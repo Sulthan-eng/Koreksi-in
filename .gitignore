@@ -2,3 +2,15 @@ spike/.venv
 spike/samples/
 spike/output/
 .env
+.env.*
+!.env.example
+
+node_modules/
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+uploads/
