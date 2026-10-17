@@ -19,7 +19,15 @@ Status: prototipe UTS, hanya dijalankan di localhost. Lihat `docs/SPEC.md` untuk
 5. Jalankan backend: `uvicorn app.main:app --reload --port 8000`.
 6. Cek: `curl http://localhost:8000/api/health` harus mengembalikan `{"status":"ok"}`.
 
-Frontend belum dibuat di tahap ini.
+7. Siapkan frontend (butuh Node 20.19+ atau 22.12+):
+   ```
+   cd frontend
+   npm install
+   ```
+8. Jalankan frontend: `npm run dev` (port 5173, proxy `/api` ke backend di port 8000).
+9. Buka `http://localhost:5173`.
+
+Kerangka frontend sudah ada (halaman placeholder, routing), logika fitur belum dibuat.
 
 ## Lint, format, test (backend)
 
@@ -28,6 +36,14 @@ Dari folder `backend/` dengan virtualenv aktif:
 - Lint: `ruff check .`
 - Format: `ruff format .`
 - Test: `pytest`
+
+## Lint, format (frontend)
+
+Dari folder `frontend/`:
+
+- Lint: `npm run lint`
+- Format: `npm run format`
+- Build: `npm run build`
 
 ## Catatan privasi Gemini
 

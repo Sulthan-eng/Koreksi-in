@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  /* merek, dari logo */
+  --color-merek-biru: #1385d7;
+  --color-merek-hijau: #3ec68b;
+
+  /* antarmuka */
+  --color-biru-utama: #0f6db5; /* tombol utama, tautan, tab aktif */
+  --color-biru-muda: #e8f3fc; /* latar lembut, baris terpilih */
+  --color-teks: #0f2a43; /* teks utama */
+  --color-teks-redup: #475569; /* teks pendukung */
+  --color-latar: #f4f8fb; /* latar halaman */
+  --color-permukaan: #ffffff; /* kartu, tabel, form */
+  --color-garis: #d5e1eb; /* garis pembatas, border */
+
+  /* kategori dan status */
+  --color-sangat-mirip: #166534;
+  --color-sangat-mirip-latar: #dcfce7;
+  --color-cukup-mirip: #92400e;
+  --color-cukup-mirip-latar: #fef3c7;
+  --color-kurang-mirip: #991b1b;
+  --color-kurang-mirip-latar: #fee2e2;
+}

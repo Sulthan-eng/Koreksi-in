@@ -2,7 +2,7 @@
 
 Aplikasi web autograding jawaban esai/jawaban singkat. Pengajar (guru atau dosen) memasukkan kunci jawaban dan mengunggah lembar jawaban peserta didik. Sistem mengekstrak teks dengan OCR, lalu LLM-judge memberi skor kemiripan sebagai rekomendasi. Pengajar memegang nilai akhir.
 
-Status: prototipe UTS. Hanya dijalankan di localhost, tidak di-deploy. Kerangka backend dan database (Docker Compose, FastAPI, Alembic) sudah dibuat, tanpa tabel, tanpa autentikasi, tanpa modul Gemini. Kerangka frontend belum dibuat.
+Status: prototipe UTS. Hanya dijalankan di localhost, tidak di-deploy. Kerangka backend dan database (Docker Compose, FastAPI, Alembic) sudah dibuat, tanpa tabel, tanpa autentikasi, tanpa modul Gemini. Kerangka frontend (Vite, React, Tailwind CSS, routing) sudah dibuat, hanya halaman placeholder tanpa logika fitur, tanpa pemanggilan API, tanpa state autentikasi.
 
 Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 
@@ -32,7 +32,13 @@ Semua perintah backend dijalankan dari folder `backend/` dengan virtualenv aktif
 - Format: `ruff format .`.
 - Test: `pytest`.
 
-Frontend belum punya perintah karena kerangkanya belum dibuat.
+Semua perintah frontend dijalankan dari folder `frontend/`.
+
+- Install dependensi: `npm install`.
+- Jalankan frontend: `npm run dev` (port 5173, proxy `/api` ke backend port 8000).
+- Build: `npm run build`.
+- Lint: `npm run lint`.
+- Format: `npm run format`.
 
 ## Workflow
 
