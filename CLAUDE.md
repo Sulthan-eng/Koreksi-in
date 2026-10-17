@@ -2,7 +2,7 @@
 
 Aplikasi web autograding jawaban esai/jawaban singkat. Pengajar (guru atau dosen) memasukkan kunci jawaban dan mengunggah lembar jawaban peserta didik. Sistem mengekstrak teks dengan OCR, lalu LLM-judge memberi skor kemiripan sebagai rekomendasi. Pengajar memegang nilai akhir.
 
-Status: prototipe UTS. Hanya dijalankan di localhost, tidak di-deploy. Kerangka aplikasi (backend, frontend, Docker) belum dibuat.
+Status: prototipe UTS. Hanya dijalankan di localhost, tidak di-deploy. Kerangka backend dan database (Docker Compose, FastAPI, Alembic) sudah dibuat, tanpa tabel, tanpa autentikasi, tanpa modul Gemini. Kerangka frontend belum dibuat.
 
 Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 
@@ -22,7 +22,17 @@ Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 
 ## Perintah
 
-Belum ada. Bagian ini diisi setelah kerangka aplikasi dibuat (jalankan, lint, test, format, migrasi). Sebelum itu, agent TIDAK BOLEH mengarang perintah.
+Semua perintah backend dijalankan dari folder `backend/` dengan virtualenv aktif, kecuali disebut lain.
+
+- Database: `docker compose up -d db` (dari root proyek, butuh `.env` di root berisi `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`).
+- Setup virtualenv: `cd backend && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt`.
+- Jalankan backend: `uvicorn app.main:app --reload --port 8000`.
+- Migrasi: `alembic upgrade head` (terapkan), `alembic current` (lihat revisi aktif).
+- Lint: `ruff check .`.
+- Format: `ruff format .`.
+- Test: `pytest`.
+
+Frontend belum punya perintah karena kerangkanya belum dibuat.
 
 ## Workflow
 
