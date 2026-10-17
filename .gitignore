@@ -1,0 +1,4 @@
+spike/.venv
+spike/samples/
+spike/output/
+.env
