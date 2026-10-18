@@ -227,6 +227,8 @@ Kode error autentikasi (bagian 6):
 | `LOGIN_GAGAL` | 401 | "Email atau password salah" |
 | `SESI_BERAKHIR` | 401 | "Sesi berakhir, silakan masuk kembali." |
 
+Kegagalan jaringan atau kode error yang tidak dikenal frontend: "Terjadi kesalahan, silakan coba lagi." (tanpa detail teknis).
+
 ## 11. Lingkungan localhost
 
 - Database: PostgreSQL lewat Docker Compose. Backend dan frontend dijalankan langsung di mesin pengembang.
@@ -266,3 +268,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-18 | Selaraskan nama dengan ERD final (SDD): `Batch.nama` → `nama_batch`; `Soal.nomor_soal` → `no_soal`; `File_Jawaban.id_file_jawaban` → `id_file`; `File_Jawaban.status_pemrosesan` → `status_proses`; tambah `File_Jawaban.diunggah_pada`; `Hasil_Koreksi.id_hasil_koreksi` → `id_koreksi`; `Hasil_Koreksi.id_file_jawaban` → `id_file`; `Hasil_Koreksi.skor_perlu_dihitung_ulang` → `skor_hitung_ulang`. U1 diputuskan |
 | 2026-10-18 | Lengkapi SPEC bagian 5 dari ERD final (celah untuk K-01): panjang VARCHAR (`Pengguna.nama` 100, `Pengguna.email` 255, `Pengguna.password_hash` 255, `Batch.nama_batch` 100, `File_Jawaban.nama_peserta_didik` 100, `File_Jawaban.path` 255); semua FK (`id_pengguna`, `id_batch`, `id_soal`, `id_file`) NOT NULL; `Sesi.dibuat_pada` DEFAULT now(), `Sesi.terakhir_dipakai_pada`/`kedaluwarsa_pada` NOT NULL tanpa default; `Batch.dibuat_pada` NOT NULL DEFAULT now() |
 | 2026-10-18 | Tugas A1a (autentikasi backend): catat path endpoint `/api/auth/{daftar,masuk,refresh,keluar,saya}` di bagian 6; tambah tabel kode error autentikasi (`VALIDASI_GAGAL`, `EMAIL_SUDAH_TERDAFTAR`, `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `LOGIN_GAGAL`, `SESI_BERAKHIR`) di bagian 10 |
+| 2026-10-18 | Tugas A1b (autentikasi frontend): tambah di bagian 10 pesan umum frontend untuk kegagalan jaringan/kode tak dikenal: "Terjadi kesalahan, silakan coba lagi." |

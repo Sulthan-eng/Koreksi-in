@@ -102,7 +102,7 @@ Berkas ada di `frontend/public/`:
 - `logo.png`: logo lengkap (ikon dan tulisan "Koreksi-in"). Dipakai di halaman Masuk dan Daftar.
 - `logo-ikon.png`: ikon saja. Dipakai di bilah atas aplikasi dan sebagai favicon.
 
-Aturan: jangan mengubah warna, rasio, atau memutar logo. Beri ruang kosong di sekeliling minimal setinggi lingkaran kecil pada ikon. Latar logo harus putih atau `latar`. Tinggi ikon di bilah atas sekitar 32 px.
+Aturan: jangan mengubah warna, rasio, atau memutar logo. Beri ruang kosong di sekeliling minimal setinggi lingkaran kecil pada ikon. Latar logo harus putih atau `latar`. Tinggi ikon di bilah atas sekitar 40 px.
 
 ## Tata letak
 
