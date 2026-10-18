@@ -8,9 +8,11 @@ from app.core.dependencies import pengguna_saat_ini
 from app.models.pengguna import Pengguna
 from app.schemas.batch import BatchResponse, BuatBatchRequest
 from app.schemas.file_jawaban import FileJawabanResponse
+from app.schemas.hasil_koreksi import HasilKoreksiItem
 from app.schemas.soal import SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
 from app.services import file_jawaban as file_jawaban_service
+from app.services import hasil_koreksi as hasil_koreksi_service
 from app.services import pemrosesan
 from app.services import soal as soal_service
 
@@ -38,6 +40,17 @@ def _file_jawaban_response(file_jawaban) -> FileJawabanResponse:
         nama_peserta_didik=file_jawaban.nama_peserta_didik,
         status_proses=file_jawaban.status_proses,
         pesan_error=file_jawaban.pesan_error,
+    )
+
+
+def _hasil_koreksi_response(baris) -> HasilKoreksiItem:
+    return HasilKoreksiItem(
+        id_file=baris.id_file,
+        nama_peserta_didik=baris.nama_peserta_didik,
+        no_soal=baris.no_soal,
+        teks_ocr=baris.teks_ocr,
+        skor_sistem=baris.skor_sistem,
+        kategori=baris.kategori,
     )
 
 
@@ -116,3 +129,13 @@ async def unggah_jawaban(
         pemrosesan.proses_file_jawaban, [fj.id_file for fj in file_jawaban_list]
     )
     return [_file_jawaban_response(fj) for fj in file_jawaban_list]
+
+
+@router.get("/{id_batch}/hasil", response_model=list[HasilKoreksiItem])
+async def daftar_hasil_koreksi(
+    id_batch: uuid.UUID,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> list[HasilKoreksiItem]:
+    baris_list = await hasil_koreksi_service.daftar_hasil_koreksi(db, pengguna, id_batch)
+    return [_hasil_koreksi_response(baris) for baris in baris_list]
