@@ -1,25 +1,27 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { setPenangananSesiBerakhir } from "../api/klien.js";
+import { pesanUntukKode } from "../api/pesan.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("memuat");
   const [nama, setNama] = useState(null);
+  const [pesanSesi, setPesanSesi] = useState(null);
   const sudahJalanRef = useRef(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     setPenangananSesiBerakhir(() => {
+      setPesanSesi(pesanUntukKode("SESI_BERAKHIR"));
       setNama(null);
       setStatus("tidak-terautentikasi");
-      navigate("/masuk", {
-        state: { pesan: "Sesi berakhir, silakan masuk kembali." },
-      });
     });
-  }, [navigate]);
+  }, []);
+
+  function bersihkanPesanSesi() {
+    setPesanSesi(null);
+  }
 
   useEffect(() => {
     if (sudahJalanRef.current) return;
@@ -52,7 +54,9 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ status, nama, tandaiMasuk, keluar }}>
+    <AuthContext.Provider
+      value={{ status, nama, pesanSesi, bersihkanPesanSesi, tandaiMasuk, keluar }}
+    >
       {children}
     </AuthContext.Provider>
   );
