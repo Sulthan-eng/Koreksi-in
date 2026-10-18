@@ -47,7 +47,9 @@ function Masuk() {
           <p className="mb-4 text-center text-teks-redup">{pesanFlash}</p>
         )}
         {kesalahan && (
-          <p className="mb-4 text-center text-kurang-mirip">{kesalahan}</p>
+          <p role="alert" className="mb-4 text-center text-kurang-mirip">
+            {kesalahan}
+          </p>
         )}
 
         <form onSubmit={tanganiSubmit} className="space-y-4">

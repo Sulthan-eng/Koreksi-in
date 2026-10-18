@@ -35,7 +35,9 @@ function Daftar() {
         </h1>
 
         {kesalahan && (
-          <p className="mb-4 text-center text-kurang-mirip">{kesalahan}</p>
+          <p role="alert" className="mb-4 text-center text-kurang-mirip">
+            {kesalahan}
+          </p>
         )}
 
         <form onSubmit={tanganiSubmit} className="space-y-4">

@@ -20,7 +20,7 @@ function BilahAtas() {
   return (
     <header className="flex items-center justify-between border-b border-garis bg-permukaan px-8 py-5">
       <div className="flex items-center gap-3">
-        <img src="/logo-ikon.png" alt="Koreksi-in" className="h-10" />
+        <img src="/logo-ikon.png" alt="" className="h-10" />
         <span className="text-lg font-semibold text-teks">Koreksi-in</span>
       </div>
       <div className="flex items-center gap-4">
