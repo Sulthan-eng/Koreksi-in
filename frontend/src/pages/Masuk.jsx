@@ -9,16 +9,24 @@ function Masuk() {
   const [password, setPassword] = useState("");
   const [kesalahan, setKesalahan] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
-  const { tandaiMasuk } = useAuth();
+  const { tandaiMasuk, pesanSesi, bersihkanPesanSesi } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [pesanFlash] = useState(() => location.state?.pesan ?? null);
+  const [pesanFlash] = useState(
+    () => location.state?.pesan ?? pesanSesi ?? null,
+  );
 
   useEffect(() => {
     if (location.state?.pesan) {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location, navigate]);
+
+  useEffect(() => {
+    if (pesanSesi) {
+      bersihkanPesanSesi();
+    }
+  }, [pesanSesi, bersihkanPesanSesi]);
 
   async function tanganiSubmit(peristiwa) {
     peristiwa.preventDefault();
