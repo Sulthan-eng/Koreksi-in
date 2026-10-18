@@ -170,21 +170,24 @@ Mengikuti bagian 6. Beranda hanya dapat diakses setelah login. Tombol Keluar ter
 
 ### F-BATCH (FR3, UC-02)
 Endpoint (prefix `/api/batch`, semua butuh login): `GET /api/batch` (daftar batch milik pengguna, `dibuat_pada` terbaru dulu), `POST /api/batch` (`{nama_batch}` → `BatchResponse`), `GET /api/batch/{id_batch}` (detail satu batch).
-1. Di Beranda, Pengajar melihat daftar batch miliknya (nama, tanggal dibuat) dan tombol "Buat Batch Baru".
+1. Di Beranda, Pengajar melihat sapaan "Selamat datang, {nama}" dengan kalimat pendukung "Kelola batch koreksi esai Anda di sini.", daftar batch miliknya (nama, tanggal dibuat), dan tombol "Buat Batch Baru".
 2. Form meminta nama batch. Pengajar menekan "Buat".
 3. Sistem memvalidasi nama tidak kosong (setelah trim), membuat batch berstatus `aktif`, lalu membuka Halaman Batch yang baru.
 - Nama kosong: tampilkan pesan validasi, tidak menyimpan.
 - Gagal simpan: "Gagal membuat batch, silakan coba lagi", batch tidak dibuat.
+- Belum ada batch: "Belum ada batch. Buat batch pertama untuk mulai mengoreksi."
 
 ### F-KUNCI (FR4, UC-04, hanya ketik)
 Endpoint (prefix `/api/batch/{id_batch}/soal`, semua butuh login): `GET /api/batch/{id_batch}/soal` (daftar soal urut `no_soal`), `POST /api/batch/{id_batch}/soal` (`{kunci_jawaban}` → `SoalResponse`, `no_soal` dibuat sistem berurutan, tidak diterima dari klien).
 Di tab Soal dan Jawaban:
 1. Pengajar menekan "Tambah Soal". Sistem menyiapkan "Soal N" berikutnya dengan satu kolom teks kunci jawaban.
 2. Pengajar mengetik kunci dan menekan "Simpan Kunci Jawaban".
-3. Sistem memvalidasi tidak kosong, menyimpan, dan menampilkan konfirmasi serta menambahkan soal ke daftar. Daftar soal menampilkan nomor dan kunci jawaban (hanya baca).
+3. Sistem memvalidasi tidak kosong, menyimpan, dan menampilkan konfirmasi "Kunci jawaban tersimpan." serta menambahkan soal ke daftar. Daftar soal menampilkan nomor dan kunci jawaban (hanya baca).
 - Kunci kosong: "Kunci jawaban tidak boleh kosong", tidak menyimpan.
 - Soal ke-21, atau penambahan setelah ada lembar jawaban: ditolak sesuai bagian 4.
 - Gagal simpan: tampilkan pesan error, soal tidak ditambahkan, Pengajar boleh menekan Simpan lagi.
+- Belum ada soal: "Belum ada soal pada batch ini."
+- Tab Status Pemrosesan dan tabel Dashboard Hasil Koreksi belum berfungsi di tugas ini: placeholder netral "Fitur ini belum tersedia di prototipe ini."
 
 ### F-UNGGAH (FR8, FR9, UC-05)
 Prasyarat: batch memiliki minimal satu soal. Di tab Soal dan Jawaban:
@@ -284,3 +287,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-18 | Tugas A1a (autentikasi backend): catat path endpoint `/api/auth/{daftar,masuk,refresh,keluar,saya}` di bagian 6; tambah tabel kode error autentikasi (`VALIDASI_GAGAL`, `EMAIL_SUDAH_TERDAFTAR`, `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `LOGIN_GAGAL`, `SESI_BERAKHIR`) di bagian 10 |
 | 2026-10-18 | Tugas A1b (autentikasi frontend): tambah di bagian 10 pesan umum frontend untuk kegagalan jaringan/kode tak dikenal: "Terjadi kesalahan, silakan coba lagi." |
 | 2026-10-18 | Tugas A2 (batch dan soal backend): catat path `GET/POST /api/batch`, `GET /api/batch/{id_batch}`, `GET/POST /api/batch/{id_batch}/soal` di bagian 9 (F-BATCH, F-KUNCI); tambah 7 kode error (`BATCH_TIDAK_DITEMUKAN`, `NAMA_BATCH_KOSONG`, `KUNCI_KOSONG`, `BATAS_SOAL_TERLAMPAUI`, `SOAL_SETELAH_JAWABAN`, `GAGAL_BUAT_BATCH`, `GAGAL_TAMBAH_SOAL`) di bagian 10 |
+| 2026-10-18 | Tugas A2 (batch dan soal frontend): isi Beranda (sapaan, daftar batch, form Buat Batch Baru) dan Halaman Batch (tab Soal dan Jawaban, Tambah Soal, Simpan Kunci Jawaban) di bagian 9; catat 6 teks UI baru (sapaan "Selamat datang, {nama}", "Kelola batch koreksi esai Anda di sini.", "Belum ada batch. Buat batch pertama untuk mulai mengoreksi.", "Belum ada soal pada batch ini.", "Kunci jawaban tersimpan.", "Fitur ini belum tersedia di prototipe ini."); pindahkan pesan "Sesi berakhir, silakan masuk kembali." dari `location.state` ke state `AuthContext` agar tidak hilang akibat navigasi `TataLetakTerproteksi` |
