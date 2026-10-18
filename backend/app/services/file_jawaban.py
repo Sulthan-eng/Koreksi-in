@@ -4,7 +4,6 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import UploadFile
-from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +15,7 @@ from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
 from app.services.batch import ambil_batch
+from app.utils.berkas import hitung_halaman
 
 BELUM_ADA_SOAL = AppError(
     kode="BELUM_ADA_SOAL",
@@ -99,7 +99,7 @@ def _deteksi_format(konten: bytes) -> str:
 
 def _hitung_halaman_pdf(konten: bytes) -> int:
     try:
-        return len(PdfReader(BytesIO(konten)).pages)
+        return hitung_halaman(konten, "pdf")
     except Exception:
         raise PDF_TIDAK_DAPAT_DIBACA from None
 

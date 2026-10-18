@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -11,6 +11,7 @@ from app.schemas.file_jawaban import FileJawabanResponse
 from app.schemas.soal import SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
 from app.services import file_jawaban as file_jawaban_service
+from app.services import pemrosesan
 from app.services import soal as soal_service
 
 router = APIRouter(prefix="/batch")
@@ -102,6 +103,7 @@ async def daftar_file_jawaban(
 @router.post("/{id_batch}/file-jawaban", response_model=list[FileJawabanResponse], status_code=201)
 async def unggah_jawaban(
     id_batch: uuid.UUID,
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(default=[]),
     nama_peserta_didik: list[str] = Form(default=[]),
     pengguna: Pengguna = Depends(pengguna_saat_ini),
@@ -109,5 +111,8 @@ async def unggah_jawaban(
 ) -> list[FileJawabanResponse]:
     file_jawaban_list = await file_jawaban_service.unggah_jawaban(
         db, pengguna, id_batch, files, nama_peserta_didik
+    )
+    background_tasks.add_task(
+        pemrosesan.proses_file_jawaban, [fj.id_file for fj in file_jawaban_list]
     )
     return [_file_jawaban_response(fj) for fj in file_jawaban_list]
