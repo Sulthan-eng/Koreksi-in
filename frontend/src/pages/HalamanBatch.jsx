@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
+import { PESAN_KODE } from "../api/pesan.js";
+import SeksiJawabanPesertaDidik from "../components/SeksiJawabanPesertaDidik.jsx";
 import Spinner from "../components/Spinner.jsx";
 
 const TAB_SOAL = "soal";
@@ -17,6 +19,7 @@ function HalamanBatch() {
   const [kesalahan, setKesalahan] = useState(null);
   const [batch, setBatch] = useState(null);
   const [daftarSoal, setDaftarSoal] = useState([]);
+  const [daftarFileJawaban, setDaftarFileJawaban] = useState([]);
   const [tabAktif, setTabAktif] = useState(TAB_SOAL);
 
   const [formTerbuka, setFormTerbuka] = useState(false);
@@ -29,13 +32,15 @@ function HalamanBatch() {
     let dibatalkan = false;
     (async () => {
       try {
-        const [batchHasil, soalHasil] = await Promise.all([
+        const [batchHasil, soalHasil, fileJawabanHasil] = await Promise.all([
           batchApi.ambilBatch(id),
           batchApi.daftarSoal(id),
+          batchApi.daftarFileJawaban(id),
         ]);
         if (!dibatalkan) {
           setBatch(batchHasil);
           setDaftarSoal(soalHasil);
+          setDaftarFileJawaban(fileJawabanHasil);
           setStatus("siap");
         }
       } catch (error) {
@@ -139,6 +144,10 @@ function HalamanBatch() {
 
         {tabAktif === TAB_SOAL && (
           <div role="tabpanel">
+            <h2 className="mb-4 text-lg font-semibold text-teks">
+              Soal dan Kunci Jawaban
+            </h2>
+
             {daftarSoal.length === 0 && (
               <p className="mb-4 text-teks-redup">
                 Belum ada soal pada batch ini.
@@ -163,7 +172,7 @@ function HalamanBatch() {
               </ul>
             )}
 
-            {pesanSukses && !formTerbuka && (
+            {pesanSukses && !formTerbuka && daftarFileJawaban.length === 0 && (
               <p role="status" className="mb-4 text-sangat-mirip">
                 {pesanSukses}
               </p>
@@ -202,6 +211,8 @@ function HalamanBatch() {
                   Simpan Kunci Jawaban
                 </button>
               </form>
+            ) : daftarFileJawaban.length > 0 ? (
+              <p className="text-teks-redup">{PESAN_KODE.SOAL_SETELAH_JAWABAN}</p>
             ) : daftarSoal.length >= BATAS_SOAL_PER_BATCH ? (
               <p className="text-teks-redup">
                 Sudah mencapai jumlah maksimal 20 soal per batch.
@@ -215,6 +226,15 @@ function HalamanBatch() {
                 Tambah Soal
               </button>
             )}
+
+            <SeksiJawabanPesertaDidik
+              idBatch={id}
+              adaSoal={daftarSoal.length > 0}
+              daftarFileJawaban={daftarFileJawaban}
+              onUploadSukses={(fileBaru) =>
+                setDaftarFileJawaban((sebelumnya) => [...sebelumnya, ...fileBaru])
+              }
+            />
           </div>
         )}
 

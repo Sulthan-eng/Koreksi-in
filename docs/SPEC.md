@@ -191,16 +191,19 @@ Di tab Soal dan Jawaban:
 - Tab Status Pemrosesan dan tabel Dashboard Hasil Koreksi belum berfungsi di tugas ini: placeholder netral "Fitur ini belum tersedia di prototipe ini."
 
 ### F-UNGGAH (FR8, FR9, UC-05)
-Prasyarat: batch memiliki minimal satu soal. Di tab Soal dan Jawaban:
+Endpoint (prefix `/api/batch/{id_batch}/file-jawaban`, semua butuh login, isolasi batch sama seperti F-KUNCI): `GET /api/batch/{id_batch}/file-jawaban` (daftar file jawaban batch itu urut `diunggah_pada` naik, masing-masing `{id_file, nama_peserta_didik, status_proses, pesan_error}`), `POST /api/batch/{id_batch}/file-jawaban` (multipart: `files` (0-10 file) dan `nama_peserta_didik` (daftar nama sejajar urutan file) → daftar `FileJawabanResponse` yang baru dibuat, status 201). Tugas A3a hanya mengerjakan jalur unggah dan simpan (tanpa OCR, tanpa Gemini, tanpa `BackgroundTasks`); setelah tersimpan, `status_proses` tetap `diproses` sampai A3b menambah pemrosesan asli.
+Prasyarat: batch memiliki minimal satu soal. Tab Soal dan Jawaban dibagi dua seksi berjudul jelas: "Soal dan Kunci Jawaban" (F-KUNCI) dan "Jawaban Peserta Didik" (seksi ini):
 1. Pengajar menekan "Upload Jawaban Peserta Didik" dan memilih satu sampai 10 file.
 2. Sistem menampilkan daftar file terpilih, tiap file dengan kolom nama peserta didik yang masih kosong.
-3. Pengajar mengisi nama untuk tiap file lalu menekan "Upload".
+3. Pengajar mengisi nama untuk tiap file lalu menekan "Upload", atau menekan "Batal" untuk mengosongkan pilihan file dan kembali ke tombol "Upload Jawaban Peserta Didik".
 4. Sistem memvalidasi semua nama terisi dan semua file valid (bagian 4). Jika ada yang tidak valid, tolak seluruh unggahan tanpa menyimpan apa pun dan tampilkan alasannya; daftar file tetap tampil.
 5. Sistem menyimpan file dan nama, mengelompokkan, memulai pemrosesan (bagian 8), dan menampilkan status "Diproses".
 - Nama kosong: "Nama peserta didik wajib untuk semua file".
 - Lebih dari 10 file: "Maksimal 10 file per unggahan."
-- Belum ada soal: "Tambahkan minimal satu soal sebelum mengunggah jawaban."
+- Belum ada soal: "Tambahkan minimal satu soal sebelum mengunggah jawaban." (tombol tidak dirender).
 - Gagal simpan: tampilkan pesan error dan tidak ada file tersimpan (hapus berkas yang sempat tertulis). Pengajar dapat mengunggah ulang.
+- Pesan sukses "Kunci jawaban tersimpan." (F-KUNCI) disembunyikan begitu batch sudah punya file jawaban, karena saat itu seksi Soal dan Kunci Jawaban sudah menampilkan pesan `SOAL_SETELAH_JAWABAN`, bukan pesan sukses tambah soal.
+- Sebelum ada file jawaban, tampilkan teks peringatan kecil: "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi." (hilang begitu sudah ada file jawaban, karena saat itu tombol "Tambah Soal" di seksi Soal dan Kunci Jawaban sudah diganti pesan `SOAL_SETELAH_JAWABAN`).
 
 ### F-STATUS (FR11 bagian tampilan, UC-06)
 Tab Status Pemrosesan:
@@ -244,6 +247,21 @@ Kode error batch dan soal (bagian 4, 9):
 | `SOAL_SETELAH_JAWABAN` | 400 | "Soal tidak dapat ditambah setelah jawaban diunggah." |
 | `GAGAL_BUAT_BATCH` | 500 | "Gagal membuat batch, silakan coba lagi" |
 | `GAGAL_TAMBAH_SOAL` | 500 | "Gagal menambah soal, silakan coba lagi." |
+
+Kode error unggah jawaban (bagian 4, 9, F-UNGGAH):
+
+| Kode | Status | Pesan |
+|---|---|---|
+| `BELUM_ADA_SOAL` | 400 | "Tambahkan minimal satu soal sebelum mengunggah jawaban." |
+| `MAKS_FILE_TERLAMPAUI` | 400 | "Maksimal 10 file per unggahan." |
+| `TIDAK_ADA_FILE` | 400 | "Pilih minimal satu file untuk diunggah." |
+| `NAMA_PESERTA_KOSONG` | 400 | "Nama peserta didik wajib untuk semua file" |
+| `NAMA_PESERTA_TERLALU_PANJANG` | 400 | "Nama peserta didik maksimal 100 karakter." |
+| `FORMAT_FILE_TIDAK_DIDUKUNG` | 400 | "Format file tidak didukung. Gunakan PDF, PNG, atau JPG." |
+| `FILE_TERLALU_BESAR` | 400 | "Ukuran file maksimal 10 MB." |
+| `PDF_TERLALU_BANYAK_HALAMAN` | 400 | "PDF maksimal 15 halaman." |
+| `PDF_TIDAK_DAPAT_DIBACA` | 400 | "File PDF rusak atau tidak dapat dibaca." |
+| `GAGAL_SIMPAN_JAWABAN` | 500 | "Gagal menyimpan jawaban, silakan coba lagi." |
 
 Kegagalan jaringan atau kode error yang tidak dikenal frontend: "Terjadi kesalahan, silakan coba lagi." (tanpa detail teknis).
 
@@ -290,3 +308,6 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-18 | Tugas A2 (batch dan soal backend): catat path `GET/POST /api/batch`, `GET /api/batch/{id_batch}`, `GET/POST /api/batch/{id_batch}/soal` di bagian 9 (F-BATCH, F-KUNCI); tambah 7 kode error (`BATCH_TIDAK_DITEMUKAN`, `NAMA_BATCH_KOSONG`, `KUNCI_KOSONG`, `BATAS_SOAL_TERLAMPAUI`, `SOAL_SETELAH_JAWABAN`, `GAGAL_BUAT_BATCH`, `GAGAL_TAMBAH_SOAL`) di bagian 10 |
 | 2026-10-18 | Tugas A2 (batch dan soal frontend): isi Beranda (sapaan, daftar batch, form Buat Batch Baru) dan Halaman Batch (tab Soal dan Jawaban, Tambah Soal, Simpan Kunci Jawaban) di bagian 9; catat 6 teks UI baru (sapaan "Selamat datang, {nama}", "Kelola batch koreksi esai Anda di sini.", "Belum ada batch. Buat batch pertama untuk mulai mengoreksi.", "Belum ada soal pada batch ini.", "Kunci jawaban tersimpan.", "Fitur ini belum tersedia di prototipe ini."); pindahkan pesan "Sesi berakhir, silakan masuk kembali." dari `location.state` ke state `AuthContext` agar tidak hilang akibat navigasi `TataLetakTerproteksi` |
 | 2026-10-18 | Tugas A2 (perbaikan UI batas soal): saat sudah 20 soal, tombol "Tambah Soal" diganti pesan "Sudah mencapai jumlah maksimal 20 soal per batch." agar Pengajar tidak membuka form kunci jawaban yang pasti ditolak |
+| 2026-10-18 | Tugas A3a (unggah lembar jawaban backend): catat path `GET/POST /api/batch/{id_batch}/file-jawaban` di bagian 9 (F-UNGGAH); tambah 10 kode error (`BELUM_ADA_SOAL`, `MAKS_FILE_TERLAMPAUI`, `TIDAK_ADA_FILE`, `NAMA_PESERTA_KOSONG`, `NAMA_PESERTA_TERLALU_PANJANG`, `FORMAT_FILE_TIDAK_DIDUKUNG`, `FILE_TERLALU_BESAR`, `PDF_TERLALU_BANYAK_HALAMAN`, `PDF_TIDAK_DAPAT_DIBACA`, `GAGAL_SIMPAN_JAWABAN`) di bagian 10; tambah dependency `python-multipart` (parsing multipart FastAPI) dan `pypdf` (hitung halaman PDF). Hanya jalur unggah dan simpan, tanpa OCR/Gemini/BackgroundTasks (A3b) |
+| 2026-10-18 | Tugas A3a (unggah lembar jawaban frontend): bagi tab Soal dan Jawaban jadi dua seksi berjudul "Soal dan Kunci Jawaban" dan "Jawaban Peserta Didik" di bagian 9 (F-UNGGAH); tambah teks peringatan "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi." (tampil hanya sebelum ada file jawaban) dan lencana status "Diproses"; tombol "Tambah Soal" diganti pesan `SOAL_SETELAH_JAWABAN` begitu batch punya file jawaban |
+| 2026-10-18 | Tugas A3a (perbaikan UI unggah jawaban): tambah tombol "Batal" di samping "Upload" untuk mengosongkan pilihan file; sembunyikan pesan sukses "Kunci jawaban tersimpan." begitu batch sudah punya file jawaban |
