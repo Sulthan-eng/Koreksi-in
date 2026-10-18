@@ -6,6 +6,7 @@ import Spinner from "../components/Spinner.jsx";
 const TAB_SOAL = "soal";
 const TAB_STATUS = "status";
 const TAB_DASHBOARD = "dashboard";
+const BATAS_SOAL_PER_BATCH = 20;
 
 const KELAS_TAB_AKTIF = "border-b-2 border-biru-utama text-biru-utama";
 const KELAS_TAB_NONAKTIF = "text-teks-redup";
@@ -50,6 +51,7 @@ function HalamanBatch() {
   }, [id]);
 
   function bukaFormTambahSoal() {
+    if (daftarSoal.length >= BATAS_SOAL_PER_BATCH) return;
     setKesalahanSoal(null);
     setPesanSukses(null);
     setKunciJawaban("");
@@ -200,6 +202,10 @@ function HalamanBatch() {
                   Simpan Kunci Jawaban
                 </button>
               </form>
+            ) : daftarSoal.length >= BATAS_SOAL_PER_BATCH ? (
+              <p className="text-teks-redup">
+                Sudah mencapai jumlah maksimal 20 soal per batch.
+              </p>
             ) : (
               <button
                 type="button"
