@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import Spinner from "../components/Spinner.jsx";
 
 function formatTanggal(iso) {
@@ -20,6 +21,7 @@ function Beranda() {
   const [kesalahanForm, setKesalahanForm] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
   const navigate = useNavigate();
+  const { nama } = useAuth();
 
   useEffect(() => {
     let dibatalkan = false;
@@ -58,6 +60,17 @@ function Beranda() {
   return (
     <div className="min-h-screen bg-latar p-8">
       <div className="mx-auto max-w-3xl">
+        {nama && (
+          <div className="mb-6">
+            <p className="text-lg font-medium text-teks">
+              Selamat datang, {nama}
+            </p>
+            <p className="text-teks-redup">
+              Kelola batch koreksi esai Anda di sini.
+            </p>
+          </div>
+        )}
+
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-teks">Batch Koreksi</h1>
           <button
@@ -84,6 +97,7 @@ function Beranda() {
               id="nama_batch"
               type="text"
               required
+              maxLength={100}
               value={namaBatch}
               onChange={(peristiwa) => setNamaBatch(peristiwa.target.value)}
               className="mb-3 w-full rounded-md border border-garis bg-permukaan px-3 py-2 text-teks"
