@@ -36,3 +36,7 @@ export async function unggahFileJawaban(idBatch, formData) {
     body: formData,
   });
 }
+
+export async function daftarHasilKoreksi(idBatch) {
+  return permintaan(`/api/batch/${idBatch}/hasil`);
+}

@@ -4,6 +4,10 @@ import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import SeksiJawabanPesertaDidik from "../components/SeksiJawabanPesertaDidik.jsx";
 import Spinner from "../components/Spinner.jsx";
+import TabHasilKoreksi from "../components/TabHasilKoreksi.jsx";
+import TabStatusPemrosesan from "../components/TabStatusPemrosesan.jsx";
+
+const JEDA_POLLING_MS = 5000;
 
 const TAB_SOAL = "soal";
 const TAB_STATUS = "status";
@@ -20,6 +24,7 @@ function HalamanBatch() {
   const [batch, setBatch] = useState(null);
   const [daftarSoal, setDaftarSoal] = useState([]);
   const [daftarFileJawaban, setDaftarFileJawaban] = useState([]);
+  const [kesalahanPolling, setKesalahanPolling] = useState(null);
   const [tabAktif, setTabAktif] = useState(TAB_SOAL);
 
   const [formTerbuka, setFormTerbuka] = useState(false);
@@ -54,6 +59,24 @@ function HalamanBatch() {
       dibatalkan = true;
     };
   }, [id]);
+
+  const adaFileDiproses = daftarFileJawaban.some(
+    (fileJawaban) => fileJawaban.status_proses === "diproses",
+  );
+
+  useEffect(() => {
+    if (!adaFileDiproses) return;
+    const interval = setInterval(async () => {
+      try {
+        const hasil = await batchApi.daftarFileJawaban(id);
+        setDaftarFileJawaban(hasil);
+      } catch {
+        setKesalahanPolling("Gagal memuat status pemrosesan, coba muat ulang halaman");
+        clearInterval(interval);
+      }
+    }, JEDA_POLLING_MS);
+    return () => clearInterval(interval);
+  }, [id, adaFileDiproses]);
 
   function bukaFormTambahSoal() {
     if (daftarSoal.length >= BATAS_SOAL_PER_BATCH) return;
@@ -239,14 +262,17 @@ function HalamanBatch() {
         )}
 
         {tabAktif === TAB_STATUS && (
-          <div role="tabpanel" className="text-teks-redup">
-            Fitur ini belum tersedia di prototipe ini.
+          <div role="tabpanel">
+            <TabStatusPemrosesan
+              daftarFileJawaban={daftarFileJawaban}
+              kesalahan={kesalahanPolling}
+            />
           </div>
         )}
 
         {tabAktif === TAB_DASHBOARD && (
-          <div role="tabpanel" className="text-teks-redup">
-            Fitur ini belum tersedia di prototipe ini.
+          <div role="tabpanel">
+            <TabHasilKoreksi idBatch={id} daftarSoal={daftarSoal} />
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import { LencanaStatusProses } from "./Lencana.jsx";
 import Spinner from "./Spinner.jsx";
 
 function SeksiJawabanPesertaDidik({
@@ -144,11 +145,13 @@ function SeksiJawabanPesertaDidik({
               key={fileJawaban.id_file}
               className="flex items-center justify-between rounded-lg border border-garis bg-permukaan p-3"
             >
-              <span className="text-teks">{fileJawaban.nama_peserta_didik}</span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-biru-muda px-3 py-1 text-sm text-biru-utama">
-                <Spinner className="h-3 w-3 text-biru-utama" />
-                Diproses
-              </span>
+              <div>
+                <span className="text-teks">{fileJawaban.nama_peserta_didik}</span>
+                {fileJawaban.status_proses === "gagal" && fileJawaban.pesan_error && (
+                  <p className="mt-1 text-sm text-kurang-mirip">{fileJawaban.pesan_error}</p>
+                )}
+              </div>
+              <LencanaStatusProses statusProses={fileJawaban.status_proses} />
             </li>
           ))}
         </ul>
