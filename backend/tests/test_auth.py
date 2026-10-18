@@ -1,11 +1,15 @@
 from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.core.errors import AppError
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
+from app.services import auth as auth_service
 
 _DAFTAR = {"nama": "Budi Santoso", "email": "Budi@Contoh.com", "password": "rahasia123"}
 
@@ -66,17 +70,50 @@ async def test_daftar_nama_melebihi_batas_ditolak_sebagai_validasi_gagal(
     assert response.json()["kode"] == "VALIDASI_GAGAL"
 
 
-async def test_daftar_race_email_ganda_ditangkap_sebagai_integrity_error(
-    client: AsyncClient, db_session: AsyncSession
+async def test_daftar_nama_kosong_setelah_strip_ditolak_sebagai_validasi_gagal(
+    client: AsyncClient,
 ) -> None:
-    pengguna = Pengguna(nama="Lain", email="budi@contoh.com", password_hash="hash-lain")
-    db_session.add(pengguna)
-    await db_session.commit()
+    response = await client.post("/api/auth/daftar", json={**_DAFTAR, "nama": "   "})
 
-    response = await client.post("/api/auth/daftar", json=_DAFTAR)
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
 
-    assert response.status_code == 409
-    assert response.json()["kode"] == "EMAIL_SUDAH_TERDAFTAR"
+
+async def test_daftar_email_kosong_setelah_strip_ditolak_sebagai_validasi_gagal(
+    client: AsyncClient,
+) -> None:
+    response = await client.post("/api/auth/daftar", json={**_DAFTAR, "email": "   "})
+
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
+
+
+async def test_masuk_email_kosong_setelah_strip_ditolak_sebagai_validasi_gagal(
+    client: AsyncClient,
+) -> None:
+    response = await client.post("/api/auth/masuk", json={"email": "  ", "password": "rahasia123"})
+
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
+
+
+async def test_daftar_integrity_error_saat_commit_dipetakan_ke_email_sudah_terdaftar(
+    db_session: AsyncSession, _engine: AsyncEngine
+) -> None:
+    # Simulasikan race: pengguna lain berhasil mendaftar dengan email yang sama
+    # tepat di antara pengecekan "email sudah ada" dan commit milik db_session.
+    sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
+    async with sessionmaker() as session_lain:
+        session_lain.add(
+            Pengguna(nama="Lain", email="budi@contoh.com", password_hash="hash-lain")
+        )
+        await session_lain.commit()
+
+    with patch.object(db_session, "scalar", AsyncMock(return_value=None)):
+        with pytest.raises(AppError) as exc_info:
+            await auth_service.daftar(db_session, "Budi Santoso", "budi@contoh.com", "rahasia123")
+
+    assert exc_info.value.kode == "EMAIL_SUDAH_TERDAFTAR"
 
 
 async def test_masuk_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
