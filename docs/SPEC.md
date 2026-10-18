@@ -34,7 +34,7 @@ Istilah UI wajib Bahasa Indonesia. Nama di kode mengikuti ERD (Indonesia), lihat
 | Skor Kemiripan | `Hasil_Koreksi.skor_sistem` | Bilangan bulat 0 sampai 100 dari LLM-judge |
 | Kategori Kualitatif | `Hasil_Koreksi.kategori` | Sangat Mirip, Cukup Mirip, Kurang Mirip |
 | Ambang Batas | konstanta di kode | Batas skor ke kategori. Tetap, ditetapkan developer |
-| Status Pemrosesan | `File_Jawaban.status_pemrosesan` | Diproses, Selesai, Gagal |
+| Status Pemrosesan | `File_Jawaban.status_proses` | Diproses, Selesai, Gagal |
 | tabel Dashboard Hasil Koreksi | tab di halaman batch | Tulis selengkapnya, bukan sekadar "dashboard" |
 
 ## 3. Cakupan fitur (penyebut: 24 FR di SRS)
@@ -73,7 +73,7 @@ Urutan jika ada waktu sisa dan pemilik proyek meminta: (1) FR11 tombol Coba Lagi
 Konsekuensi lingkup:
 - Tabel `Transaksi_Pembayaran` TIDAK dibuat. Kolom `Pengguna.status_langganan` dan `Pengguna.masa_berlaku_pro` dibuat sesuai ERD tetapi TIDAK dipakai. Semua pengguna diperlakukan tanpa batas kuota.
 - Kolom `Batch.status` dibuat; hanya nilai `aktif` yang dipakai.
-- Kolom `Hasil_Koreksi.skor_revisi` dan `skor_perlu_dihitung_ulang` dibuat tetapi tidak dipakai (selalu NULL dan false).
+- Kolom `Hasil_Koreksi.skor_revisi` dan `skor_hitung_ulang` dibuat tetapi tidak dipakai (selalu NULL dan false).
 - Halaman daftar batch di Beranda tetap dibuat, karena Pengajar perlu membuka batch miliknya (bukan FR tersendiri).
 
 ## 4. Aturan produk
@@ -94,7 +94,7 @@ Konsekuensi lingkup:
 
 ## 5. Data
 
-PostgreSQL 15+, SQLAlchemy 2.0 async, migrasi hanya lewat Alembic. Semua PK adalah UUID. Pola nama PK `id_<tabel>`. Nama tabel dan kolom di bawah adalah nama persis di kode dan database, dan tabel ini adalah satu-satunya sumber skema. Jika sebuah nama kolom tidak tertulis di sini, tanya.
+PostgreSQL 15+, SQLAlchemy 2.0 async, migrasi hanya lewat Alembic. Semua PK adalah UUID. Pola nama PK `id_<tabel>`, kecuali `File_Jawaban` (`id_file`) dan `Hasil_Koreksi` (`id_koreksi`). Nama tabel dan kolom di bawah adalah nama persis di kode dan database, dan tabel ini adalah satu-satunya sumber skema. Jika sebuah nama kolom tidak tertulis di sini, tanya.
 
 Enum PostgreSQL native. Di SQLAlchemy pakai Python `Enum` dengan `values_callable` agar yang tersimpan adalah nilai huruf kecil seperti `free`, bukan `FREE`.
 
@@ -102,13 +102,13 @@ Enum PostgreSQL native. Di SQLAlchemy pakai Python `Enum` dengan `values_callabl
 |---|---|
 | `Pengguna` | `id_pengguna`, `nama` NOT NULL, `email` UNIQUE NOT NULL (disimpan lowercase), `password_hash` NOT NULL (bcrypt), `status_langganan` ENUM('free','pro') NOT NULL DEFAULT 'free' (tidak dipakai), `masa_berlaku_pro` TIMESTAMP NULL (tidak dipakai), `dibuat_pada` TIMESTAMP NOT NULL DEFAULT now() |
 | `Sesi` | `id_sesi`, `id_pengguna` FK ON DELETE CASCADE, `refresh_token_hash` VARCHAR(64) UNIQUE NOT NULL (SHA-256), `dibuat_pada`, `terakhir_dipakai_pada`, `kedaluwarsa_pada`, `dicabut_pada` NULL |
-| `Batch` | `id_batch`, `id_pengguna` FK ON DELETE CASCADE, `nama` NOT NULL, `status` ENUM('aktif','selesai') NOT NULL DEFAULT 'aktif', `dibuat_pada` |
-| `Soal` | `id_soal`, `id_batch` FK ON DELETE CASCADE, `nomor_soal` INT NOT NULL, `kunci_jawaban` TEXT NOT NULL. UNIQUE (`id_batch`, `nomor_soal`). Tanpa teks soal, tanpa vektor |
-| `File_Jawaban` | `id_file_jawaban`, `id_batch` FK ON DELETE CASCADE, `nama_peserta_didik` NOT NULL, `path` NOT NULL, `status_pemrosesan` ENUM('diproses','selesai','gagal') NOT NULL, `pesan_error` TEXT NULL, `jumlah_retry` INT NOT NULL DEFAULT 0 |
-| `Hasil_Koreksi` | PK `id_hasil_koreksi`, `id_file_jawaban` FK ON DELETE CASCADE, `id_soal` FK ON DELETE CASCADE, `teks_ocr` TEXT NOT NULL DEFAULT '', `skor_sistem` INT NULL (CHECK 0 sampai 100), `kategori` ENUM('sangat_mirip','cukup_mirip','kurang_mirip') NULL, `skor_revisi` INT NULL (tidak dipakai), `skor_perlu_dihitung_ulang` BOOLEAN NOT NULL DEFAULT false (tidak dipakai). UNIQUE (`id_file_jawaban`, `id_soal`). Tanpa kolom `alasan`, tanpa vektor |
+| `Batch` | `id_batch`, `id_pengguna` FK ON DELETE CASCADE, `nama_batch` NOT NULL, `status` ENUM('aktif','selesai') NOT NULL DEFAULT 'aktif', `dibuat_pada` |
+| `Soal` | `id_soal`, `id_batch` FK ON DELETE CASCADE, `no_soal` INT NOT NULL, `kunci_jawaban` TEXT NOT NULL. UNIQUE (`id_batch`, `no_soal`). Tanpa teks soal, tanpa vektor |
+| `File_Jawaban` | `id_file`, `id_batch` FK ON DELETE CASCADE, `nama_peserta_didik` NOT NULL, `path` NOT NULL, `status_proses` ENUM('diproses','selesai','gagal') NOT NULL, `pesan_error` TEXT NULL, `jumlah_retry` INT NOT NULL DEFAULT 0, `diunggah_pada` TIMESTAMP NOT NULL DEFAULT now() |
+| `Hasil_Koreksi` | PK `id_koreksi`, `id_file` FK ON DELETE CASCADE, `id_soal` FK ON DELETE CASCADE, `teks_ocr` TEXT NOT NULL DEFAULT '', `skor_sistem` INT NULL (CHECK 0 sampai 100), `kategori` ENUM('sangat_mirip','cukup_mirip','kurang_mirip') NULL, `skor_revisi` INT NULL (tidak dipakai), `skor_hitung_ulang` BOOLEAN NOT NULL DEFAULT false (tidak dipakai). UNIQUE (`id_file`, `id_soal`). Tanpa kolom `alasan`, tanpa vektor |
 
 Aturan data:
-- `File_Jawaban.path` adalah path relatif `uploads/<id_batch>/<id_file_jawaban>.<ext>` di bawah direktori unggahan dari environment variable `UPLOAD_DIR`. Nama asli file TIDAK disimpan.
+- `File_Jawaban.path` adalah path relatif `uploads/<id_batch>/<id_file>.<ext>` di bawah direktori unggahan dari environment variable `UPLOAD_DIR`. Nama asli file TIDAK disimpan.
 - `kategori` NULL selama `skor_sistem` NULL. Kategori dihitung dari `skor_sistem` oleh satu fungsi (bagian 7), tidak ditulis di tempat lain.
 - `jumlah_retry` menghitung retry manual saja (Cadangan). Retry otomatis tidak dihitung.
 - Penghapusan Batch (Cadangan) menghapus berkas fisik oleh backend dan baris turunan lewat cascade.
@@ -147,7 +147,7 @@ Keputusan 17 Okt 2026: penentu skor adalah LLM-judge `gemini-3.5-flash-lite`. Em
 - Setelah unggahan lolos validasi dan tersimpan, semua file berstatus `diproses` dan pemrosesan dimulai. Respons unggahan tidak menunggu pemrosesan.
 - Pengelompokan: file dibagi ke grup menurut urutan unggah. Satu grup berisi maksimal 5 file, total 15 MB, dan total 15 halaman (gambar dihitung 1 halaman). Satu file selalu muat dalam satu grup.
 - Per grup, dua panggilan Gemini berurutan:
-  1. OCR: satu request berisi semua file dalam grup dan daftar nomor soal batch itu. Output terstruktur per file: daftar `{nomor_soal, teks}`. Hanya nomor soal yang ada di batch. Jika jawaban untuk suatu nomor tidak ditemukan, JANGAN dimasukkan (kosong). Model TIDAK BOLEH menebak nomor soal, termasuk pada lembar tanpa nomor (Spike: Flash-Lite menebak jika lembar tanpa nomor).
+  1. OCR: satu request berisi semua file dalam grup dan daftar nomor soal batch itu. Output terstruktur per file: daftar `{no_soal, teks}`. Hanya nomor soal yang ada di batch. Jika jawaban untuk suatu nomor tidak ditemukan, JANGAN dimasukkan (kosong). Model TIDAK BOLEH menebak nomor soal, termasuk pada lembar tanpa nomor (Spike: Flash-Lite menebak jika lembar tanpa nomor).
   2. Judge (bagian 7): satu request untuk semua item (file x soal) dalam grup.
 - Lalu simpan `Hasil_Koreksi` untuk setiap pasangan (file, soal batch itu), idempotent (unik per file dan soal), dan ubah status file menjadi `selesai`.
 - Maksimal 2 panggilan Gemini paralel (semaphore). Panggilan lain menunggu.
@@ -240,7 +240,7 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 
 | # | Hal | Keterangan |
 |---|---|---|
-| U1 | Nama PK `Hasil_Koreksi` | Ditulis `id_hasil_koreksi` mengikuti pola. Jika pemilik proyek punya ERD final yang berbeda, ikuti ERD itu |
+| U1 | Nama PK `Hasil_Koreksi` | Diputuskan: mengikuti ERD final (`id_koreksi`) |
 | U2 | Pratinjau gambar asli di tabel Dashboard Hasil Koreksi | Tidak ada di prototipe |
 | U3 | Ambang kategori ≥80 / 40–79 / <40 | Diusulkan dari hasil Spike, berlaku sampai SRS direvisi |
 
@@ -251,3 +251,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-17 | Draf awal |
 | 2026-10-17 | Maks 10 file per unggahan. Satu modul layanan Gemini dengan penghitung anggaran. Tailwind dan `docs/UI.md`. Tanpa `docs/ERD.md` |
 | 2026-10-17 | Revisi: selaras SRS 38 hlm. 24 FR sebagai penyebut, 10 FR dihitung. Nama kode mengikuti ERD Indonesia. Sesi lengkap (tabel `Sesi`). Tanpa kolom alasan. Kategori Sangat/Cukup/Kurang Mirip. Kunci hanya diketik. Soal tidak dapat ditambah setelah ada jawaban |
+| 2026-10-18 | Selaraskan nama dengan ERD final (SDD): `Batch.nama` → `nama_batch`; `Soal.nomor_soal` → `no_soal`; `File_Jawaban.id_file_jawaban` → `id_file`; `File_Jawaban.status_pemrosesan` → `status_proses`; tambah `File_Jawaban.diunggah_pada`; `Hasil_Koreksi.id_hasil_koreksi` → `id_koreksi`; `Hasil_Koreksi.id_file_jawaban` → `id_file`; `Hasil_Koreksi.skor_perlu_dihitung_ulang` → `skor_hitung_ulang`. U1 diputuskan |

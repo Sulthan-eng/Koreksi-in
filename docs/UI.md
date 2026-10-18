@@ -71,7 +71,7 @@ Tampil sebagai lencana kecil: teks kategori di atas warna latar lembut. Pemetaan
 
 ### Status Pemrosesan
 
-| `status_pemrosesan` | Teks lencana | Kelas |
+| `status_proses` | Teks lencana | Kelas |
 |---|---|---|
 | `diproses` | Diproses | `bg-biru-muda text-biru-utama` (beri indikator berputar) |
 | `selesai` | Selesai | `bg-sangat-mirip-latar text-sangat-mirip` |
