@@ -105,7 +105,14 @@ async def _proses_file_jawaban_dengan_sesi(id_file_list: list[uuid.UUID], db: As
     soal_list = list(
         await db.scalars(select(Soal).where(Soal.id_batch == id_batch).order_by(Soal.no_soal))
     )
-    berkas = [_muat_berkas(f) for f in files]
+    try:
+        berkas = [_muat_berkas(f) for f in files]
+    except Exception:
+        logger.exception("pemrosesan_muat_berkas_gagal")
+        await db.rollback()
+        await _tandai_baris_gagal(db, files, PESAN_GAGAL_UMUM)
+        return
+
     for grup in _buat_grup(berkas):
         try:
             await _proses_satu_grup(db, grup, soal_list)
@@ -241,7 +248,11 @@ async def _upsert_hasil(
 
 
 async def _tandai_gagal(db: AsyncSession, grup: list[_Berkas], pesan: str) -> None:
-    for b in grup:
-        b.row.status_proses = StatusProses.GAGAL
-        b.row.pesan_error = pesan
+    await _tandai_baris_gagal(db, [b.row for b in grup], pesan)
+
+
+async def _tandai_baris_gagal(db: AsyncSession, baris: list[FileJawaban], pesan: str) -> None:
+    for row in baris:
+        row.status_proses = StatusProses.GAGAL
+        row.pesan_error = pesan
     await db.commit()

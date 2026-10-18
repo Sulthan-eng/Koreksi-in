@@ -156,6 +156,25 @@ async def test_idempotent_tidak_duplikat(db_session: AsyncSession, tmp_path, mon
     assert hasil[0].skor_sistem == 90
 
 
+async def test_muat_berkas_gagal_tandai_semua_file_gagal(
+    db_session: AsyncSession, tmp_path
+) -> None:
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj1 = await _buat_file_jawaban(db_session, tmp_path, batch)
+    fj2 = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    (tmp_path / fj1.path).unlink()
+
+    await pemrosesan.proses_file_jawaban([fj1.id_file, fj2.id_file], db=db_session)
+
+    await db_session.refresh(fj1)
+    await db_session.refresh(fj2)
+    assert fj1.status_proses == StatusProses.GAGAL
+    assert fj1.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+    assert fj2.status_proses == StatusProses.GAGAL
+    assert fj2.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+
+
 async def test_grup_gagal_tidak_pengaruhi_grup_lain(
     db_session: AsyncSession, tmp_path, monkeypatch
 ) -> None:

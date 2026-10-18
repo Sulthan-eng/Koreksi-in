@@ -183,7 +183,10 @@ def _klasifikasikan(exc: Exception) -> str:
         return "transient"
     if isinstance(exc, genai_errors.ClientError) and getattr(exc, "code", None) == 429:
         pesan = f"{getattr(exc, 'message', '') or ''} {getattr(exc, 'details', '') or ''}".lower()
-        if "per minute" in pesan or "per_minute" in pesan or "rate" in pesan:
+        pesan_rapat = pesan.replace(" ", "").replace("_", "")
+        ada_per_menit = "perminute" in pesan_rapat
+        ada_per_hari = "perday" in pesan_rapat
+        if ada_per_menit and not ada_per_hari:
             return "transient"
         return "kuota_harian"
     return "permanen"

@@ -99,6 +99,65 @@ async def test_retry_untuk_429_per_menit(monkeypatch):
     assert sleeps == [10]
 
 
+async def test_kuota_harian_pesan_realistis_tanpa_retry(monkeypatch):
+    calls: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        calls.append(1)
+        raise genai_errors.ClientError(
+            429,
+            {
+                "error": {
+                    "message": (
+                        "Quota exceeded for quota metric "
+                        "'generativelanguage.googleapis.com/generate_content_free_tier_requests' "
+                        "and limit 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' "
+                        "of service 'generativelanguage.googleapis.com'"
+                    )
+                }
+            },
+        )
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    sleeps = _patch_sleep(monkeypatch)
+
+    with pytest.raises(gemini.KuotaHarianHabis):
+        await gemini.ocr_grup([], [])
+    assert len(calls) == 1
+    assert sleeps == []
+
+
+async def test_429_per_menit_pesan_realistis_di_retry(monkeypatch):
+    calls: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        calls.append(1)
+        if len(calls) == 1:
+            raise genai_errors.ClientError(
+                429,
+                {
+                    "error": {
+                        "message": (
+                            "Quota exceeded for quota metric "
+                            "'generativelanguage.googleapis.com/"
+                            "generate_content_free_tier_requests' "
+                            "and limit "
+                            "'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' "
+                            "of service 'generativelanguage.googleapis.com'"
+                        )
+                    }
+                },
+            )
+        return gemini.ResponsOcr(items=[])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    sleeps = _patch_sleep(monkeypatch)
+
+    await gemini.ocr_grup([], [])
+    assert len(calls) == 2
+    assert sleeps == [10]
+
+
 async def test_retry_habis_setelah_3_kali(monkeypatch):
     calls: list[int] = []
 
