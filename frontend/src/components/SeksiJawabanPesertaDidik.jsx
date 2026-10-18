@@ -29,6 +29,11 @@ function SeksiJawabanPesertaDidik({
     );
   }
 
+  function tanganiBatal() {
+    setFileTerpilih([]);
+    setKesalahanUpload(null);
+  }
+
   async function tanganiUpload(peristiwa) {
     peristiwa.preventDefault();
     setSedangUpload(true);
@@ -109,14 +114,24 @@ function SeksiJawabanPesertaDidik({
                 </p>
               )}
 
-              <button
-                type="submit"
-                disabled={sedangUpload}
-                className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
-              >
-                {sedangUpload && <Spinner className="h-4 w-4 text-white" />}
-                Upload
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={sedangUpload}
+                  className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
+                >
+                  {sedangUpload && <Spinner className="h-4 w-4 text-white" />}
+                  Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={tanganiBatal}
+                  disabled={sedangUpload}
+                  className="rounded-md border border-garis px-4 py-2 text-teks-redup disabled:opacity-50"
+                >
+                  Batal
+                </button>
+              </div>
             </form>
           )}
         </>

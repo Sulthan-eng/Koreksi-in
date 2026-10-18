@@ -172,7 +172,7 @@ function HalamanBatch() {
               </ul>
             )}
 
-            {pesanSukses && !formTerbuka && (
+            {pesanSukses && !formTerbuka && daftarFileJawaban.length === 0 && (
               <p role="status" className="mb-4 text-sangat-mirip">
                 {pesanSukses}
               </p>
