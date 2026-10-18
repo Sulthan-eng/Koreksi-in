@@ -8,3 +8,4 @@ bcrypt==4.2.1
 PyJWT==2.10.1
 python-multipart==0.0.20
 pypdf==5.9.0
+google-genai==2.31.0

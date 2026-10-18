@@ -1,7 +1,9 @@
 from collections.abc import AsyncGenerator
 
 import asyncpg
+import pytest
 import pytest_asyncio
+from fastapi import BackgroundTasks
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -66,6 +68,23 @@ async def db_session(_engine) -> AsyncGenerator[AsyncSession, None]:
     _assert_nama_db_test(_TEST_DB_NAME)
     async with _engine.begin() as conn:
         await conn.exec_driver_sql('TRUNCATE TABLE "Sesi", "Pengguna" RESTART IDENTITY CASCADE')
+
+
+@pytest.fixture(autouse=True)
+def _background_tasks_tidak_dijalankan(monkeypatch) -> list[tuple]:
+    """Cegah BackgroundTasks benar-benar berjalan (Gemini + database pengembangan) saat test
+    memanggil endpoint unggah. Starlette menjalankan BackgroundTasks di akhir siklus request
+    yang sama, jadi tanpa ini test unggah akan memicu panggilan Gemini sungguhan dan membuka
+    koneksi ke database pengembangan lewat AsyncSessionLocal. Dipatch di level BackgroundTasks
+    (bukan pemrosesan.proses_file_jawaban) agar test yang memanggil pemrosesan langsung (tanpa
+    lewat router) tidak ikut terdampak, karena keduanya memakai objek modul yang sama."""
+    dijadwalkan: list[tuple] = []
+
+    def _add_task_palsu(self, func, *args, **kwargs):
+        dijadwalkan.append((func, args, kwargs))
+
+    monkeypatch.setattr(BackgroundTasks, "add_task", _add_task_palsu)
+    return dijadwalkan
 
 
 @pytest_asyncio.fixture(loop_scope="session")

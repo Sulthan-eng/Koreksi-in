@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.file_jawaban import FileJawaban
+from app.services import pemrosesan
 
 _DAFTAR = {"nama": "Budi Santoso", "email": "Budi@Contoh.com", "password": "rahasia123"}
 
@@ -371,3 +372,24 @@ async def test_tambah_soal_setelah_unggah_jawaban_ditolak(client: AsyncClient) -
     )
     assert response.status_code == 400
     assert response.json()["kode"] == "SOAL_SETELAH_JAWABAN"
+
+
+async def test_unggah_jawaban_menjadwalkan_pemrosesan(
+    client: AsyncClient, _background_tasks_tidak_dijalankan: list[tuple]
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("a.png", _PNG, "image/png")]),
+        data=_nama("Budi"),
+        headers=_auth(token),
+    )
+    id_file = uuid.UUID(response.json()[0]["id_file"])
+
+    assert len(_background_tasks_tidak_dijalankan) == 1
+    func, args, kwargs = _background_tasks_tidak_dijalankan[0]
+    assert func is pemrosesan.proses_file_jawaban
+    assert args == ([id_file],)
+    assert kwargs == {}
