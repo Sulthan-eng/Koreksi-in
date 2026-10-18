@@ -25,3 +25,14 @@ export async function tambahSoal(idBatch, { kunci_jawaban }) {
     body: { kunci_jawaban },
   });
 }
+
+export async function daftarFileJawaban(idBatch) {
+  return permintaan(`/api/batch/${idBatch}/file-jawaban`);
+}
+
+export async function unggahFileJawaban(idBatch, formData) {
+  return permintaan(`/api/batch/${idBatch}/file-jawaban`, {
+    method: "POST",
+    body: formData,
+  });
+}

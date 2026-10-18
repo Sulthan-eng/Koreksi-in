@@ -20,18 +20,19 @@ async function kirim(
   path,
   { method = "GET", body, autentikasi, sertakanKredensial },
 ) {
+  const isFormData = body instanceof FormData;
   let response;
   try {
     response = await fetch(path, {
       method,
       headers: {
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
         ...(autentikasi && accessToken
           ? { Authorization: `Bearer ${accessToken}` }
           : {}),
       },
       credentials: sertakanKredensial ? "include" : "same-origin",
-      ...(body ? { body: JSON.stringify(body) } : {}),
+      ...(body ? { body: isFormData ? body : JSON.stringify(body) } : {}),
     });
   } catch {
     lemparKesalahan("UMUM");

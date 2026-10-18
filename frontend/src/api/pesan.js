@@ -12,6 +12,17 @@ export const PESAN_KODE = {
   SOAL_SETELAH_JAWABAN: "Soal tidak dapat ditambah setelah jawaban diunggah.",
   GAGAL_BUAT_BATCH: "Gagal membuat batch, silakan coba lagi",
   GAGAL_TAMBAH_SOAL: "Gagal menambah soal, silakan coba lagi.",
+  BELUM_ADA_SOAL: "Tambahkan minimal satu soal sebelum mengunggah jawaban.",
+  MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
+  TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
+  NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",
+  NAMA_PESERTA_TERLALU_PANJANG: "Nama peserta didik maksimal 100 karakter.",
+  FORMAT_FILE_TIDAK_DIDUKUNG:
+    "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.",
+  FILE_TERLALU_BESAR: "Ukuran file maksimal 10 MB.",
+  PDF_TERLALU_BANYAK_HALAMAN: "PDF maksimal 15 halaman.",
+  PDF_TIDAK_DAPAT_DIBACA: "File PDF rusak atau tidak dapat dibaca.",
+  GAGAL_SIMPAN_JAWABAN: "Gagal menyimpan jawaban, silakan coba lagi.",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 
