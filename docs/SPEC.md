@@ -117,6 +117,7 @@ Aturan data:
 
 Dikunci di SRS 2.5. Implementasi manual.
 
+- Endpoint (prefix `/api/auth`): `POST /daftar` (201, `{nama, email, password}` → `{id_pengguna, nama, email}`); `POST /masuk` (200, `{email, password}` → `{access_token}` + cookie `refresh_token`); `POST /refresh` (200, baca cookie `refresh_token` → `{access_token}` + cookie `refresh_token` diperbarui); `POST /keluar` (204, baca cookie `refresh_token` → tanpa isi, cookie dihapus); `GET /saya` (200, header `Authorization: Bearer <access_token>` → `{nama}`).
 - Registrasi: `nama`, `email`, `password`. Email di-trim dan di-lowercase. Password minimal 8 karakter, disimpan sebagai hash bcrypt. Email yang sudah terdaftar ditolak dengan pesan "Email sudah terdaftar". Setelah sukses, arahkan ke halaman masuk dengan pesan "Akun berhasil dibuat, silakan masuk". Registrasi tidak membuat sesi.
 - Login: `email` dan `password`. Jika gagal, pesan generik "Email atau password salah" (tanpa membedakan email atau password). Jika sukses, buat satu baris `Sesi` dan kirim access token.
 - Access token: JWT (HS256, rahasia `SECRET_KEY` dari environment), berlaku 15 menit, berisi `id_pengguna`, `id_sesi`, `exp`. Frontend menyimpannya di memori saja (bukan localStorage).
@@ -215,6 +216,17 @@ Tab tabel Dashboard Hasil Koreksi:
 
 Backend mengembalikan kode error yang stabil; frontend memetakan kode ke teks Indonesia. Teks tidak boleh membocorkan detail teknis, jejak stack, atau isi rahasia. Pesan yang sudah ditulis di bagian 4, 6, 8, dan 9 dipakai persis. Tambahan: sesi habis, "Sesi berakhir, silakan masuk kembali."
 
+Kode error autentikasi (bagian 6):
+
+| Kode | Status | Pesan |
+|---|---|---|
+| `VALIDASI_GAGAL` | 422 | "Data yang dikirim tidak valid." |
+| `EMAIL_SUDAH_TERDAFTAR` | 409 | "Email sudah terdaftar" |
+| `PASSWORD_TERLALU_PENDEK` | 400 | "Password minimal 8 karakter" |
+| `PASSWORD_TERLALU_PANJANG` | 400 | "Password maksimal 72 karakter" |
+| `LOGIN_GAGAL` | 401 | "Email atau password salah" |
+| `SESI_BERAKHIR` | 401 | "Sesi berakhir, silakan masuk kembali." |
+
 ## 11. Lingkungan localhost
 
 - Database: PostgreSQL lewat Docker Compose. Backend dan frontend dijalankan langsung di mesin pengembang.
@@ -253,3 +265,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-17 | Revisi: selaras SRS 38 hlm. 24 FR sebagai penyebut, 10 FR dihitung. Nama kode mengikuti ERD Indonesia. Sesi lengkap (tabel `Sesi`). Tanpa kolom alasan. Kategori Sangat/Cukup/Kurang Mirip. Kunci hanya diketik. Soal tidak dapat ditambah setelah ada jawaban |
 | 2026-10-18 | Selaraskan nama dengan ERD final (SDD): `Batch.nama` → `nama_batch`; `Soal.nomor_soal` → `no_soal`; `File_Jawaban.id_file_jawaban` → `id_file`; `File_Jawaban.status_pemrosesan` → `status_proses`; tambah `File_Jawaban.diunggah_pada`; `Hasil_Koreksi.id_hasil_koreksi` → `id_koreksi`; `Hasil_Koreksi.id_file_jawaban` → `id_file`; `Hasil_Koreksi.skor_perlu_dihitung_ulang` → `skor_hitung_ulang`. U1 diputuskan |
 | 2026-10-18 | Lengkapi SPEC bagian 5 dari ERD final (celah untuk K-01): panjang VARCHAR (`Pengguna.nama` 100, `Pengguna.email` 255, `Pengguna.password_hash` 255, `Batch.nama_batch` 100, `File_Jawaban.nama_peserta_didik` 100, `File_Jawaban.path` 255); semua FK (`id_pengguna`, `id_batch`, `id_soal`, `id_file`) NOT NULL; `Sesi.dibuat_pada` DEFAULT now(), `Sesi.terakhir_dipakai_pada`/`kedaluwarsa_pada` NOT NULL tanpa default; `Batch.dibuat_pada` NOT NULL DEFAULT now() |
+| 2026-10-18 | Tugas A1a (autentikasi backend): catat path endpoint `/api/auth/{daftar,masuk,refresh,keluar,saya}` di bagian 6; tambah tabel kode error autentikasi (`VALIDASI_GAGAL`, `EMAIL_SUDAH_TERDAFTAR`, `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `LOGIN_GAGAL`, `SESI_BERAKHIR`) di bagian 10 |
