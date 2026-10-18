@@ -85,13 +85,15 @@ function HalamanBatch() {
 
   if (status === "gagal") {
     return (
-      <div className="min-h-screen bg-latar p-8">
-        <p role="alert" className="mb-4 text-kurang-mirip">
-          {kesalahan}
-        </p>
-        <Link to="/" className="text-biru-utama">
-          Kembali ke Beranda
-        </Link>
+      <div className="flex min-h-screen items-center justify-center bg-latar p-8">
+        <div className="text-center">
+          <p role="alert" className="mb-4 text-kurang-mirip">
+            {kesalahan}
+          </p>
+          <Link to="/" className="text-biru-utama">
+            Kembali ke Beranda
+          </Link>
+        </div>
       </div>
     );
   }
