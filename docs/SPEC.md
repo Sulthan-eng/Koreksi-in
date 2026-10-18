@@ -169,6 +169,7 @@ Halaman: Masuk, Daftar, Beranda, Halaman Batch. Halaman Batch punya tiga tab: So
 Mengikuti bagian 6. Beranda hanya dapat diakses setelah login. Tombol Keluar tersedia di semua halaman terproteksi.
 
 ### F-BATCH (FR3, UC-02)
+Endpoint (prefix `/api/batch`, semua butuh login): `GET /api/batch` (daftar batch milik pengguna, `dibuat_pada` terbaru dulu), `POST /api/batch` (`{nama_batch}` → `BatchResponse`), `GET /api/batch/{id_batch}` (detail satu batch).
 1. Di Beranda, Pengajar melihat daftar batch miliknya (nama, tanggal dibuat) dan tombol "Buat Batch Baru".
 2. Form meminta nama batch. Pengajar menekan "Buat".
 3. Sistem memvalidasi nama tidak kosong (setelah trim), membuat batch berstatus `aktif`, lalu membuka Halaman Batch yang baru.
@@ -176,6 +177,7 @@ Mengikuti bagian 6. Beranda hanya dapat diakses setelah login. Tombol Keluar ter
 - Gagal simpan: "Gagal membuat batch, silakan coba lagi", batch tidak dibuat.
 
 ### F-KUNCI (FR4, UC-04, hanya ketik)
+Endpoint (prefix `/api/batch/{id_batch}/soal`, semua butuh login): `GET /api/batch/{id_batch}/soal` (daftar soal urut `no_soal`), `POST /api/batch/{id_batch}/soal` (`{kunci_jawaban}` → `SoalResponse`, `no_soal` dibuat sistem berurutan, tidak diterima dari klien).
 Di tab Soal dan Jawaban:
 1. Pengajar menekan "Tambah Soal". Sistem menyiapkan "Soal N" berikutnya dengan satu kolom teks kunci jawaban.
 2. Pengajar mengetik kunci dan menekan "Simpan Kunci Jawaban".
@@ -227,6 +229,18 @@ Kode error autentikasi (bagian 6):
 | `LOGIN_GAGAL` | 401 | "Email atau password salah" |
 | `SESI_BERAKHIR` | 401 | "Sesi berakhir, silakan masuk kembali." |
 
+Kode error batch dan soal (bagian 4, 9):
+
+| Kode | Status | Pesan |
+|---|---|---|
+| `BATCH_TIDAK_DITEMUKAN` | 404 | "Batch tidak ditemukan" |
+| `NAMA_BATCH_KOSONG` | 400 | "Nama batch tidak boleh kosong." |
+| `KUNCI_KOSONG` | 400 | "Kunci jawaban tidak boleh kosong" |
+| `BATAS_SOAL_TERLAMPAUI` | 400 | "Maksimal 20 soal per batch." |
+| `SOAL_SETELAH_JAWABAN` | 400 | "Soal tidak dapat ditambah setelah jawaban diunggah." |
+| `GAGAL_BUAT_BATCH` | 500 | "Gagal membuat batch, silakan coba lagi" |
+| `GAGAL_TAMBAH_SOAL` | 500 | "Gagal menambah soal, silakan coba lagi." |
+
 Kegagalan jaringan atau kode error yang tidak dikenal frontend: "Terjadi kesalahan, silakan coba lagi." (tanpa detail teknis).
 
 ## 11. Lingkungan localhost
@@ -269,3 +283,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-10-18 | Lengkapi SPEC bagian 5 dari ERD final (celah untuk K-01): panjang VARCHAR (`Pengguna.nama` 100, `Pengguna.email` 255, `Pengguna.password_hash` 255, `Batch.nama_batch` 100, `File_Jawaban.nama_peserta_didik` 100, `File_Jawaban.path` 255); semua FK (`id_pengguna`, `id_batch`, `id_soal`, `id_file`) NOT NULL; `Sesi.dibuat_pada` DEFAULT now(), `Sesi.terakhir_dipakai_pada`/`kedaluwarsa_pada` NOT NULL tanpa default; `Batch.dibuat_pada` NOT NULL DEFAULT now() |
 | 2026-10-18 | Tugas A1a (autentikasi backend): catat path endpoint `/api/auth/{daftar,masuk,refresh,keluar,saya}` di bagian 6; tambah tabel kode error autentikasi (`VALIDASI_GAGAL`, `EMAIL_SUDAH_TERDAFTAR`, `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `LOGIN_GAGAL`, `SESI_BERAKHIR`) di bagian 10 |
 | 2026-10-18 | Tugas A1b (autentikasi frontend): tambah di bagian 10 pesan umum frontend untuk kegagalan jaringan/kode tak dikenal: "Terjadi kesalahan, silakan coba lagi." |
+| 2026-10-18 | Tugas A2 (batch dan soal backend): catat path `GET/POST /api/batch`, `GET /api/batch/{id_batch}`, `GET/POST /api/batch/{id_batch}/soal` di bagian 9 (F-BATCH, F-KUNCI); tambah 7 kode error (`BATCH_TIDAK_DITEMUKAN`, `NAMA_BATCH_KOSONG`, `KUNCI_KOSONG`, `BATAS_SOAL_TERLAMPAUI`, `SOAL_SETELAH_JAWABAN`, `GAGAL_BUAT_BATCH`, `GAGAL_TAMBAH_SOAL`) di bagian 10 |
