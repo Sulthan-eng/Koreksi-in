@@ -9,6 +9,7 @@ Aturan tampilan untuk frontend. Warna diambil dari logo (biru dan hijau). Fronte
 - Teks biasa HARUS memenuhi kontras WCAG AA (minimal 4,5 : 1). Kombinasi yang sudah dicek ada di tabel kontras.
 - Warna tidak boleh menjadi satu-satunya penanda. Kategori dan status SELALU memakai teks ("Sangat Mirip", "Gagal"), bukan hanya warna.
 - Teks UI Bahasa Indonesia. Desktop dulu, tetap responsif sampai lebar ponsel.
+- Pesan validasi form berasal dari aplikasi dan tertulis persis seperti di SPEC, tampil di bawah form atau di dekat kolomnya. TIDAK BOLEH memakai bubble validasi bawaan browser (pakai `noValidate` pada form).
 - Font: font sans-serif sistem bawaan Tailwind. Tidak ada font tambahan.
 
 ## Token warna
@@ -69,7 +70,7 @@ Tampil sebagai lencana kecil: teks kategori di atas warna latar lembut. Pemetaan
 | `cukup_mirip` | Cukup Mirip | `bg-cukup-mirip-latar text-cukup-mirip` |
 | `kurang_mirip` | Kurang Mirip | `bg-kurang-mirip-latar text-kurang-mirip` |
 
-### Status Pemrosesan
+### Status Pemrosesan (lencana di daftar file jawaban)
 
 | `status_proses` | Teks lencana | Kelas |
 |---|---|---|
@@ -104,11 +105,56 @@ Berkas ada di `frontend/public/`:
 
 Aturan: jangan mengubah warna, rasio, atau memutar logo. Beri ruang kosong di sekeliling minimal setinggi lingkaran kecil pada ikon. Latar logo harus putih atau `latar`. Tinggi ikon di bilah atas sekitar 40 px.
 
+## Inventaris halaman
+
+Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9. Rute adalah rute target; mengubah rute yang sudah ada hanya dilakukan oleh tugas refactor tampilan yang memintanya. "Rancangan" adalah status rancangan tampilan per halaman (tata letak, komponen, keadaan) yang ditulis di bagian "Rancangan halaman" sebelum halaman itu dikerjakan.
+
+| # | Halaman | Rute | Peran | FR dan UC | Isi utama | Status fitur | Rancangan |
+|---|---|---|---|---|---|---|---|
+| 1 | Pemasaran | `/` | Publik (yang sudah login dialihkan ke Beranda atau Dashboard Pantauan) | FR28 | Penjelasan fitur, cara kerja, perbedaan Free dan Pro, tautan Daftar dan Masuk | Belum dikerjakan | Belum |
+| 2 | Daftar | `/daftar` | Publik | FR1 | Form nama, email, password | Selesai | Belum |
+| 3 | Masuk | `/masuk` | Publik | FR1 | Form email dan password; pesan "Akun berhasil dibuat, silakan masuk" dan "Sesi berakhir, silakan masuk kembali." | Selesai | Belum |
+| 4 | Beranda | `/beranda` | Pengajar | FR2, FR3, FR21, FR22, UC-01, UC-02, UC-03, UC-13 | Sapaan, label FREE atau PRO, ringkasan (nanti), daftar batch, "Buat Batch Baru", hapus batch (nanti) | Sebagian selesai | Belum |
+| 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Hapus Batch, Ekspor Rekap Nilai (nanti) | Sebagian selesai | Belum |
+| 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade to Pro", status transaksi | Belum dikerjakan | Belum |
+| 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Belum dikerjakan | Belum |
+| 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Belum dikerjakan | Belum |
+| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Jika email terdaftar, tautan atur ulang password telah dikirim." | Belum dikerjakan | Belum |
+| 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Belum dikerjakan | Belum |
+
+Halaman 9 dan 10 mengikuti SPEC F-RESET. Halaman Masuk mendapat tautan "Lupa password?". Setelah Keluar, pengguna dialihkan ke Halaman Pemasaran (SPEC bagian 6).
+
+Isi Halaman Batch (dua tab):
+- Soal dan Jawaban, dua seksi: "Soal dan Kunci Jawaban" (daftar soal, "Tambah Soal", form kunci) dan "Jawaban Peserta Didik" (tombol "Upload Jawaban Peserta Didik", form unggah, lalu daftar semua file jawaban dengan nama, lencana status, dan pesan error untuk yang Gagal).
+- Dashboard Hasil Koreksi: pilihan soal, tabel hasil.
+- Tidak ada tab Status Pemrosesan. Status tiap file hanya tampil di daftar file jawaban.
+
+## Komponen bersama
+
+Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `frontend/src/components/`.
+
+| Komponen | Dipakai di | Aturan |
+|---|---|---|
+| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, label FREE atau PRO, nama, "Keluar". Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar" |
+| Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
+| Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, tinggalkan halaman unggah | Judul singkat, satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
+| Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks. Nilai 0 tetap tampil |
+| Tabel | Hasil koreksi, Akun Pengajar | Aturan di bagian Tata letak |
+| Keadaan data | Semua data yang dimuat | Tiga keadaan: memuat (indikator), kosong (teks dari SPEC), gagal (teks dari SPEC) |
+| Pesan sukses dan galat | Semua form | Sukses singkat ("Kunci jawaban tersimpan."), galat memakai `text-kurang-mirip` |
+
 ## Tata letak
 
-- Bilah atas: ikon logo, nama "Koreksi-in", tombol Keluar di kanan.
+- Bilah atas: ikon logo, nama "Koreksi-in", dan isi menurut peran (lihat Komponen bersama).
 - Halaman Masuk dan Daftar: kartu di tengah dengan `logo.png` di atasnya.
-- Beranda: judul "Batch Koreksi", tombol "Buat Batch Baru", lalu daftar batch.
-- Halaman Batch: judul batch, tiga tab (Soal dan Jawaban, Status Pemrosesan, Dashboard Hasil Koreksi).
+- Beranda: judul "Batch Koreksi", tombol "Buat Batch Baru", lalu daftar batch. Tata letak yang lebih kaya (ringkasan, label langganan) ditetapkan di Rancangan halaman.
+- Halaman Batch: judul batch, dua tab (Soal dan Jawaban, Dashboard Hasil Koreksi).
 - Tabel: baris cukup lega, header `text-teks-redup`, teks OCR panjang dipotong dengan opsi tampilkan lengkap.
 - Tampilkan indikator loading pada unggah, pemrosesan, dan pemuatan data. Tampilkan keadaan kosong dengan teks yang ada di SPEC.
+- Responsif: desktop adalah prioritas, tetapi semua halaman tetap bisa dipakai pada lebar ponsel tanpa gulir horizontal untuk isi utama (NFR17).
+
+## Rancangan halaman
+
+Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dikerjakan: tata letak (urutan blok dari atas ke bawah), komponen yang dipakai, isi tiap blok, keadaan (memuat, kosong, gagal, sukses), dan perilaku tombol. Halaman yang belum punya subbagian di sini TIDAK BOLEH dirombak atau dibuat; tanyakan pemilik proyek.
+
+(Belum ada. Subbagian pertama yang akan ditulis: Beranda, Halaman Batch, Masuk dan Daftar, lalu Halaman Pemasaran.)
