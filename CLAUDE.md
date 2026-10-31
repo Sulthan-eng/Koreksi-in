@@ -2,7 +2,7 @@
 
 Aplikasi web autograding jawaban esai/jawaban singkat. Pengajar (guru atau dosen) memasukkan kunci jawaban dan mengunggah lembar jawaban peserta didik. Sistem mengekstrak teks dengan OCR, lalu LLM-judge memberi skor kemiripan sebagai rekomendasi. Pengajar memegang nilai akhir.
 
-Status: prototipe UTS. Hanya dijalankan di localhost, tidak di-deploy. Kerangka backend dan database (Docker Compose, FastAPI, Alembic) sudah dibuat, tanpa tabel, tanpa autentikasi, tanpa modul Gemini. Kerangka frontend (Vite, React, Tailwind CSS, routing) sudah dibuat, hanya halaman placeholder tanpa logika fitur, tanpa pemanggilan API, tanpa state autentikasi.
+Status: prototipe UTS sudah berjalan di localhost (autentikasi, batch dan soal, unggah jawaban, pemrosesan OCR dan LLM-judge, tabel Dashboard Hasil Koreksi). Pengembangan sekarang menuju sistem penuh (dua peran Pengajar dan Admin, langganan, ekspor, dan seterusnya) bertahap atas permintaan pemilik proyek. Status tiap fitur ada di `docs/SPEC.md` bagian 3. Saat ini dijalankan di localhost; sistem akan di-deploy (detail belum diputuskan, lihat `docs/SPEC.md` U13).
 
 Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 
@@ -53,7 +53,7 @@ Semua perintah frontend dijalankan dari folder `frontend/`.
 ## Prinsip
 
 - Kerjakan hal paling sederhana yang memenuhi permintaan. Jika terasa perlu menambah sesuatu, tanya dulu, jangan menambah sendiri.
-- Fitur di luar `docs/SPEC.md` TIDAK BOLEH ditambahkan. Fitur berstatus "Cadangan" atau "Di luar prototipe" di SPEC bagian 3 TIDAK BOLEH dikerjakan kecuali diminta eksplisit.
+- Fitur di luar `docs/SPEC.md` TIDAK BOLEH ditambahkan. Fitur berstatus "Belum dikerjakan" di SPEC bagian 3 TIDAK BOLEH dikerjakan kecuali diminta eksplisit.
 - Jika kode dan SPEC bertentangan, atau SPEC diam soal hal yang dibutuhkan: BERHENTI dan tanya. Jangan menebak dan jangan mengubah SPEC agar cocok dengan kode.
 - Item di bagian "Undecided" pada SPEC TIDAK BOLEH diimplementasikan berdasarkan asumsi.
 - Kejelasan lebih baik daripada kepintaran. Gagal dengan jelas dan cepat, jangan menelan error.
@@ -82,12 +82,12 @@ Kuota free tier kecil dan dipakai bersama semua pengguna. Aturan ini wajib:
 ## Dokumen proyek
 
 - `docs/SPEC.md`: satu-satunya sumber kebutuhan. Agent HARUS membaca bagian yang relevan sebelum merencanakan fitur.
-- `docs/UI.md`: palet warna, token Tailwind, logo, dan aturan tampilan. Agent HARUS membacanya sebelum membuat atau mengubah UI.
+- `docs/UI.md`: palet warna, token Tailwind, logo, inventaris halaman, komponen bersama, dan rancangan per halaman. Agent HARUS membacanya sebelum membuat atau mengubah UI.
 - `docs/STYLE.md`: konvensi gaya kode backend dan frontend. Agent HARUS membacanya sebelum menulis kode.
 - Skema database hanya ada di SPEC bagian 5. Tidak ada file ERD terpisah.
-- SRS lengkap (PDF) adalah latar. Bukan bahan baca rutin, dan SPEC menang jika berbeda.
+- SRS dan SDD tidak ada di repositori ini. Semua kebutuhan yang diperlukan ada di `docs/SPEC.md`.
 - `README.md`: untuk manusia, bukan sumber kebutuhan.
-- Perubahan pada dokumen ini diputuskan di Plan mode dan dibuat dalam PR yang sama dengan kodenya.
+- Perubahan pada dokumen ini diputuskan di Plan mode dan dibuat dalam PR yang sama dengan kodenya. Pengecualian: sinkronisasi dokumen, atau rancangan halaman baru, dibuat di PR dokumen tersendiri (`docs`).
 
 ## Bahasa dan penamaan
 
