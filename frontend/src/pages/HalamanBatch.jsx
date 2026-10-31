@@ -88,6 +88,10 @@ function HalamanBatch() {
 
   async function tanganiSimpanSoal(peristiwa) {
     peristiwa.preventDefault();
+    if (kunciJawaban.trim() === "") {
+      setKesalahanSoal(PESAN_KODE.KUNCI_KOSONG);
+      return;
+    }
     setSedangSimpan(true);
     setKesalahanSoal(null);
     try {
@@ -204,6 +208,7 @@ function HalamanBatch() {
             {formTerbuka ? (
               <form
                 onSubmit={tanganiSimpanSoal}
+                noValidate
                 className="rounded-lg border border-garis bg-permukaan p-6"
               >
                 <label
@@ -214,7 +219,6 @@ function HalamanBatch() {
                 </label>
                 <textarea
                   id="kunci_jawaban"
-                  required
                   rows={4}
                   value={kunciJawaban}
                   onChange={(peristiwa) => setKunciJawaban(peristiwa.target.value)}
