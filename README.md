@@ -1,8 +1,8 @@
 # Koreksi-in
 
-Web app autograding jawaban esai/jawaban singkat berbasis semantic similarity (OCR + AI embedding), dengan sistem langganan berbayar.
+Web app autograding jawaban esai/jawaban singkat. OCR mengekstrak teks jawaban peserta didik, lalu LLM-judge (Gemini) memberi skor kemiripan sebagai rekomendasi bagi Pengajar. Dilengkapi sistem langganan berbayar.
 
-Status: prototipe UTS, hanya dijalankan di localhost. Lihat `docs/SPEC.md` untuk kebutuhan dan `CLAUDE.md` untuk aturan kerja.
+Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localhost; sistem akan di-deploy (detail deploy belum diputuskan). Lihat `docs/SPEC.md` untuk kebutuhan dan status tiap fitur (bagian 3), dan `CLAUDE.md` untuk aturan kerja.
 
 ## Menjalankan di localhost
 
@@ -27,7 +27,7 @@ Status: prototipe UTS, hanya dijalankan di localhost. Lihat `docs/SPEC.md` untuk
 8. Jalankan frontend: `npm run dev` (port 5173, proxy `/api` ke backend di port 8000).
 9. Buka `http://localhost:5173`.
 
-Kerangka frontend sudah ada (halaman placeholder, routing), logika fitur belum dibuat.
+Fitur yang sudah berjalan dan yang belum dikerjakan tercantum di `docs/SPEC.md` bagian 3.
 
 ## Lint, format, test (backend)
 
@@ -47,4 +47,4 @@ Dari folder `frontend/`:
 
 ## Catatan privasi Gemini
 
-Prototipe ini memakai Gemini free tier (`gemini-3.5-flash-lite`) untuk OCR dan penilaian. Pada tingkat free tier, konten yang dikirim ke Gemini dapat dipakai Google untuk peningkatan produk dan dapat dibaca oleh reviewer manusia. Jangan mengunggah data sensitif atau rahasia melalui prototipe ini.
+Aplikasi ini memakai Gemini free tier (`gemini-3.5-flash-lite`) untuk OCR dan penilaian. Pada tingkat free tier, konten yang dikirim ke Gemini dapat dipakai Google untuk peningkatan produk dan dapat dibaca oleh reviewer manusia. Selama masih memakai free tier, jangan mengunggah data sensitif atau rahasia.
