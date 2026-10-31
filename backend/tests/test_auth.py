@@ -88,6 +88,38 @@ async def test_daftar_email_kosong_setelah_strip_ditolak_sebagai_validasi_gagal(
     assert response.json()["kode"] == "VALIDASI_GAGAL"
 
 
+@pytest.mark.parametrize(
+    "email",
+    ["bukan-email-valid", "tanpa-domain@", "@tanpa-lokal.com", "a@b", "a b@c.com", "a@@c.com"],
+)
+async def test_daftar_email_format_tidak_valid_ditolak_sebagai_validasi_gagal(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    email: str,
+) -> None:
+    response = await client.post("/api/auth/daftar", json={**_DAFTAR, "email": email})
+
+    assert response.status_code == 422
+    assert response.json() == {"kode": "VALIDASI_GAGAL", "pesan": "Data yang dikirim tidak valid."}
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == email))
+    assert pengguna is None
+
+
+async def test_daftar_email_format_valid_diterima(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    response = await client.post(
+        "/api/auth/daftar", json={**_DAFTAR, "email": "  Budi.S+tes@mail.sekolah.id  "}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["email"] == "budi.s+tes@mail.sekolah.id"
+    pengguna = await db_session.scalar(
+        select(Pengguna).where(Pengguna.email == "budi.s+tes@mail.sekolah.id")
+    )
+    assert pengguna is not None
+
+
 async def test_masuk_email_kosong_setelah_strip_ditolak_sebagai_validasi_gagal(
     client: AsyncClient,
 ) -> None:
