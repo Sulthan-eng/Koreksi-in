@@ -1,6 +1,9 @@
+import re
 import uuid
 
 from pydantic import BaseModel, Field, field_validator
+
+_POLA_EMAIL = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
 
 def _strip_dan_tolak_kosong(value: str) -> str:
@@ -19,6 +22,14 @@ class DaftarRequest(BaseModel):
     @classmethod
     def _validasi_nama_email(cls, value: str) -> str:
         return _strip_dan_tolak_kosong(value)
+
+    @field_validator("email")
+    @classmethod
+    def _validasi_format_email(cls, value: str) -> str:
+        # Berjalan setelah trim (urutan definisi validator), jadi pola sengaja tanpa spasi tepi.
+        if _POLA_EMAIL.match(value) is None:
+            raise ValueError("format email tidak valid")
+        return value
 
 
 class DaftarResponse(BaseModel):
