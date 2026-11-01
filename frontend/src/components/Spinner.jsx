@@ -1,11 +1,10 @@
 import { LoaderCircle } from "lucide-react";
 
-function Spinner({ ukuran = "size-4", className = "" }) {
-  const kelasUkuran = className || ukuran;
+function Spinner({ ukuran = "size-4" }) {
   return (
     <LoaderCircle
       aria-hidden="true"
-      className={`animate-spin motion-reduce:animate-none ${kelasUkuran}`.trim()}
+      className={`animate-spin motion-reduce:animate-none ${ukuran}`}
     />
   );
 }
