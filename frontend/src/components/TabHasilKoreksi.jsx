@@ -88,20 +88,22 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
 
   return (
     <div>
-      <select
-        aria-label="Soal"
-        value={noSoalDipilih ?? ""}
-        onChange={(peristiwa) =>
-          setNoSoalDipilih(Number(peristiwa.target.value))
-        }
-        className="mb-4 h-11 w-fit min-w-40 rounded-lg border border-garis bg-permukaan px-3 text-teks"
-      >
-        {daftarSoal.map((soal) => (
-          <option key={soal.id_soal} value={soal.no_soal}>
-            Soal {soal.no_soal}
-          </option>
-        ))}
-      </select>
+      {daftarSoal.length > 0 && (
+        <select
+          aria-label="Soal"
+          value={noSoalDipilih ?? ""}
+          onChange={(peristiwa) =>
+            setNoSoalDipilih(Number(peristiwa.target.value))
+          }
+          className="mb-4 h-11 w-fit min-w-40 rounded-lg border border-garis bg-permukaan px-3 text-teks"
+        >
+          {daftarSoal.map((soal) => (
+            <option key={soal.id_soal} value={soal.no_soal}>
+              Soal {soal.no_soal}
+            </option>
+          ))}
+        </select>
+      )}
 
       {hasilSoalTerpilih.length === 0 ? (
         <KeadaanData keadaan="kosong" pesan={PESAN_KODE.BELUM_ADA_HASIL_SOAL} />
@@ -113,28 +115,28 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
                 <th
                   role="columnheader"
                   scope="col"
-                  className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                 >
                   Peserta Didik
                 </th>
                 <th
                   role="columnheader"
                   scope="col"
-                  className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                 >
                   Teks OCR
                 </th>
                 <th
                   role="columnheader"
                   scope="col"
-                  className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                 >
                   Skor Kemiripan
                 </th>
                 <th
                   role="columnheader"
                   scope="col"
-                  className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                 >
                   Kategori Kualitatif
                 </th>

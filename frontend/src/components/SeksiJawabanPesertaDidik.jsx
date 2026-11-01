@@ -175,14 +175,14 @@ function SeksiJawabanPesertaDidik({
                     <th
                       role="columnheader"
                       scope="col"
-                      className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                      className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                     >
                       Peserta Didik
                     </th>
                     <th
                       role="columnheader"
                       scope="col"
-                      className="border-b border-garis p-3 text-left text-sm font-semibold text-teks-redup"
+                      className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
                     >
                       Status
                     </th>
