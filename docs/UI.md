@@ -228,7 +228,7 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 
 | Komponen | Dipakai di | Aturan |
 |---|---|---|
-| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, menu "Beranda" dan "Langganan" ("Langganan" baru dirender setelah halaman Langganan dikerjakan), label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar". Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
+| Bilah atas | Semua halaman, kecuali halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) yang tampil tanpa bilah atas | Tiga varian. Publik: logo, "Masuk", "Daftar" (di Pemasaran ditambah tiga tautan jangkar, lihat rancangan Pemasaran). Pengajar: logo, menu "Beranda" dan "Langganan" ("Langganan" baru dirender setelah halaman Langganan dikerjakan), label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar". Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
 | Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
 | Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, tinggalkan halaman unggah | Judul singkat ("Hapus Batch", "Selesaikan Batch", "Tinggalkan Halaman"), satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
 | Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks. Nilai 0 tetap tampil |
@@ -256,7 +256,7 @@ Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dike
 - Rancangan menetapkan ISI dan STRUKTUR: urutan blok, komponen, teks, keadaan, dan perilaku. Gaya visual (ukuran, jarak, bentuk, ilustrasi) diputuskan perancang tampilan, TETAPI hanya memakai token warna dan aturan di bagian atas dokumen ini.
 - Semua teks yang tertulis dalam tanda kutip diambil dari `docs/SPEC.md` dan dipakai persis. Perancang TIDAK BOLEH mengarang teks pesan, label tombol, atau angka batas. Teks yang bertanda "(usulan)" belum ada di SPEC dan dapat diganti pemilik proyek.
 - Fitur yang bertanda "(nanti)" belum dikerjakan (SPEC bagian 3). Tempatnya dirancang sekarang supaya tata letak tidak dirombak lagi, tetapi elemennya TIDAK dirender sampai fiturnya diminta.
-- Semua halaman terproteksi memakai bilah atas sesuai peran (bagian Komponen bersama) dan konten di tengah dengan lebar maksimal setara `max-w-5xl`, margin samping 16 px di ponsel. Halaman publik bertipe kartu (Masuk, Daftar, Lupa Password, Atur Ulang Password) memakai kartu sempit di tengah.
+- Semua halaman terproteksi memakai bilah atas sesuai peran (bagian Komponen bersama) dan konten di tengah dengan lebar maksimal setara `max-w-5xl`, margin samping 16 px di ponsel. Halaman publik bertipe kartu (Masuk, Daftar, Lupa Password, Atur Ulang Password) memakai kartu sempit di tengah layar, tanpa bilah atas.
 - Setiap data yang dimuat punya tiga keadaan: memuat (indikator), kosong (teks SPEC), gagal (teks SPEC). Setiap form memakai `noValidate` dan menampilkan pesan dari aplikasi di dekat kolom atau di bawah form.
 - Di ponsel dan tablet (lebar kurang dari 1024 px, titik henti `lg`) tabel tidak boleh membuat halaman bergulir horizontal. Tabel berubah menjadi daftar kartu, satu kartu per baris, dengan label kolom di dalam kartu. Tabel penuh dipakai mulai 1024 px (laptop, desktop, dan tablet landscape lebar). Tidak ada pilihan gulir horizontal untuk tabel. PENGECUALIAN: tabel perbandingan Free dan Pro di Pemasaran tetap berbentuk tabel di semua lebar (tiga kolom muat di 375 px tanpa gulir), karena tujuannya membandingkan dua kolom berdampingan. Aturan kartu berlaku untuk tabel data (Akun Pengajar dan Dashboard Hasil Koreksi).
 - Tombol aksi utama memakai `bg-biru-utama`. Tombol sekunder memakai garis `border-garis` dengan teks `text-teks`. Aksi yang merusak (hapus, nonaktifkan) memakai tombol sekunder dengan teks `text-kurang-mirip` dan SELALU lewat dialog konfirmasi.
@@ -264,6 +264,8 @@ Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dike
 ### 1. Pemasaran (`/`)
 
 Tujuan: pengunjung yang belum login memahami apa itu Koreksi-in dan terdorong mendaftar. Pengunjung yang sudah login dialihkan ke Beranda (Pengajar) atau Dashboard Pantauan (Admin). Bilah atas varian Publik.
+
+Bilah atas Pemasaran menempel di atas layar saat halaman digulir. Mulai 1024 px, di tengah bilah ada tiga tautan jangkar: "Cara kerja", "Fitur utama", "Free dan Pro" (teksnya sama dengan judul seksi, tanpa teks baru). Mengklik tautan menggulir halaman ke seksi itu, dan judul seksi tidak boleh tertutup bilah. Gulir halus dimatikan bagi pengguna yang memilih gerak berkurang (`motion-reduce`). Di bawah 1024 px tautan jangkar tidak ditampilkan; bilah hanya berisi logo, "Masuk", dan "Daftar".
 
 Blok dari atas ke bawah:
 1. **Hero.** Judul (didahului garis aksen pendek `h-1 w-16 rounded-full bg-merek-hijau`, `aria-hidden`; satu-satunya halaman yang memakainya, halaman aplikasi tidak), satu kalimat penjelas, tombol utama "Daftar" ke `/daftar`, dan tautan "Masuk" ke `/masuk`. Teks usulan: judul "Koreksi esai lebih cepat, nilai akhir tetap di tangan Anda"; kalimat "Unggah lembar jawaban peserta didik. Koreksi-in membaca tulisan tangan dan memberi skor kemiripan sebagai rekomendasi."
@@ -416,7 +418,7 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 - Token kedaluwarsa, sudah dipakai, atau tidak sah: halaman menampilkan "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan "Lupa Password" untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
 - Sukses: arahkan ke `/masuk` dengan pesan "Password berhasil diubah, silakan masuk."
 
-### Keputusan pemilik proyek (1 November 2026)
+### Keputusan pemilik proyek
 
 1. Tombol "Upgrade ke Pro" dan pesan "batch tidak terbatas" memakai Bahasa Indonesia (SPEC sudah disesuaikan).
 2. Akun Pro yang masih berlaku boleh membeli paket lagi. Masa berlaku baru dihitung dari masa berlaku saat ini (SPEC F-LANGGANAN). Tombol berlabel "Perpanjang Pro" untuk akun itu (label usulan).
@@ -435,4 +437,6 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 11. Ejaan baku "silakan" dipakai di semua pesan (SPEC sudah disesuaikan, SRS menyusul saat sinkronisasi).
 12. Tabel Free dan Pro di Pemasaran tetap tabel di semua lebar tanpa gulir horizontal (pengecualian dari aturan tabel menjadi kartu di bawah 1024 px).
 13. Garis hijau pendek di atas judul hanya dipakai di Pemasaran. Halaman aplikasi (termasuk Dashboard Pantauan) tidak memakainya.
-14. Teks OCR di Dashboard Hasil Koreksi: tautan "Tampilkan lengkap" berganti menjadi "Tampilkan ringkas" setelah teks dibuka (pilihan pemilik proyek, 1 November 2026).
+14. Teks OCR di Dashboard Hasil Koreksi: tautan "Tampilkan lengkap" berganti menjadi "Tampilkan ringkas" setelah teks dibuka (pilihan pemilik proyek, 1 November 2026)
+15. Halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) tidak memakai bilah atas; hanya kartu di tengah layar dengan logo, seperti referensi situs lain (pilihan pemilik proyek, 2 November 2026). Mockup Masuk dan Daftar yang masih menampilkan bilah atas varian Publik diabaikan; varian Publik hanya dipakai di Pemasaran.
+16. Bilah atas Pemasaran menempel di atas dan memuat tiga tautan jangkar yang menggulir ke seksi "Cara kerja", "Fitur utama", dan "Free dan Pro", mengikuti situs referensi (pilihan pemilik proyek, 2 November 2026). Label memakai judul seksi yang sudah ada; mockup Pemasaran belum menampilkannya, jadi UI.md yang diikuti..
