@@ -114,7 +114,7 @@ Ikon boleh dipakai untuk memperjelas tombol, menu, dan keadaan data. Sumbernya h
 - Warna ikon mengikuti teks di sekitarnya (`currentColor`, otomatis di Lucide). TIDAK BOLEH memberi warna ikon dengan HEX atau nilai arbitrer; pemakaian warna mengikuti tabel Pemakaian.
 - Ikon tidak pernah menjadi satu-satunya penanda. Tombol, lencana, dan status tetap memuat teks. Ikon di samping teks bersifat dekoratif (`aria-hidden="true"`). Tombol yang hanya berisi ikon (misalnya titik tiga) WAJIB punya nama aksesibel (`aria-label`), dan area sentuhnya minimal 44 px walau gambar ikonnya lebih kecil.
 - Ikon tidak boleh menggantikan kata pada aksi yang merusak atau tidak dapat dibatalkan (Hapus Batch, Nonaktifkan): teksnya tetap tertulis, ikon hanya pendamping.
-- Pemetaan ikon per aksi ditetapkan perancang tampilan dan dicatat di ringkasan desain; satu aksi memakai satu ikon yang sama di semua halaman (contoh: titik tiga memakai `MoreHorizontal`, tidak berganti-ganti).
+- Pemetaan ikon per aksi ditetapkan perancang tampilan dan dicatat di ringkasan desain; satu aksi memakai satu ikon yang sama di semua halaman (contoh: titik tiga selalu memakai `ellipsis-vertical`, tidak berganti-ganti).
 - Logo Koreksi-in bukan ikon Lucide dan tetap memakai berkas di bagian Logo.
 
 ## Gaya visual
@@ -386,14 +386,14 @@ Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba m
 Kartu di tengah dengan `logo.png`, judul "Lupa Password".
 - Kolom Email, tombol "Kirim Tautan" (indikator putar), tautan kembali "Kembali ke Masuk".
 - Format email tidak valid: "Format email tidak valid." di bawah kolom, tanpa permintaan terkirim.
-- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Jika email terdaftar, tautan atur ulang password telah dikirim." (gaya sukses). Halaman TIDAK BOLEH membedakan hasilnya.
+- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Jika email terdaftar, tautan atur ulang password telah dikirim." (gaya sukses). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
 
 ### 10. Atur Ulang Password (`/atur-ulang-password?token=...`, publik, nanti)
 
 Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 - Kolom Password baru dan Konfirmasi password, tombol "Simpan Password".
 - Galat: "Konfirmasi password tidak sama.", "Password minimal 8 karakter", "Password maksimal 72 karakter", "Gagal mengubah password, silakan coba lagi."
-- Token kedaluwarsa, sudah dipakai, atau tidak sah: halaman menampilkan "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
+- Token kedaluwarsa, sudah dipakai, atau tidak sah: halaman menampilkan "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan "Lupa Password" untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
 - Sukses: arahkan ke `/masuk` dengan pesan "Password berhasil diubah, silakan masuk."
 
 ### Keputusan pemilik proyek (1 November 2026)
@@ -405,4 +405,5 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
 6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
 7. Ikon diizinkan, hanya dari Lucide (bagian Ikon).
-8. Tampilan mendukung tablet: tabel berubah menjadi kartu di bawah 1024 px, dan menu Bilah atas berpindah ke laci di bawah 1024 px, satu titik henti (`lg`) yang sama untuk tabel dan menu (bagian Gaya visual dan Komponen bersama).
+8. Tautan di halaman Atur Ulang Password untuk token tidak sah memakai teks "Lupa Password" (pilihan pemilik proyek). Alt teks logo: "Koreksi-in". Tautan "Langganan" di navbar dan "Lupa password?" di Masuk memakai penanda "nanti" sampai fiturnya dikerjakan.
+9. Tampilan mendukung tablet: tabel berubah menjadi kartu di bawah 1024 px, dan menu Bilah atas berpindah ke laci di bawah 1024 px, satu titik henti (`lg`) yang sama untuk tabel dan menu (bagian Gaya visual dan Komponen bersama).
