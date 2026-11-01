@@ -21,7 +21,7 @@ function Rute() {
   if (status === "memuat") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-latar">
-        <Spinner className="h-8 w-8" />
+        <Spinner ukuran="size-5" />
       </div>
     );
   }

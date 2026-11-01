@@ -112,7 +112,7 @@ function HalamanBatch() {
   if (status === "memuat") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-latar">
-        <Spinner className="h-8 w-8" />
+        <Spinner ukuran="size-5" />
       </div>
     );
   }
@@ -234,7 +234,7 @@ function HalamanBatch() {
                   disabled={sedangSimpan}
                   className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
                 >
-                  {sedangSimpan && <Spinner className="h-4 w-4 text-white" />}
+                  {sedangSimpan && <Spinner ukuran="size-4" />}
                   Simpan Kunci Jawaban
                 </button>
               </form>
