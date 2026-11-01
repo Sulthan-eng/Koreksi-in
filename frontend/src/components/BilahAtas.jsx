@@ -158,7 +158,7 @@ function BilahAtas({ varian = "pengajar", statusLangganan = null }) {
               aria-label="Buka menu"
               aria-expanded={laciTerbuka}
               onClick={bukaLaci}
-              className="ml-auto inline-flex min-h-11 size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks lg:hidden"
+              className="ml-auto inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks lg:hidden"
             >
               <Menu aria-hidden="true" className="size-5" />
             </button>
@@ -188,7 +188,7 @@ function BilahAtas({ varian = "pengajar", statusLangganan = null }) {
                 type="button"
                 aria-label="Tutup menu"
                 onClick={tutupLaci}
-                className="inline-flex min-h-11 size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks"
+                className="inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks"
               >
                 <X aria-hidden="true" className="size-5" />
               </button>
