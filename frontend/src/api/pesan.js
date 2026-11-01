@@ -7,6 +7,8 @@ export const PESAN_KODE = {
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
   BATCH_TIDAK_DITEMUKAN: "Batch tidak ditemukan",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
+  BELUM_ADA_BATCH:
+    "Belum ada batch. Buat batch pertama untuk mulai mengoreksi.",
   KUNCI_KOSONG: "Kunci jawaban tidak boleh kosong",
   BATAS_SOAL_TERLAMPAUI: "Maksimal 20 soal per batch.",
   SOAL_SETELAH_JAWABAN: "Soal tidak dapat ditambah setelah jawaban diunggah.",
