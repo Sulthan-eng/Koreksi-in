@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import KeadaanData from "../components/KeadaanData.jsx";
+import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
 function formatTanggal(iso) {
@@ -76,7 +78,7 @@ function Beranda() {
           <button
             type="button"
             onClick={() => setFormTerbuka((sebelumnya) => !sebelumnya)}
-            className="rounded-md bg-biru-utama px-4 py-2 text-white"
+            className="rounded-md bg-biru-utama px-4 py-2 text-permukaan"
           >
             Buat Batch Baru
           </button>
@@ -103,14 +105,16 @@ function Beranda() {
               className="mb-3 w-full rounded-md border border-garis bg-permukaan px-3 py-2 text-teks"
             />
             {kesalahanForm && (
-              <p role="alert" className="mb-3 text-kurang-mirip">
-                {kesalahanForm}
-              </p>
+              <PesanForm
+                varian="galat"
+                pesan={kesalahanForm}
+                className="mb-3"
+              />
             )}
             <button
               type="submit"
               disabled={sedangKirim}
-              className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-permukaan disabled:opacity-50"
             >
               {sedangKirim && <Spinner ukuran="size-4" />}
               Buat
@@ -118,22 +122,17 @@ function Beranda() {
           </form>
         )}
 
-        {status === "memuat" && (
-          <div className="flex justify-center py-12">
-            <Spinner ukuran="size-5" />
-          </div>
-        )}
+        {status === "memuat" && <KeadaanData keadaan="memuat" />}
 
         {status === "gagal" && (
-          <p role="alert" className="text-kurang-mirip">
-            {kesalahan}
-          </p>
+          <KeadaanData keadaan="gagal" pesan={kesalahan} />
         )}
 
         {status === "siap" && daftarBatch.length === 0 && (
-          <p className="text-teks-redup">
-            Belum ada batch. Buat batch pertama untuk mulai mengoreksi.
-          </p>
+          <KeadaanData
+            keadaan="kosong"
+            pesan="Belum ada batch. Buat batch pertama untuk mulai mengoreksi."
+          />
         )}
 
         {status === "siap" && daftarBatch.length > 0 && (

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import KeadaanData from "../components/KeadaanData.jsx";
+import PesanForm from "../components/PesanForm.jsx";
 import SeksiJawabanPesertaDidik from "../components/SeksiJawabanPesertaDidik.jsx";
 import Spinner from "../components/Spinner.jsx";
 import TabHasilKoreksi from "../components/TabHasilKoreksi.jsx";
@@ -71,7 +73,9 @@ function HalamanBatch() {
         const hasil = await batchApi.daftarFileJawaban(id);
         setDaftarFileJawaban(hasil);
       } catch {
-        setKesalahanPolling("Gagal memuat status pemrosesan, coba muat ulang halaman");
+        setKesalahanPolling(
+          "Gagal memuat status pemrosesan, coba muat ulang halaman",
+        );
         clearInterval(interval);
       }
     }, JEDA_POLLING_MS);
@@ -110,20 +114,14 @@ function HalamanBatch() {
   }
 
   if (status === "memuat") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-latar">
-        <Spinner ukuran="size-5" />
-      </div>
-    );
+    return <KeadaanData keadaan="memuat" className="min-h-screen bg-latar" />;
   }
 
   if (status === "gagal") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-latar p-8">
         <div className="text-center">
-          <p role="alert" className="mb-4 text-kurang-mirip">
-            {kesalahan}
-          </p>
+          <KeadaanData keadaan="gagal" pesan={kesalahan} className="mb-4" />
           <Link to="/" className="text-biru-utama">
             Kembali ke Beranda
           </Link>
@@ -176,9 +174,11 @@ function HalamanBatch() {
             </h2>
 
             {daftarSoal.length === 0 && (
-              <p className="mb-4 text-teks-redup">
-                Belum ada soal pada batch ini.
-              </p>
+              <KeadaanData
+                keadaan="kosong"
+                pesan="Belum ada soal pada batch ini."
+                className="mb-4"
+              />
             )}
 
             {daftarSoal.length > 0 && (
@@ -200,9 +200,7 @@ function HalamanBatch() {
             )}
 
             {pesanSukses && !formTerbuka && daftarFileJawaban.length === 0 && (
-              <p role="status" className="mb-4 text-sangat-mirip">
-                {pesanSukses}
-              </p>
+              <PesanForm varian="sukses" pesan={pesanSukses} className="mb-4" />
             )}
 
             {formTerbuka ? (
@@ -221,25 +219,31 @@ function HalamanBatch() {
                   id="kunci_jawaban"
                   rows={4}
                   value={kunciJawaban}
-                  onChange={(peristiwa) => setKunciJawaban(peristiwa.target.value)}
+                  onChange={(peristiwa) =>
+                    setKunciJawaban(peristiwa.target.value)
+                  }
                   className="mb-3 w-full rounded-md border border-garis bg-permukaan px-3 py-2 text-teks"
                 />
                 {kesalahanSoal && (
-                  <p role="alert" className="mb-3 text-kurang-mirip">
-                    {kesalahanSoal}
-                  </p>
+                  <PesanForm
+                    varian="galat"
+                    pesan={kesalahanSoal}
+                    className="mb-3"
+                  />
                 )}
                 <button
                   type="submit"
                   disabled={sedangSimpan}
-                  className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-permukaan disabled:opacity-50"
                 >
                   {sedangSimpan && <Spinner ukuran="size-4" />}
                   Simpan Kunci Jawaban
                 </button>
               </form>
             ) : daftarFileJawaban.length > 0 ? (
-              <p className="text-teks-redup">{PESAN_KODE.SOAL_SETELAH_JAWABAN}</p>
+              <p className="text-teks-redup">
+                {PESAN_KODE.SOAL_SETELAH_JAWABAN}
+              </p>
             ) : daftarSoal.length >= BATAS_SOAL_PER_BATCH ? (
               <p className="text-teks-redup">
                 Sudah mencapai jumlah maksimal 20 soal per batch.
@@ -248,7 +252,7 @@ function HalamanBatch() {
               <button
                 type="button"
                 onClick={bukaFormTambahSoal}
-                className="rounded-md bg-biru-utama px-4 py-2 text-white"
+                className="rounded-md bg-biru-utama px-4 py-2 text-permukaan"
               >
                 Tambah Soal
               </button>
@@ -259,7 +263,10 @@ function HalamanBatch() {
               adaSoal={daftarSoal.length > 0}
               daftarFileJawaban={daftarFileJawaban}
               onUploadSukses={(fileBaru) =>
-                setDaftarFileJawaban((sebelumnya) => [...sebelumnya, ...fileBaru])
+                setDaftarFileJawaban((sebelumnya) => [
+                  ...sebelumnya,
+                  ...fileBaru,
+                ])
               }
             />
           </div>
