@@ -2,6 +2,8 @@ import { useState } from "react";
 import { File, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import { useKonfirmasiTinggalkan } from "../hooks/useKonfirmasiTinggalkan.js";
+import DialogKonfirmasi from "./DialogKonfirmasi.jsx";
 import Lencana from "./Lencana.jsx";
 import Spinner from "./Spinner.jsx";
 
@@ -15,6 +17,8 @@ function SeksiJawabanPesertaDidik({
   const [fileTerpilih, setFileTerpilih] = useState([]);
   const [sedangUpload, setSedangUpload] = useState(false);
   const [kesalahanUpload, setKesalahanUpload] = useState(null);
+
+  const blocker = useKonfirmasiTinggalkan(fileTerpilih.length > 0);
 
   function tanganiPilihFile(peristiwa) {
     const fileBaru = Array.from(peristiwa.target.files).map((file) => ({
@@ -229,6 +233,16 @@ function SeksiJawabanPesertaDidik({
           )}
         </div>
       )}
+
+      <DialogKonfirmasi
+        terbuka={blocker.state === "blocked"}
+        judul={PESAN_KODE.JUDUL_TINGGALKAN_HALAMAN}
+        isi={PESAN_KODE.PESAN_TINGGALKAN_HALAMAN}
+        labelBatal="Tetap di Halaman"
+        labelYa="Tinggalkan"
+        onBatal={() => blocker.reset?.()}
+        onYa={() => blocker.proceed?.()}
+      />
     </section>
   );
 }
