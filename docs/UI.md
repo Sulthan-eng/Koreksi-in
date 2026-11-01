@@ -357,7 +357,7 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 
 #### Tab Dashboard Hasil Koreksi
 
-- Pilihan soal di atas tabel: dropdown berisi "Soal 1", "Soal 2", dan seterusnya (hingga 30). Soal pertama terpilih awal.
+- Pilihan soal di atas tabel: dropdown berisi "Soal 1", "Soal 2", dan seterusnya (hingga 30). Soal pertama terpilih awal. Jika batch belum punya soal, dropdown tidak dirender dan pesan kosong tetap tampil.
 - Tabel untuk soal terpilih, satu baris per peserta didik yang file-nya berstatus Selesai. Kolom: Peserta Didik, Teks OCR, Skor Kemiripan (0 sampai 100), Kategori Kualitatif (lencana bernama, bukan hanya warna). Teks OCR panjang dipotong beberapa baris dengan tautan "Tampilkan lengkap"; setelah dibuka, tautan berganti "Tampilkan ringkas" untuk memotongnya kembali (tombol dengan `aria-expanded`). Jawaban tidak ditemukan: "(jawaban tidak ditemukan)".
 - (nanti) Kolom Nilai Akhir dan aksi per baris: "Edit" (ubah teks OCR, FR15) dan "Ubah Nilai Akhir" (FR16). Nilai akhir yang sudah diisi tampil sebagai nilai resmi dan skor kemiripan sistem tetap terlihat sebagai rekomendasi.
 - Kosong: "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai." Gagal memuat: "Koneksi internet terputus, coba muat ulang halaman."
