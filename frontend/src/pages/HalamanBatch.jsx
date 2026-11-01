@@ -229,8 +229,7 @@ function HalamanBatch() {
             id="panel-soal"
             role="tabpanel"
             aria-labelledby="tab-soal"
-            tabIndex={0}
-            className="flex flex-col gap-6 focus:outline-none"
+            className="flex flex-col gap-6"
           >
             <section className="flex flex-col gap-4 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-teks">
@@ -358,8 +357,6 @@ function HalamanBatch() {
             id="panel-dashboard"
             role="tabpanel"
             aria-labelledby="tab-dashboard"
-            tabIndex={0}
-            className="focus:outline-none"
           >
             <TabHasilKoreksi idBatch={id} daftarSoal={daftarSoal} />
           </div>
