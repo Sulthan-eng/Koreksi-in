@@ -296,13 +296,12 @@ function HalamanBatch() {
                     />
                   </label>
                   {kesalahanSoal && (
-                    <p
+                    <PesanForm
+                      varian="galat"
                       id="galat-kunci"
-                      role="alert"
-                      className="text-sm leading-5 text-kurang-mirip"
-                    >
-                      {kesalahanSoal}
-                    </p>
+                      pesan={kesalahanSoal}
+                      className="text-sm leading-5"
+                    />
                   )}
                   <div>
                     <button

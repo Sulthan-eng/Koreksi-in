@@ -9,13 +9,14 @@ const VARIAN_PESAN = {
   },
 };
 
-function PesanForm({ varian = "galat", pesan, className = "" }) {
+function PesanForm({ varian = "galat", pesan, id, className = "" }) {
   if (!pesan) return null;
 
   const konfigurasi = VARIAN_PESAN[varian] ?? VARIAN_PESAN.galat;
 
   return (
     <p
+      id={id}
       role={konfigurasi.role}
       className={`${konfigurasi.warna} ${className}`.trim()}
     >
