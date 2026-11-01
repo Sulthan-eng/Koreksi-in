@@ -189,7 +189,7 @@ function HalamanBatch() {
 
         <header className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
-            <h1 className="min-w-0 break-words text-2xl font-bold leading-8 text-teks">
+            <h1 className="min-w-0 wrap-break-word text-2xl font-bold leading-8 text-teks">
               {batch.nama_batch}
             </h1>
           </div>
@@ -216,7 +216,7 @@ function HalamanBatch() {
                 tabIndex={aktif ? 0 : -1}
                 onClick={() => setTabAktif(tab.id)}
                 onKeyDown={(peristiwa) => tanganiKeyDownTab(peristiwa, indeks)}
-                className="min-h-11 rounded-md px-2 text-sm font-semibold leading-5 text-teks-redup aria-[selected=true]:bg-permukaan aria-[selected=true]:text-biru-utama aria-[selected=true]:shadow-sm lg:-mb-px lg:rounded-none lg:border-b-2 lg:border-transparent lg:px-4 lg:text-base lg:leading-6 lg:shadow-none lg:aria-[selected=true]:border-biru-utama lg:aria-[selected=true]:bg-transparent"
+                className="min-h-11 rounded-md px-2 text-sm font-semibold leading-5 text-teks-redup aria-selected:bg-permukaan aria-selected:text-biru-utama aria-selected:shadow-sm lg:-mb-px lg:rounded-none lg:border-b-2 lg:border-transparent lg:px-4 lg:text-base lg:leading-6 lg:shadow-none lg:aria-selected:border-biru-utama lg:aria-selected:bg-transparent"
               >
                 {tab.label}
               </button>
@@ -292,7 +292,7 @@ function HalamanBatch() {
                       aria-describedby={
                         kesalahanSoal ? "galat-kunci" : undefined
                       }
-                      className="w-full rounded-lg border border-garis bg-permukaan p-3 text-teks aria-[invalid=true]:border-kurang-mirip"
+                      className="w-full rounded-lg border border-garis bg-permukaan p-3 text-teks aria-invalid:border-kurang-mirip"
                     />
                   </label>
                   {kesalahanSoal && (
