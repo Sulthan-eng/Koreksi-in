@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
+import { PESAN_KODE } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
-import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
 function formatTanggal(iso) {
@@ -48,37 +48,66 @@ function Beranda() {
 
   async function tanganiBuatBatch(peristiwa) {
     peristiwa.preventDefault();
-    setSedangKirim(true);
     setKesalahanForm(null);
+
+    if (namaBatch.trim() === "") {
+      setKesalahanForm(PESAN_KODE.NAMA_BATCH_KOSONG);
+      return;
+    }
+
+    setSedangKirim(true);
     try {
       const batch = await batchApi.buatBatch({ nama_batch: namaBatch });
       navigate(`/batch/${batch.id_batch}`);
     } catch (error) {
-      setKesalahanForm(error.pesan);
+      setKesalahanForm(error.pesan || PESAN_KODE.GAGAL_BUAT_BATCH);
       setSedangKirim(false);
     }
   }
 
-  return (
-    <div className="min-h-screen bg-latar p-8">
-      <div className="mx-auto max-w-3xl">
-        {nama && (
-          <div className="mb-6">
-            <p className="text-lg font-medium text-teks">
+  if (status === "memuat") {
+    return (
+      <div className="min-h-screen bg-latar">
+        <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold leading-8 text-teks">
               Selamat datang, {nama}
-            </p>
+            </h1>
             <p className="text-teks-redup">
               Kelola batch koreksi esai Anda di sini.
             </p>
           </div>
+          <KeadaanData keadaan="memuat" className="min-h-48" />
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-latar">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold leading-8 text-teks">
+            Selamat datang, {nama}
+          </h1>
+          <p className="text-teks-redup">
+            Kelola batch koreksi esai Anda di sini.
+          </p>
+        </div>
+
+        {status === "gagal" && (
+          <KeadaanData
+            keadaan="gagal"
+            pesan={kesalahan || PESAN_KODE.KONEKSI_TERPUTUS}
+          />
         )}
 
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-teks">Batch Koreksi</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-teks">Batch Koreksi</h2>
           <button
             type="button"
             onClick={() => setFormTerbuka((sebelumnya) => !sebelumnya)}
-            className="rounded-md bg-biru-utama px-4 py-2 text-permukaan"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan"
           >
             Buat Batch Baru
           </button>
@@ -87,73 +116,72 @@ function Beranda() {
         {formTerbuka && (
           <form
             onSubmit={tanganiBuatBatch}
-            className="mb-6 rounded-lg border border-garis bg-permukaan p-6"
+            noValidate
+            className="flex flex-col gap-4 rounded-lg border border-garis bg-permukaan p-6 shadow-sm"
           >
-            <label
-              htmlFor="nama_batch"
-              className="mb-1 block text-sm text-teks-redup"
-            >
-              Nama Batch
-            </label>
-            <input
-              id="nama_batch"
-              type="text"
-              required
-              maxLength={100}
-              value={namaBatch}
-              onChange={(peristiwa) => setNamaBatch(peristiwa.target.value)}
-              className="mb-3 w-full rounded-md border border-garis bg-permukaan px-3 py-2 text-teks"
-            />
-            {kesalahanForm && (
-              <PesanForm
-                varian="galat"
-                pesan={kesalahanForm}
-                className="mb-3"
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-teks">
+                Nama Batch
+              </span>
+              <input
+                type="text"
+                maxLength={100}
+                value={namaBatch}
+                onChange={(peristiwa) => setNamaBatch(peristiwa.target.value)}
+                aria-invalid={kesalahanForm ? "true" : undefined}
+                aria-describedby={kesalahanForm ? "galat-nama" : undefined}
+                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
               />
+            </label>
+            {kesalahanForm && (
+              <p
+                id="galat-nama"
+                role="alert"
+                className="text-sm leading-5 text-kurang-mirip"
+              >
+                {kesalahanForm}
+              </p>
             )}
-            <button
-              type="submit"
-              disabled={sedangKirim}
-              className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-permukaan disabled:opacity-50"
-            >
-              {sedangKirim && <Spinner ukuran="size-4" />}
-              Buat
-            </button>
+            <div>
+              <button
+                type="submit"
+                disabled={sedangKirim}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50"
+              >
+                {sedangKirim && <Spinner ukuran="size-4" />}
+                Buat
+              </button>
+            </div>
           </form>
         )}
 
-        {status === "memuat" && <KeadaanData keadaan="memuat" />}
-
-        {status === "gagal" && (
-          <KeadaanData keadaan="gagal" pesan={kesalahan} />
-        )}
-
         {status === "siap" && daftarBatch.length === 0 && (
-          <KeadaanData
-            keadaan="kosong"
-            pesan="Belum ada batch. Buat batch pertama untuk mulai mengoreksi."
-          />
+          <KeadaanData keadaan="kosong" pesan={PESAN_KODE.BELUM_ADA_BATCH} />
         )}
 
         {status === "siap" && daftarBatch.length > 0 && (
-          <ul className="divide-y divide-garis rounded-lg border border-garis bg-permukaan">
+          <ul className="flex flex-col rounded-lg border border-garis bg-permukaan shadow-sm">
             {daftarBatch.map((batch) => (
-              <li key={batch.id_batch}>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/batch/${batch.id_batch}`)}
-                  className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-biru-muda"
-                >
-                  <span className="text-teks">{batch.nama_batch}</span>
-                  <span className="text-sm text-teks-redup">
+              <li
+                key={batch.id_batch}
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-garis p-4 last:border-b-0"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <Link
+                    to={`/batch/${batch.id_batch}`}
+                    className="font-semibold text-biru-utama underline"
+                  >
+                    {batch.nama_batch}
+                  </Link>
+                  <span className="text-sm leading-5 text-teks-redup">
                     {formatTanggal(batch.dibuat_pada)}
                   </span>
-                </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </main>
     </div>
   );
 }
