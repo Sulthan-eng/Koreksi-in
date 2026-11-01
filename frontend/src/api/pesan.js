@@ -13,6 +13,14 @@ export const PESAN_KODE = {
   GAGAL_BUAT_BATCH: "Gagal membuat batch, silakan coba lagi",
   GAGAL_TAMBAH_SOAL: "Gagal menambah soal, silakan coba lagi.",
   BELUM_ADA_SOAL: "Tambahkan minimal satu soal sebelum mengunggah jawaban.",
+  BELUM_ADA_SOAL_BATCH: "Belum ada soal pada batch ini.",
+  KUNCI_TERSIMPAN: "Kunci jawaban tersimpan.",
+  SUDAH_MAKSIMAL_SOAL: "Sudah mencapai jumlah maksimal 20 soal per batch.",
+  PERINGATAN_SEBELUM_UNGGAH:
+    "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi.",
+  GAGAL_STATUS_PEMROSESAN:
+    "Gagal memuat status pemrosesan, coba muat ulang halaman",
+  KONEKSI_TERPUTUS: "Koneksi internet terputus, coba muat ulang halaman.",
   MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
   TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
   NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",
