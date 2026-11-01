@@ -94,7 +94,7 @@ function Daftar() {
             disabled={sedangKirim}
             className="flex w-full items-center justify-center gap-2 rounded-md bg-biru-utama px-3 py-2 text-white disabled:opacity-50"
           >
-            {sedangKirim && <Spinner className="h-4 w-4 text-white" />}
+            {sedangKirim && <Spinner ukuran="size-4" />}
             Daftar
           </button>
         </form>

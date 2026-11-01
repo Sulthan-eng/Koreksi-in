@@ -1,4 +1,4 @@
-import { LencanaStatusProses } from "./Lencana.jsx";
+import Lencana from "./Lencana.jsx";
 
 function TabStatusPemrosesan({ daftarFileJawaban, kesalahan }) {
   if (kesalahan) {
@@ -22,7 +22,7 @@ function TabStatusPemrosesan({ daftarFileJawaban, kesalahan }) {
               <p className="mt-1 text-sm text-kurang-mirip">{fileJawaban.pesan_error}</p>
             )}
           </div>
-          <LencanaStatusProses statusProses={fileJawaban.status_proses} />
+          <Lencana varian={fileJawaban.status_proses} />
         </li>
       ))}
     </ul>

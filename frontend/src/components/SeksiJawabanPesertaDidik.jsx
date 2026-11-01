@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
-import { LencanaStatusProses } from "./Lencana.jsx";
+import Lencana from "./Lencana.jsx";
 import Spinner from "./Spinner.jsx";
 
 function SeksiJawabanPesertaDidik({
@@ -121,7 +121,7 @@ function SeksiJawabanPesertaDidik({
                   disabled={sedangUpload}
                   className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
                 >
-                  {sedangUpload && <Spinner className="h-4 w-4 text-white" />}
+                  {sedangUpload && <Spinner ukuran="size-4" />}
                   Upload
                 </button>
                 <button
@@ -151,7 +151,7 @@ function SeksiJawabanPesertaDidik({
                   <p className="mt-1 text-sm text-kurang-mirip">{fileJawaban.pesan_error}</p>
                 )}
               </div>
-              <LencanaStatusProses statusProses={fileJawaban.status_proses} />
+              <Lencana varian={fileJawaban.status_proses} />
             </li>
           ))}
         </ul>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as batchApi from "../api/batch.js";
-import { LencanaKategori } from "./Lencana.jsx";
+import Lencana from "./Lencana.jsx";
 import Spinner from "./Spinner.jsx";
 
 function TabHasilKoreksi({ idBatch, daftarSoal }) {
@@ -29,7 +29,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
   if (status === "memuat") {
     return (
       <div className="flex justify-center p-8">
-        <Spinner className="h-6 w-6 text-biru-utama" />
+        <Spinner ukuran="size-5" />
       </div>
     );
   }
@@ -89,7 +89,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
                   </td>
                   <td className="p-3 text-teks">{item.skor_sistem}</td>
                   <td className="p-3">
-                    <LencanaKategori kategori={item.kategori} />
+                    <Lencana varian={item.kategori} />
                   </td>
                 </tr>
               ))}
