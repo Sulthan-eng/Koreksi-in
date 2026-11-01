@@ -176,7 +176,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 
 ### Catatan
 
-- Wadah halaman memakai `@container`; tabel menjadi kartu di bawah 1024 px dengan `@max-lg:`.
+- Di aplikasi, titik henti memakai varian viewport Tailwind: `lg:` (mulai 1024 px) dan `max-lg:` (di bawah 1024 px). JANGAN memakai `@container`, `@min-[64rem]`, atau `@max-[63.9375rem]` dari berkas mockup: itu hanya akal agar bingkai pratinjau 375 px bisa tampil di layar 1280 px (di Tailwind v4, `@lg` pada container query berarti 32rem, bukan 1024 px).
 - Status Aktif batch di ponsel sejajar dengan nama batch (`items-start`, `min-w-0` pada judul).
 - Dialog memakai elemen `<dialog>` bawaan.
 
@@ -210,9 +210,9 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 
 | Komponen | Dipakai di | Aturan |
 |---|---|---|
-| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, label FREE atau PRO, nama, "Keluar". Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar". Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
+| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, menu "Beranda" dan "Langganan" ("Langganan" baru dirender setelah halaman Langganan dikerjakan), label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar". Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
 | Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
-| Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, tinggalkan halaman unggah | Judul singkat, satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
+| Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, tinggalkan halaman unggah | Judul singkat ("Hapus Batch", "Selesaikan Batch", "Tinggalkan Halaman"), satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
 | Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks. Nilai 0 tetap tampil |
 | Tabel | Hasil koreksi, Akun Pengajar | Aturan di bagian Tata letak |
 | Menu aksi (titik tiga) | Baris daftar batch di Beranda (nanti) | Tombol ikon titik tiga yang membuka daftar aksi kecil. Punya nama aksesibel, dapat dioperasikan dengan papan ketik (Enter, Esc, panah), tertutup saat klik di luar. Aksi yang merusak berteks `text-kurang-mirip` dan membuka dialog konfirmasi |
@@ -290,7 +290,7 @@ Kartu di tengah dengan `logo.png`, judul "Masuk". Pengguna yang sudah login dial
 
 Blok dari atas ke bawah:
 1. **Sapaan.** "Selamat datang, {nama}" dan "Kelola batch koreksi esai Anda di sini."
-2. **Ringkasan (nanti, FR21).** Deret kartu angka: jumlah total batch, jumlah peserta didik yang sudah dikoreksi, dan khusus akun Free: sisa slot batch aktif serta sisa slot jawaban per batch. Nilai 0 tetap tampil. Gagal: "Gagal memuat ringkasan, coba muat ulang halaman".
+2. **Ringkasan (nanti, FR21).** Deret kartu angka: jumlah total batch, jumlah peserta didik yang sudah dikoreksi, dan khusus akun Free: sisa slot batch aktif serta sisa slot jawaban per batch. Nilai 0 tetap tampil. Label kartu (disetujui): "Total batch", "Peserta didik sudah dikoreksi", "Sisa slot batch aktif", "Sisa slot jawaban per batch". Gagal: "Gagal memuat ringkasan, coba muat ulang halaman".
 3. **Banner upgrade (nanti).** Tampil untuk akun Free yang baru turun dari Pro atau yang datanya melewati batas Free. Teks usulan: "Masa berlaku Pro Anda telah berakhir. Upgrade ke Pro untuk membuat batch baru dan memakai semua fitur." dengan tautan ke `/langganan`.
 4. **Kepala daftar.** Judul "Batch Koreksi" dan tombol utama "Buat Batch Baru".
 5. **Form buat batch.** Terbuka di tempat saat tombol ditekan. Kolom "Nama Batch" (maksimal 100 karakter), tombol "Buat". Galat: "Nama batch tidak boleh kosong.", "Gagal membuat batch, silakan coba lagi". Akun Free yang sudah punya 1 batch aktif (nanti, FR18): "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas." dengan tautan ke `/langganan`; tombol "Buat Batch Baru" tetap bisa ditekan dan pesan ini muncul sebagai penolakan, bukan tersembunyi.
