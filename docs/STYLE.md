@@ -44,7 +44,7 @@ Aturan:
 
 Struktur di `frontend/src/`:
 
-- `pages/`: satu file per halaman sesuai Inventaris halaman di `docs/UI.md` (Pemasaran, Daftar, Masuk, Beranda, HalamanBatch, Langganan, DashboardPantauan, AkunPengajar). File halaman tipis: merangkai komponen dan memegang state halaman, bukan menampung markup panjang.
+- `pages/`: satu file per halaman sesuai Inventaris halaman di `docs/UI.md` (Pemasaran, Daftar, Masuk, LupaPassword, AturUlangPassword, Beranda, HalamanBatch, Langganan, DashboardPantauan, AkunPengajar). File halaman tipis: merangkai komponen dan memegang state halaman, bukan menampung markup panjang.
 - `components/`: komponen bersama (daftar di `docs/UI.md`, bagian Komponen bersama: bilah atas, Lencana, dialog konfirmasi, kartu angka, tabel, keadaan data) dan komponen per tab. Satu definisi per komponen; jangan menyalin markup yang sama ke halaman lain.
 - `api/`: semua pemanggilan ke backend. Komponen TIDAK memanggil `fetch` langsung.
 - `api/klien.js`: satu wrapper `fetch` yang menempelkan access token, menangani 401 dengan satu panggilan refresh bersama (single-flight), dan memetakan `kode` error ke teks Indonesia.
@@ -61,6 +61,9 @@ Aturan:
 - Halaman terproteksi dibungkus pelindung rute yang memeriksa login dan peran (Pengajar tidak bisa membuka halaman Admin dan sebaliknya). Pemeriksaan ini hanya kenyamanan UI; yang menentukan adalah backend.
 - Peringatan meninggalkan halaman dipasang lewat satu hook bersama dan hanya aktif selama ada data yang belum terkirim (SPEC bagian 9, F-UNGGAH).
 - Gaya hanya lewat kelas Tailwind dan token `docs/UI.md`. Jika satu rangkaian kelas dipakai berulang lebih dari tiga kali, ekstrak jadi komponen, bukan `@apply`.
+- Ikon hanya dari paket `lucide-react` (satu keluarga ikon, keputusan pemilik proyek di `docs/UI.md`, bagian Ikon). Paket ikon lain TIDAK BOLEH ditambahkan. Alasan dependensi untuk deskripsi PR saat paketnya dipasang: ikon konsisten, hanya ikon yang dipakai ikut ke bundel, dan `currentColor` mengikuti token warna.
+- Titik henti responsif memakai varian viewport Tailwind `lg:` dan `max-lg:` (1024 px). Jangan menyalin `@container`, `@min-[64rem]`, atau `@max-[63.9375rem]` dari berkas mockup; itu hanya akal agar bingkai pratinjau tampil di layar lebar.
+- Mockup HTML per halaman diberikan pemilik proyek saat tugas halaman itu dimulai, dan tidak disimpan di repositori. Ikuti sebagai acuan tampilan, tetapi `docs/UI.md` dan `docs/SPEC.md` menang jika bertentangan. Bagian khusus mockup (bingkai ponsel, kendali keadaan, skrip pratinjau, penanda "nanti", kelas `data-saat`) TIDAK BOLEH disalin ke aplikasi.
 - Teks UI semuanya Bahasa Indonesia. Teks error dan pesan ditaruh di satu berkas pemetaan (`api/pesan.js`), tidak tersebar di komponen.
 - Lint dan format dengan `eslint` dan `prettier`.
 - Test frontend minimal: fungsi murni (pemetaan kategori ke teks, pemetaan kode error). Tidak ada keharusan test komponen untuk prototipe.
