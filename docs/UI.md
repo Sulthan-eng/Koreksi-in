@@ -11,6 +11,7 @@ Aturan tampilan untuk frontend. Warna diambil dari logo (biru dan hijau). Fronte
 - Teks UI Bahasa Indonesia. Desktop dulu, tetap responsif sampai lebar ponsel.
 - Pesan validasi form berasal dari aplikasi dan tertulis persis seperti di SPEC, tampil di bawah form atau di dekat kolomnya. TIDAK BOLEH memakai bubble validasi bawaan browser (pakai `noValidate` pada form).
 - Font: font sans-serif sistem bawaan Tailwind. Tidak ada font tambahan.
+- Ikon: hanya dari Lucide (paket `lucide-react`), lihat bagian Ikon. Tidak ada keluarga ikon lain dan tidak ada font ikon.
 
 ## Token warna
 
@@ -104,6 +105,17 @@ Berkas ada di `frontend/public/`:
 - `logo-ikon.png`: ikon saja. Dipakai di bilah atas aplikasi dan sebagai favicon.
 
 Aturan: jangan mengubah warna, rasio, atau memutar logo. Beri ruang kosong di sekeliling minimal setinggi lingkaran kecil pada ikon. Latar logo harus putih atau `latar`. Tinggi ikon di bilah atas sekitar 40 px.
+
+## Ikon
+
+Ikon boleh dipakai untuk memperjelas tombol, menu, dan keadaan data. Sumbernya hanya Lucide (lisensi ISC), diimpor per ikon lewat `lucide-react` sehingga hanya ikon yang dipakai ikut terkirim. Penambahan paket atau keluarga ikon lain adalah perubahan dokumen ini, bukan keputusan agent.
+
+- Satu keluarga saja. Ketebalan garis seragam (bawaan Lucide, `stroke-width` 2) dan ukuran seragam: `size-4` (16 px) di dalam tombol atau teks, `size-5` (20 px) pada tombol ikon, `size-6` (24 px) atau lebih untuk ilustrasi keadaan kosong.
+- Warna ikon mengikuti teks di sekitarnya (`currentColor`, otomatis di Lucide). TIDAK BOLEH memberi warna ikon dengan HEX atau nilai arbitrer; pemakaian warna mengikuti tabel Pemakaian.
+- Ikon tidak pernah menjadi satu-satunya penanda. Tombol, lencana, dan status tetap memuat teks. Ikon di samping teks bersifat dekoratif (`aria-hidden="true"`). Tombol yang hanya berisi ikon (misalnya titik tiga) WAJIB punya nama aksesibel (`aria-label`), dan area sentuhnya minimal 44 px walau gambar ikonnya lebih kecil.
+- Ikon tidak boleh menggantikan kata pada aksi yang merusak atau tidak dapat dibatalkan (Hapus Batch, Nonaktifkan): teksnya tetap tertulis, ikon hanya pendamping.
+- Pemetaan ikon per aksi ditetapkan perancang tampilan dan dicatat di ringkasan desain; satu aksi memakai satu ikon yang sama di semua halaman (contoh: titik tiga memakai `MoreHorizontal`, tidak berganti-ganti).
+- Logo Koreksi-in bukan ikon Lucide dan tetap memakai berkas di bagian Logo.
 
 ## Inventaris halaman
 
@@ -328,3 +340,5 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 3. Kolom kosong di Daftar dan Masuk cukup memakai "Data yang dikirim tidak valid." untuk sementara.
 4. Teks yang bertanda "(usulan)" dan label kecil di luar daftar pesan SPEC disetujui untuk sementara. Perancang TIDAK BOLEH menambah teks baru di luar itu; perubahan teks lewat pemilik proyek.
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
+6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
+7. Ikon diizinkan, hanya dari Lucide (bagian Ikon).
