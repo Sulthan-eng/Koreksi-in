@@ -33,6 +33,9 @@ export const PESAN_KODE = {
   PDF_TERLALU_BANYAK_HALAMAN: "PDF maksimal 15 halaman.",
   PDF_TIDAK_DAPAT_DIBACA: "File PDF rusak atau tidak dapat dibaca.",
   GAGAL_SIMPAN_JAWABAN: "Gagal menyimpan jawaban, silakan coba lagi.",
+  JUDUL_TINGGALKAN_HALAMAN: "Tinggalkan Halaman",
+  PESAN_TINGGALKAN_HALAMAN:
+    "Ada file yang belum diunggah. Yakin ingin meninggalkan halaman ini?",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 

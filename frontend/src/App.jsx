@@ -1,4 +1,11 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  RouterProvider,
+  createBrowserRouter,
+  createRoutesFromElements,
+} from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import KeadaanData from "./components/KeadaanData.jsx";
 import TataLetakTerproteksi from "./components/TataLetakTerproteksi.jsx";
@@ -15,43 +22,47 @@ function RouteTamu({ children }) {
   return children;
 }
 
-function Rute() {
+function GerbangAutentikasi() {
   const { status } = useAuth();
 
   if (status === "memuat") {
     return <KeadaanData keadaan="memuat" className="min-h-screen bg-latar" />;
   }
 
-  return (
-    <Routes>
-      <Route
-        path="/masuk"
-        element={
-          <RouteTamu>
-            <Masuk />
-          </RouteTamu>
-        }
-      />
-      <Route
-        path="/daftar"
-        element={
-          <RouteTamu>
-            <Daftar />
-          </RouteTamu>
-        }
-      />
-      <Route element={<TataLetakTerproteksi />}>
-        <Route path="/" element={<Beranda />} />
-        <Route path="/batch/:id" element={<HalamanBatch />} />
-      </Route>
-    </Routes>
-  );
+  return <Outlet />;
 }
+
+const rute = createRoutesFromElements(
+  <Route element={<GerbangAutentikasi />}>
+    <Route
+      path="/masuk"
+      element={
+        <RouteTamu>
+          <Masuk />
+        </RouteTamu>
+      }
+    />
+    <Route
+      path="/daftar"
+      element={
+        <RouteTamu>
+          <Daftar />
+        </RouteTamu>
+      }
+    />
+    <Route element={<TataLetakTerproteksi />}>
+      <Route path="/" element={<Beranda />} />
+      <Route path="/batch/:id" element={<HalamanBatch />} />
+    </Route>
+  </Route>,
+);
+
+const router = createBrowserRouter(rute);
 
 function App() {
   return (
     <AuthProvider>
-      <Rute />
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }
