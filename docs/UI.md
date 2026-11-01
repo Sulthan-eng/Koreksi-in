@@ -117,6 +117,69 @@ Ikon boleh dipakai untuk memperjelas tombol, menu, dan keadaan data. Sumbernya h
 - Pemetaan ikon per aksi ditetapkan perancang tampilan dan dicatat di ringkasan desain; satu aksi memakai satu ikon yang sama di semua halaman (contoh: titik tiga memakai `MoreHorizontal`, tidak berganti-ganti).
 - Logo Koreksi-in bukan ikon Lucide dan tetap memakai berkas di bagian Logo.
 
+## Gaya visual
+
+Ukuran dan bentuk memakai skala Tailwind standar saja; tidak ada nilai piksel arbitrer (`p-[13px]`, `text-[15px]`). Ditetapkan dari desain tahap 1 (lembar komponen dan Halaman Batch). Mengubah gaya adalah perubahan dokumen ini.
+
+### Tipografi
+
+| Peran | Kelas |
+|---|---|
+| Judul halaman | `text-2xl font-bold leading-8` |
+| Judul seksi | `text-lg font-semibold` |
+| Isi | `text-base leading-6` |
+| Label kecil, keterangan, lencana | `text-sm leading-5` |
+| Angka besar di kartu angka | `text-3xl font-bold leading-9` |
+| Label kolom di kartu ponsel | `text-xs font-semibold` |
+
+### Jarak
+
+- Celah antar elemen: `gap-2`, `gap-3`, `gap-4`, `gap-6`.
+- Isi kartu dan dialog: `p-6`. Isi item daftar dan kartu kecil: `p-4`.
+- Samping halaman: `px-4` di ponsel. Isi utama `max-w-5xl`.
+- Bilah atas: `px-4 py-3`.
+- Area sentuh minimal: `min-h-11` (44 px) untuk semua tombol, tautan menu, dan kendali.
+
+### Radius dan bayangan
+
+| Elemen | Kelas |
+|---|---|
+| Kartu, tabel, form, tombol, bidang | `rounded-lg` |
+| Lencana dan pil status | `rounded-full` |
+| Item menu aksi | `rounded-md` |
+| Dialog | `rounded-xl` |
+| Kartu dan seksi | `shadow-sm` |
+| Menu aksi titik tiga | `shadow-sm` |
+| Dialog | `shadow-lg` |
+
+### Pemetaan ikon (Lucide)
+
+Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukuran `size-4` di tombol dan lencana, `size-5` di tombol ikon. Satu aksi memakai satu ikon yang sama di semua halaman.
+
+| Fungsi | Ikon Lucide | Ukuran | Dipakai di |
+|---|---|---|---|
+| Edit | `pencil` | `size-4` | Aksi di Dashboard Hasil Koreksi (nanti) |
+| Ubah Nilai Akhir | `badge-check` | `size-4` | Dashboard Hasil Koreksi (nanti) |
+| Buka menu | `menu` | `size-5` | Bilah atas ponsel (`aria-label` "Buka menu") |
+| Tutup menu | `x` | `size-5` | Laci menu (`aria-label` "Tutup menu") |
+| Menu aksi | `ellipsis-vertical` | `size-5` | Titik tiga (`aria-label` berisi nama batch) |
+| Coba Lagi | `rotate-ccw` | `size-4` | File yang Gagal (nanti) |
+| Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi" |
+| Unggah | `upload` | `size-4` | "Upload Jawaban Peserta Didik" |
+| Tambah | `plus` | `size-4` | "Tambah Soal" |
+| Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" (nanti) |
+| Hapus | `trash-2` | `size-4` | "Hapus Batch" |
+| Keluar | `log-out` | `size-4` | "Keluar" |
+| Memuat, Diproses | `loader-circle` + `animate-spin` | `size-4` (`size-3.5` di dalam lencana) | Indikator |
+| Galat | `circle-alert` | `size-4` | Pesan galat |
+| File jawaban | `file` | `size-4` | Nama file di form unggah |
+
+### Catatan
+
+- Wadah halaman memakai `@container`; tabel menjadi kartu di bawah 1024 px dengan `@max-lg:`.
+- Status Aktif batch di ponsel sejajar dengan nama batch (`items-start`, `min-w-0` pada judul).
+- Dialog memakai elemen `<dialog>` bawaan.
+
 ## Inventaris halaman
 
 Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9. Rute adalah rute target; mengubah rute yang sudah ada hanya dilakukan oleh tugas refactor tampilan yang memintanya. "Rancangan" adalah status rancangan tampilan per halaman (tata letak, komponen, keadaan) yang ditulis di bagian "Rancangan halaman" sebelum halaman itu dikerjakan.
@@ -147,7 +210,7 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 
 | Komponen | Dipakai di | Aturan |
 |---|---|---|
-| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, label FREE atau PRO, nama, "Keluar". Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar" |
+| Bilah atas | Semua halaman | Tiga varian. Publik: logo, "Masuk", "Daftar". Pengajar: logo, label FREE atau PRO, nama, "Keluar". Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar". Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
 | Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
 | Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, tinggalkan halaman unggah | Judul singkat, satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
 | Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks. Nilai 0 tetap tampil |
@@ -164,7 +227,7 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 - Halaman Batch: judul batch, dua tab (Soal dan Jawaban, Dashboard Hasil Koreksi).
 - Tabel: baris cukup lega, header `text-teks-redup`, teks OCR panjang dipotong dengan opsi tampilkan lengkap.
 - Tampilkan indikator loading pada unggah, pemrosesan, dan pemuatan data. Tampilkan keadaan kosong dengan teks yang ada di SPEC.
-- Responsif: desktop adalah prioritas, tetapi semua halaman tetap bisa dipakai pada lebar ponsel tanpa gulir horizontal untuk isi utama (NFR17).
+- Responsif: desktop adalah prioritas, tetapi semua halaman tetap bisa dipakai pada lebar tablet dan ponsel tanpa gulir horizontal untuk isi utama (NFR17). Titik henti: ponsel di bawah 768 px (`md`), tablet 768 sampai 1023 px, desktop mulai 1024 px (`lg`).
 
 ## Rancangan halaman
 
@@ -177,7 +240,7 @@ Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dike
 - Fitur yang bertanda "(nanti)" belum dikerjakan (SPEC bagian 3). Tempatnya dirancang sekarang supaya tata letak tidak dirombak lagi, tetapi elemennya TIDAK dirender sampai fiturnya diminta.
 - Semua halaman terproteksi memakai bilah atas sesuai peran (bagian Komponen bersama) dan konten di tengah dengan lebar maksimal setara `max-w-5xl`, margin samping 16 px di ponsel. Halaman publik bertipe kartu (Masuk, Daftar, Lupa Password, Atur Ulang Password) memakai kartu sempit di tengah.
 - Setiap data yang dimuat punya tiga keadaan: memuat (indikator), kosong (teks SPEC), gagal (teks SPEC). Setiap form memakai `noValidate` dan menampilkan pesan dari aplikasi di dekat kolom atau di bawah form.
-- Di ponsel (lebar kurang dari 640 px) tabel tidak boleh membuat halaman bergulir horizontal. Tabel berubah menjadi daftar kartu, satu kartu per baris, dengan label kolom di dalam kartu.
+- Di ponsel dan tablet (lebar kurang dari 1024 px, titik henti `lg`) tabel tidak boleh membuat halaman bergulir horizontal. Tabel berubah menjadi daftar kartu, satu kartu per baris, dengan label kolom di dalam kartu. Tabel penuh dipakai mulai 1024 px (laptop, desktop, dan tablet landscape lebar). Tidak ada pilihan gulir horizontal untuk tabel.
 - Tombol aksi utama memakai `bg-biru-utama`. Tombol sekunder memakai garis `border-garis` dengan teks `text-teks`. Aksi yang merusak (hapus, nonaktifkan) memakai tombol sekunder dengan teks `text-kurang-mirip` dan SELALU lewat dialog konfirmasi.
 
 ### 1. Pemasaran (`/`)
@@ -280,7 +343,7 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 - Tabel untuk soal terpilih, satu baris per peserta didik yang file-nya berstatus Selesai. Kolom: Peserta Didik, Teks OCR, Skor Kemiripan (0 sampai 100), Kategori Kualitatif (lencana bernama, bukan hanya warna). Teks OCR panjang dipotong beberapa baris dengan tautan "Tampilkan lengkap". Jawaban tidak ditemukan: "(jawaban tidak ditemukan)".
 - (nanti) Kolom Nilai Akhir dan aksi per baris: "Edit" (ubah teks OCR, FR15) dan "Ubah Nilai Akhir" (FR16). Nilai akhir yang sudah diisi tampil sebagai nilai resmi dan skor kemiripan sistem tetap terlihat sebagai rekomendasi.
 - Kosong: "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai." Gagal memuat: "Koneksi internet terputus, coba muat ulang halaman."
-- Di ponsel: tiap baris menjadi kartu dengan nama di atas, skor dan lencana kategori, lalu teks OCR.
+- Di bawah 1024 px (ponsel dan tablet): tiap baris menjadi kartu dengan nama di atas, skor dan lencana kategori, lalu teks OCR.
 
 #### Batch Selesai (nanti, FR23)
 
@@ -316,7 +379,7 @@ Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba m
 - **Ubah Langganan:** dialog dengan pilihan status Free atau Pro; untuk Pro, kolom tanggal masa berlaku wajib. Galat: "Masa berlaku wajib diisi dengan tanggal setelah hari ini." Sukses: "Status langganan berhasil diubah". Gagal: "Gagal mengubah status langganan, silakan coba lagi.", "Koneksi internet terputus, silakan coba lagi."
 - **Nonaktifkan atau Aktifkan:** dialog konfirmasi yang menyebut nama akun dan tindakan. Sukses: "Akun berhasil dinonaktifkan" atau "Akun berhasil diaktifkan". Gagal: "Gagal mengubah status akun, silakan coba lagi."
 - **Keadaan:** kosong "Belum ada akun Pengajar yang terdaftar."; pencarian tanpa hasil "Tidak ada akun yang sesuai dengan pencarian."; gagal "Gagal memuat daftar akun, coba muat ulang halaman."; offline "Koneksi internet terputus, coba muat ulang halaman."
-- Di ponsel tiap baris menjadi kartu dengan aksi di bagian bawah kartu.
+- Di bawah 1024 px (ponsel dan tablet) tiap baris menjadi kartu dengan aksi di bagian bawah kartu.
 
 ### 9. Lupa Password (`/lupa-password`, publik, nanti)
 
@@ -342,3 +405,4 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
 6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
 7. Ikon diizinkan, hanya dari Lucide (bagian Ikon).
+8. Tampilan mendukung tablet: tabel berubah menjadi kartu di bawah 1024 px, dan menu Bilah atas berpindah ke laci di bawah 1024 px, satu titik henti (`lg`) yang sama untuk tabel dan menu (bagian Gaya visual dan Komponen bersama).
