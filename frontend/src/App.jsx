@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
-import Spinner from "./components/Spinner.jsx";
+import KeadaanData from "./components/KeadaanData.jsx";
 import TataLetakTerproteksi from "./components/TataLetakTerproteksi.jsx";
 import Masuk from "./pages/Masuk.jsx";
 import Daftar from "./pages/Daftar.jsx";
@@ -19,11 +19,7 @@ function Rute() {
   const { status } = useAuth();
 
   if (status === "memuat") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-latar">
-        <Spinner ukuran="size-5" />
-      </div>
-    );
+    return <KeadaanData keadaan="memuat" className="min-h-screen bg-latar" />;
   }
 
   return (

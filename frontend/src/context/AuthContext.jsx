@@ -55,7 +55,14 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ status, nama, pesanSesi, bersihkanPesanSesi, tandaiMasuk, keluar }}
+      value={{
+        status,
+        nama,
+        pesanSesi,
+        bersihkanPesanSesi,
+        tandaiMasuk,
+        keluar,
+      }}
     >
       {children}
     </AuthContext.Provider>

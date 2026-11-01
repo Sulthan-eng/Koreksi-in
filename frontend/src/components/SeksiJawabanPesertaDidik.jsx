@@ -1,7 +1,9 @@
 import { useState } from "react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import KeadaanData from "./KeadaanData.jsx";
 import Lencana from "./Lencana.jsx";
+import PesanForm from "./PesanForm.jsx";
 import Spinner from "./Spinner.jsx";
 
 function SeksiJawabanPesertaDidik({
@@ -26,7 +28,9 @@ function SeksiJawabanPesertaDidik({
 
   function ubahNama(index, nilai) {
     setFileTerpilih((sebelumnya) =>
-      sebelumnya.map((item, i) => (i === index ? { ...item, nama: nilai } : item)),
+      sebelumnya.map((item, i) =>
+        i === index ? { ...item, nama: nilai } : item,
+      ),
     );
   }
 
@@ -42,7 +46,9 @@ function SeksiJawabanPesertaDidik({
     try {
       const formData = new FormData();
       fileTerpilih.forEach(({ file }) => formData.append("files", file));
-      fileTerpilih.forEach(({ nama }) => formData.append("nama_peserta_didik", nama));
+      fileTerpilih.forEach(({ nama }) =>
+        formData.append("nama_peserta_didik", nama),
+      );
       const hasil = await batchApi.unggahFileJawaban(idBatch, formData);
       onUploadSukses(hasil);
       setFileTerpilih([]);
@@ -60,7 +66,7 @@ function SeksiJawabanPesertaDidik({
       </h2>
 
       {!adaSoal && (
-        <p className="text-teks-redup">{PESAN_KODE.BELUM_ADA_SOAL}</p>
+        <KeadaanData keadaan="kosong" pesan={PESAN_KODE.BELUM_ADA_SOAL} />
       )}
 
       {adaSoal && (
@@ -73,7 +79,7 @@ function SeksiJawabanPesertaDidik({
           )}
 
           {fileTerpilih.length === 0 && (
-            <label className="inline-block cursor-pointer rounded-md bg-biru-utama px-4 py-2 text-white focus-within:ring-2 focus-within:ring-biru-utama">
+            <label className="inline-block cursor-pointer rounded-md bg-biru-utama px-4 py-2 text-permukaan focus-within:ring-2 focus-within:ring-biru-utama">
               Upload Jawaban Peserta Didik
               <input
                 type="file"
@@ -102,7 +108,9 @@ function SeksiJawabanPesertaDidik({
                       maxLength={100}
                       placeholder="Nama peserta didik"
                       value={item.nama}
-                      onChange={(peristiwa) => ubahNama(index, peristiwa.target.value)}
+                      onChange={(peristiwa) =>
+                        ubahNama(index, peristiwa.target.value)
+                      }
                       className="w-48 rounded-md border border-garis bg-permukaan px-3 py-2 text-teks"
                     />
                   </li>
@@ -110,16 +118,18 @@ function SeksiJawabanPesertaDidik({
               </ul>
 
               {kesalahanUpload && (
-                <p role="alert" className="mb-3 text-kurang-mirip">
-                  {kesalahanUpload}
-                </p>
+                <PesanForm
+                  varian="galat"
+                  pesan={kesalahanUpload}
+                  className="mb-3"
+                />
               )}
 
               <div className="flex items-center gap-3">
                 <button
                   type="submit"
                   disabled={sedangUpload}
-                  className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-white disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-md bg-biru-utama px-4 py-2 text-permukaan disabled:opacity-50"
                 >
                   {sedangUpload && <Spinner ukuran="size-4" />}
                   Upload
@@ -146,10 +156,15 @@ function SeksiJawabanPesertaDidik({
               className="flex items-center justify-between rounded-lg border border-garis bg-permukaan p-3"
             >
               <div>
-                <span className="text-teks">{fileJawaban.nama_peserta_didik}</span>
-                {fileJawaban.status_proses === "gagal" && fileJawaban.pesan_error && (
-                  <p className="mt-1 text-sm text-kurang-mirip">{fileJawaban.pesan_error}</p>
-                )}
+                <span className="text-teks">
+                  {fileJawaban.nama_peserta_didik}
+                </span>
+                {fileJawaban.status_proses === "gagal" &&
+                  fileJawaban.pesan_error && (
+                    <p className="mt-1 text-sm text-kurang-mirip">
+                      {fileJawaban.pesan_error}
+                    </p>
+                  )}
               </div>
               <Lencana varian={fileJawaban.status_proses} />
             </li>

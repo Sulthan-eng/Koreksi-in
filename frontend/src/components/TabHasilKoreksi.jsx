@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import * as batchApi from "../api/batch.js";
+import KeadaanData from "./KeadaanData.jsx";
 import Lencana from "./Lencana.jsx";
-import Spinner from "./Spinner.jsx";
 
 function TabHasilKoreksi({ idBatch, daftarSoal }) {
   const [status, setStatus] = useState("memuat");
   const [daftarHasil, setDaftarHasil] = useState([]);
-  const [noSoalDipilih, setNoSoalDipilih] = useState(daftarSoal[0]?.no_soal ?? null);
+  const [noSoalDipilih, setNoSoalDipilih] = useState(
+    daftarSoal[0]?.no_soal ?? null,
+  );
 
   useEffect(() => {
     let dibatalkan = false;
@@ -27,22 +29,21 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
   }, [idBatch]);
 
   if (status === "memuat") {
-    return (
-      <div className="flex justify-center p-8">
-        <Spinner ukuran="size-5" />
-      </div>
-    );
+    return <KeadaanData keadaan="memuat" className="p-8" />;
   }
 
   if (status === "gagal") {
     return (
-      <p role="alert" className="text-kurang-mirip">
-        Koneksi internet terputus, coba muat ulang halaman.
-      </p>
+      <KeadaanData
+        keadaan="gagal"
+        pesan="Koneksi internet terputus, coba muat ulang halaman."
+      />
     );
   }
 
-  const hasilSoalTerpilih = daftarHasil.filter((item) => item.no_soal === noSoalDipilih);
+  const hasilSoalTerpilih = daftarHasil.filter(
+    (item) => item.no_soal === noSoalDipilih,
+  );
 
   return (
     <div>
@@ -54,7 +55,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
             onClick={() => setNoSoalDipilih(soal.no_soal)}
             className={`rounded-md px-3 py-1.5 text-sm ${
               noSoalDipilih === soal.no_soal
-                ? "bg-biru-utama text-white"
+                ? "bg-biru-utama text-permukaan"
                 : "border border-garis text-teks-redup"
             }`}
           >
@@ -64,27 +65,41 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
       </div>
 
       {hasilSoalTerpilih.length === 0 ? (
-        <p className="text-teks-redup">
-          Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai.
-        </p>
+        <KeadaanData
+          keadaan="kosong"
+          pesan="Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai."
+        />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-garis">
           <table className="w-full min-w-max text-left">
             <thead>
               <tr className="border-b border-garis">
-                <th className="p-3 text-sm font-medium text-teks-redup">Peserta Didik</th>
-                <th className="p-3 text-sm font-medium text-teks-redup">Teks OCR</th>
-                <th className="p-3 text-sm font-medium text-teks-redup">Skor Kemiripan</th>
-                <th className="p-3 text-sm font-medium text-teks-redup">Kategori Kualitatif</th>
+                <th className="p-3 text-sm font-medium text-teks-redup">
+                  Peserta Didik
+                </th>
+                <th className="p-3 text-sm font-medium text-teks-redup">
+                  Teks OCR
+                </th>
+                <th className="p-3 text-sm font-medium text-teks-redup">
+                  Skor Kemiripan
+                </th>
+                <th className="p-3 text-sm font-medium text-teks-redup">
+                  Kategori Kualitatif
+                </th>
               </tr>
             </thead>
             <tbody>
               {hasilSoalTerpilih.map((item) => (
-                <tr key={item.id_file} className="border-b border-garis last:border-0">
+                <tr
+                  key={item.id_file}
+                  className="border-b border-garis last:border-0"
+                >
                   <td className="p-3 text-teks">{item.nama_peserta_didik}</td>
                   <td className="whitespace-pre-wrap p-3 text-teks">
                     {item.teks_ocr || (
-                      <span className="text-teks-redup">(jawaban tidak ditemukan)</span>
+                      <span className="text-teks-redup">
+                        (jawaban tidak ditemukan)
+                      </span>
                     )}
                   </td>
                   <td className="p-3 text-teks">{item.skor_sistem}</td>

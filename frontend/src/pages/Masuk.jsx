@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
 function Masuk() {
@@ -55,9 +56,11 @@ function Masuk() {
           <p className="mb-4 text-center text-teks-redup">{pesanFlash}</p>
         )}
         {kesalahan && (
-          <p role="alert" className="mb-4 text-center text-kurang-mirip">
-            {kesalahan}
-          </p>
+          <PesanForm
+            varian="galat"
+            pesan={kesalahan}
+            className="mb-4 text-center"
+          />
         )}
 
         <form onSubmit={tanganiSubmit} className="space-y-4">
@@ -96,7 +99,7 @@ function Masuk() {
           <button
             type="submit"
             disabled={sedangKirim}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-biru-utama px-3 py-2 text-white disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-biru-utama px-3 py-2 text-permukaan disabled:opacity-50"
           >
             {sedangKirim && <Spinner ukuran="size-4" />}
             Masuk

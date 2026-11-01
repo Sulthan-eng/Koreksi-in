@@ -1,12 +1,9 @@
+import KeadaanData from "./KeadaanData.jsx";
 import Lencana from "./Lencana.jsx";
 
 function TabStatusPemrosesan({ daftarFileJawaban, kesalahan }) {
   if (kesalahan) {
-    return (
-      <p role="alert" className="text-kurang-mirip">
-        {kesalahan}
-      </p>
-    );
+    return <KeadaanData keadaan="gagal" pesan={kesalahan} />;
   }
 
   return (
@@ -18,9 +15,12 @@ function TabStatusPemrosesan({ daftarFileJawaban, kesalahan }) {
         >
           <div>
             <span className="text-teks">{fileJawaban.nama_peserta_didik}</span>
-            {fileJawaban.status_proses === "gagal" && fileJawaban.pesan_error && (
-              <p className="mt-1 text-sm text-kurang-mirip">{fileJawaban.pesan_error}</p>
-            )}
+            {fileJawaban.status_proses === "gagal" &&
+              fileJawaban.pesan_error && (
+                <p className="mt-1 text-sm text-kurang-mirip">
+                  {fileJawaban.pesan_error}
+                </p>
+              )}
           </div>
           <Lencana varian={fileJawaban.status_proses} />
         </li>
