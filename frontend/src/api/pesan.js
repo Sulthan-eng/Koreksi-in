@@ -21,6 +21,8 @@ export const PESAN_KODE = {
   GAGAL_STATUS_PEMROSESAN:
     "Gagal memuat status pemrosesan, coba muat ulang halaman",
   KONEKSI_TERPUTUS: "Koneksi internet terputus, coba muat ulang halaman.",
+  BELUM_ADA_HASIL_SOAL:
+    "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai.",
   MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
   TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
   NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",

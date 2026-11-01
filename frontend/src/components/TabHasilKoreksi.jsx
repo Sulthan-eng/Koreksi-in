@@ -1,7 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as batchApi from "../api/batch.js";
+import { PESAN_KODE } from "../api/pesan.js";
 import KeadaanData from "./KeadaanData.jsx";
 import Lencana from "./Lencana.jsx";
+
+function TeksOcr({ teks }) {
+  const refTeks = useRef(null);
+  const [dibuka, setDibuka] = useState(false);
+  const [terpotong, setTerpotong] = useState(false);
+
+  useEffect(() => {
+    const elemen = refTeks.current;
+    if (!elemen || dibuka) return undefined;
+
+    function periksaTerpotong() {
+      setTerpotong(elemen.scrollHeight > elemen.clientHeight);
+    }
+
+    periksaTerpotong();
+    const observer = new ResizeObserver(periksaTerpotong);
+    observer.observe(elemen);
+    return () => observer.disconnect();
+  }, [teks, dibuka]);
+
+  if (!teks) {
+    return <span className="text-teks-redup">(jawaban tidak ditemukan)</span>;
+  }
+
+  return (
+    <div>
+      <p
+        ref={refTeks}
+        className={`whitespace-pre-wrap text-teks ${dibuka ? "" : "line-clamp-3"}`}
+      >
+        {teks}
+      </p>
+      {(terpotong || dibuka) && (
+        <button
+          type="button"
+          aria-expanded={dibuka}
+          onClick={() => setDibuka((sebelumnya) => !sebelumnya)}
+          className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-biru-utama underline"
+        >
+          {dibuka ? "Tampilkan ringkas" : "Tampilkan lengkap"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function TabHasilKoreksi({ idBatch, daftarSoal }) {
   const [status, setStatus] = useState("memuat");
@@ -33,12 +79,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
   }
 
   if (status === "gagal") {
-    return (
-      <KeadaanData
-        keadaan="gagal"
-        pesan="Koneksi internet terputus, coba muat ulang halaman."
-      />
-    );
+    return <KeadaanData keadaan="gagal" pesan={PESAN_KODE.KONEKSI_TERPUTUS} />;
   }
 
   const hasilSoalTerpilih = daftarHasil.filter(
@@ -47,63 +88,101 @@ function TabHasilKoreksi({ idBatch, daftarSoal }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {daftarSoal.map((soal) => (
-          <button
-            key={soal.id_soal}
-            type="button"
-            onClick={() => setNoSoalDipilih(soal.no_soal)}
-            className={`rounded-md px-3 py-1.5 text-sm ${
-              noSoalDipilih === soal.no_soal
-                ? "bg-biru-utama text-permukaan"
-                : "border border-garis text-teks-redup"
-            }`}
-          >
-            Soal {soal.no_soal}
-          </button>
-        ))}
-      </div>
+      {daftarSoal.length > 0 && (
+        <select
+          aria-label="Soal"
+          value={noSoalDipilih ?? ""}
+          onChange={(peristiwa) =>
+            setNoSoalDipilih(Number(peristiwa.target.value))
+          }
+          className="mb-4 h-11 w-fit min-w-40 rounded-lg border border-garis bg-permukaan px-3 text-teks"
+        >
+          {daftarSoal.map((soal) => (
+            <option key={soal.id_soal} value={soal.no_soal}>
+              Soal {soal.no_soal}
+            </option>
+          ))}
+        </select>
+      )}
 
       {hasilSoalTerpilih.length === 0 ? (
-        <KeadaanData
-          keadaan="kosong"
-          pesan="Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai."
-        />
+        <KeadaanData keadaan="kosong" pesan={PESAN_KODE.BELUM_ADA_HASIL_SOAL} />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-garis">
-          <table className="w-full min-w-max text-left">
-            <thead>
-              <tr className="border-b border-garis">
-                <th className="p-3 text-sm font-medium text-teks-redup">
+        <div className="overflow-hidden rounded-lg border border-garis bg-permukaan max-lg:overflow-visible max-lg:border-0 max-lg:bg-transparent">
+          <table role="table" className="w-full border-collapse max-lg:block">
+            <thead role="rowgroup" className="max-lg:hidden">
+              <tr role="row">
+                <th
+                  role="columnheader"
+                  scope="col"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
+                >
                   Peserta Didik
                 </th>
-                <th className="p-3 text-sm font-medium text-teks-redup">
+                <th
+                  role="columnheader"
+                  scope="col"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
+                >
                   Teks OCR
                 </th>
-                <th className="p-3 text-sm font-medium text-teks-redup">
+                <th
+                  role="columnheader"
+                  scope="col"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
+                >
                   Skor Kemiripan
                 </th>
-                <th className="p-3 text-sm font-medium text-teks-redup">
+                <th
+                  role="columnheader"
+                  scope="col"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
+                >
                   Kategori Kualitatif
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup" className="max-lg:block">
               {hasilSoalTerpilih.map((item) => (
                 <tr
                   key={item.id_file}
-                  className="border-b border-garis last:border-0"
+                  role="row"
+                  className="border-b border-garis last:border-b-0 max-lg:mb-3 max-lg:block max-lg:rounded-lg max-lg:border max-lg:border-garis max-lg:bg-permukaan max-lg:p-4"
                 >
-                  <td className="p-3 text-teks">{item.nama_peserta_didik}</td>
-                  <td className="whitespace-pre-wrap p-3 text-teks">
-                    {item.teks_ocr || (
-                      <span className="text-teks-redup">
-                        (jawaban tidak ditemukan)
-                      </span>
-                    )}
+                  <td
+                    role="cell"
+                    className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
+                  >
+                    <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                      Peserta Didik
+                    </span>
+                    <span className="text-teks">{item.nama_peserta_didik}</span>
                   </td>
-                  <td className="p-3 text-teks">{item.skor_sistem}</td>
-                  <td className="p-3">
+                  <td
+                    role="cell"
+                    className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
+                  >
+                    <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                      Teks OCR
+                    </span>
+                    <TeksOcr teks={item.teks_ocr} />
+                  </td>
+                  <td
+                    role="cell"
+                    className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
+                  >
+                    <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                      Skor Kemiripan
+                    </span>
+                    <span className="text-teks">{item.skor_sistem}</span>
+                  </td>
+                  <td
+                    role="cell"
+                    className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
+                  >
+                    <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                      Kategori Kualitatif
+                    </span>
                     <Lencana varian={item.kategori} />
                   </td>
                 </tr>

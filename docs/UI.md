@@ -357,8 +357,8 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 
 #### Tab Dashboard Hasil Koreksi
 
-- Pilihan soal di atas tabel: dropdown berisi "Soal 1", "Soal 2", dan seterusnya (hingga 30). Soal pertama terpilih awal.
-- Tabel untuk soal terpilih, satu baris per peserta didik yang file-nya berstatus Selesai. Kolom: Peserta Didik, Teks OCR, Skor Kemiripan (0 sampai 100), Kategori Kualitatif (lencana bernama, bukan hanya warna). Teks OCR panjang dipotong beberapa baris dengan tautan "Tampilkan lengkap". Jawaban tidak ditemukan: "(jawaban tidak ditemukan)".
+- Pilihan soal di atas tabel: dropdown berisi "Soal 1", "Soal 2", dan seterusnya (hingga 30). Soal pertama terpilih awal. Jika batch belum punya soal, dropdown tidak dirender dan pesan kosong tetap tampil.
+- Tabel untuk soal terpilih, satu baris per peserta didik yang file-nya berstatus Selesai. Kolom: Peserta Didik, Teks OCR, Skor Kemiripan (0 sampai 100), Kategori Kualitatif (lencana bernama, bukan hanya warna). Teks OCR panjang dipotong beberapa baris dengan tautan "Tampilkan lengkap"; setelah dibuka, tautan berganti "Tampilkan ringkas" untuk memotongnya kembali (tombol dengan `aria-expanded`). Jawaban tidak ditemukan: "(jawaban tidak ditemukan)".
 - (nanti) Kolom Nilai Akhir dan aksi per baris: "Edit" (ubah teks OCR, FR15) dan "Ubah Nilai Akhir" (FR16). Nilai akhir yang sudah diisi tampil sebagai nilai resmi dan skor kemiripan sistem tetap terlihat sebagai rekomendasi.
 - Kosong: "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai." Gagal memuat: "Koneksi internet terputus, coba muat ulang halaman."
 - Di bawah 1024 px (ponsel dan tablet): tiap baris menjadi kartu dengan nama di atas, skor dan lencana kategori, lalu teks OCR.
@@ -435,3 +435,4 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 11. Ejaan baku "silakan" dipakai di semua pesan (SPEC sudah disesuaikan, SRS menyusul saat sinkronisasi).
 12. Tabel Free dan Pro di Pemasaran tetap tabel di semua lebar tanpa gulir horizontal (pengecualian dari aturan tabel menjadi kartu di bawah 1024 px).
 13. Garis hijau pendek di atas judul hanya dipakai di Pemasaran. Halaman aplikasi (termasuk Dashboard Pantauan) tidak memakainya.
+14. Teks OCR di Dashboard Hasil Koreksi: tautan "Tampilkan lengkap" berganti menjadi "Tampilkan ringkas" setelah teks dibuka (pilihan pemilik proyek, 1 November 2026).
