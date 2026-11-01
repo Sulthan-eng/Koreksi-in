@@ -127,6 +127,7 @@ Ukuran dan bentuk memakai skala Tailwind standar saja; tidak ada nilai piksel ar
 |---|---|
 | Judul halaman | `text-2xl font-bold leading-8` |
 | Judul seksi | `text-lg font-semibold` |
+| Judul kelompok kartu angka (Dashboard Pantauan) | `text-sm font-semibold leading-5 text-teks-redup` |
 | Isi | `text-base leading-6` |
 | Label kecil, keterangan, lencana | `text-sm leading-5` |
 | Angka besar di kartu angka | `text-3xl font-bold leading-9` |
@@ -170,15 +171,32 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" (nanti) |
 | Hapus | `trash-2` | `size-4` | "Hapus Batch" |
 | Keluar | `log-out` | `size-4` | "Keluar" |
-| Memuat, Diproses | `loader-circle` + `animate-spin` | `size-4` (`size-3.5` di dalam lencana) | Indikator |
+| Memuat, Diproses | `loader-circle` + `animate-spin motion-reduce:animate-none` | `size-4` (`size-3.5` di dalam lencana) | Indikator. SEMUA spinner memakai `motion-reduce:animate-none` (berlaku saat implementasi, juga untuk berkas mockup lama yang belum memilikinya) |
 | Galat | `circle-alert` | `size-4` | Pesan galat |
 | File jawaban | `file` | `size-4` | Nama file di form unggah |
+| Membaca tulisan tangan | `scan-text` | `size-5` dalam kotak `size-11 rounded-lg bg-biru-muda text-biru-utama` | Kartu fitur Pemasaran |
+| Skor kemiripan dan kategori | `gauge` | sama | Kartu fitur Pemasaran |
+| Koreksi manual | `pencil` | sama | Kartu fitur Pemasaran (ikon sama dengan Edit) |
+| Ekspor rekap nilai | `download` | sama | Kartu fitur Pemasaran (ikon sama dengan Ekspor) |
+| Akun, Total akun Pengajar | `users` | `size-4` | Dashboard Pantauan (judul kelompok dan kartu) |
+| Akun Free | `user-check` | `size-4` | Dashboard Pantauan |
+| Akun Pro | `crown` | `size-4` | Dashboard Pantauan |
+| Aktivitas, Jumlah batch | `layers` | `size-4` | Dashboard Pantauan |
+| File Selesai | `file-check` | `size-4` | Dashboard Pantauan |
+| File Gagal | `file-x` | `size-4` | Dashboard Pantauan |
+| Kuota API | `gauge` | `size-4` | Judul kelompok Dashboard Pantauan |
+| Ya (tersedia) | `check` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Ya" |
+| Tidak (tidak tersedia) | `x` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Tidak" (`x` juga dipakai untuk "Tutup menu", maknanya ditentukan teks di sampingnya atau `aria-label`) |
 
 ### Catatan
 
 - Di aplikasi, titik henti memakai varian viewport Tailwind: `lg:` (mulai 1024 px) dan `max-lg:` (di bawah 1024 px). JANGAN memakai `@container`, `@min-[64rem]`, atau `@max-[63.9375rem]` dari berkas mockup: itu hanya akal agar bingkai pratinjau 375 px bisa tampil di layar 1280 px (di Tailwind v4, `@lg` pada container query berarti 32rem, bukan 1024 px).
 - Status Aktif batch di ponsel sejajar dengan nama batch (`items-start`, `min-w-0` pada judul).
 - Dialog memakai elemen `<dialog>` bawaan.
+- Kartu fitur Pemasaran: `rounded-xl p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg`, dengan pelindung gerak `motion-reduce:transition-none motion-reduce:hover:translate-y-0`. Garis aksen dekoratif di tepi atas kartu memakai `merek-hijau` atau `merek-biru` (bergantian), `aria-hidden`.
+- Kartu angka Dashboard Pantauan: `grid-cols-2` di ponsel dan tablet; di desktop tiga atau empat kolom menurut jumlah kartu per kelompok (Akun 3, Aktivitas 4). Kuota API berupa satu kartu lebar penuh dengan bilah pemakaian. Kartu ganjil yang menggantung di ponsel dibuat lebar penuh (`col-span-2`).
+- Pilihan paket di Langganan berupa grup radio. Saat diimplementasi, bungkus dengan `fieldset` dan `legend` (teks "Paket Pro") agar pembaca layar mengenal grupnya.
+- Dialog "Ubah Langganan": kolom "Masa berlaku" hanya perlu diisi bila status Pro dipilih.
 
 ## Inventaris halaman
 
@@ -240,7 +258,7 @@ Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dike
 - Fitur yang bertanda "(nanti)" belum dikerjakan (SPEC bagian 3). Tempatnya dirancang sekarang supaya tata letak tidak dirombak lagi, tetapi elemennya TIDAK dirender sampai fiturnya diminta.
 - Semua halaman terproteksi memakai bilah atas sesuai peran (bagian Komponen bersama) dan konten di tengah dengan lebar maksimal setara `max-w-5xl`, margin samping 16 px di ponsel. Halaman publik bertipe kartu (Masuk, Daftar, Lupa Password, Atur Ulang Password) memakai kartu sempit di tengah.
 - Setiap data yang dimuat punya tiga keadaan: memuat (indikator), kosong (teks SPEC), gagal (teks SPEC). Setiap form memakai `noValidate` dan menampilkan pesan dari aplikasi di dekat kolom atau di bawah form.
-- Di ponsel dan tablet (lebar kurang dari 1024 px, titik henti `lg`) tabel tidak boleh membuat halaman bergulir horizontal. Tabel berubah menjadi daftar kartu, satu kartu per baris, dengan label kolom di dalam kartu. Tabel penuh dipakai mulai 1024 px (laptop, desktop, dan tablet landscape lebar). Tidak ada pilihan gulir horizontal untuk tabel.
+- Di ponsel dan tablet (lebar kurang dari 1024 px, titik henti `lg`) tabel tidak boleh membuat halaman bergulir horizontal. Tabel berubah menjadi daftar kartu, satu kartu per baris, dengan label kolom di dalam kartu. Tabel penuh dipakai mulai 1024 px (laptop, desktop, dan tablet landscape lebar). Tidak ada pilihan gulir horizontal untuk tabel. PENGECUALIAN: tabel perbandingan Free dan Pro di Pemasaran tetap berbentuk tabel di semua lebar (tiga kolom muat di 375 px tanpa gulir), karena tujuannya membandingkan dua kolom berdampingan. Aturan kartu berlaku untuk tabel data (Akun Pengajar dan Dashboard Hasil Koreksi).
 - Tombol aksi utama memakai `bg-biru-utama`. Tombol sekunder memakai garis `border-garis` dengan teks `text-teks`. Aksi yang merusak (hapus, nonaktifkan) memakai tombol sekunder dengan teks `text-kurang-mirip` dan SELALU lewat dialog konfirmasi.
 
 ### 1. Pemasaran (`/`)
@@ -248,10 +266,10 @@ Tiap halaman di Inventaris halaman ditambahi satu subbagian di sini sebelum dike
 Tujuan: pengunjung yang belum login memahami apa itu Koreksi-in dan terdorong mendaftar. Pengunjung yang sudah login dialihkan ke Beranda (Pengajar) atau Dashboard Pantauan (Admin). Bilah atas varian Publik.
 
 Blok dari atas ke bawah:
-1. **Hero.** Judul, satu kalimat penjelas, tombol utama "Daftar" ke `/daftar`, dan tautan "Masuk" ke `/masuk`. Teks usulan: judul "Koreksi esai lebih cepat, nilai akhir tetap di tangan Anda"; kalimat "Unggah lembar jawaban peserta didik. Koreksi-in membaca tulisan tangan dan memberi skor kemiripan sebagai rekomendasi."
+1. **Hero.** Judul (didahului garis aksen pendek `h-1 w-16 rounded-full bg-merek-hijau`, `aria-hidden`; satu-satunya halaman yang memakainya, halaman aplikasi tidak), satu kalimat penjelas, tombol utama "Daftar" ke `/daftar`, dan tautan "Masuk" ke `/masuk`. Teks usulan: judul "Koreksi esai lebih cepat, nilai akhir tetap di tangan Anda"; kalimat "Unggah lembar jawaban peserta didik. Koreksi-in membaca tulisan tangan dan memberi skor kemiripan sebagai rekomendasi."
 2. **Cara kerja.** Empat langkah bernomor: (1) Buat batch dan ketik kunci jawaban. (2) Unggah lembar jawaban berupa foto atau PDF, beserta nama peserta didik. (3) Sistem membaca tulisan dan memberi skor kemiripan. (4) Tinjau hasil, koreksi nilai bila perlu, lalu ekspor (akun Pro).
 3. **Fitur utama.** Empat kartu kecil: "Membaca tulisan tangan" (OCR), "Skor kemiripan dan kategori" (Sangat Mirip, Cukup Mirip, Kurang Mirip), "Koreksi manual" (edit teks hasil baca dan nilai akhir), "Ekspor rekap nilai" (Pro).
-4. **Free dan Pro.** Tabel perbandingan dua kolom:
+4. **Free dan Pro.** Tabel perbandingan dua kolom (tetap tabel di semua lebar, tanpa gulir horizontal; pengecualian dari aturan tabel menjadi kartu):
 
 | | Free | Pro |
 |---|---|---|
@@ -262,7 +280,7 @@ Blok dari atas ke bawah:
 | Ekspor rekap nilai | Tidak | Ya |
 | Harga | Gratis | Rp 30.000 (1 bulan), Rp 80.000 (3 bulan) |
 
-   Di bawah tabel, satu kalimat kecil: "Langganan Pro tidak diperpanjang otomatis."
+   Header kolom pertama kosong secara visual, tetapi harus berisi teks `sr-only` "Fitur" (bukan sel `th` kosong) agar pembaca layar mengenal kolomnya. Di bawah tabel, satu kalimat kecil: "Langganan Pro tidak diperpanjang otomatis."
 5. **Penutup.** Ajakan singkat dan tombol "Daftar".
 
 Keadaan: halaman statis, tanpa pemuatan data. Penegasan isi: skor selalu disebut rekomendasi, sistem tidak mengeluarkan nilai huruf, dan tidak ada klaim akurasi berupa angka.
@@ -360,15 +378,17 @@ Batch berstatus Selesai bersifat baca saja: lencana "Selesai" di kepala, tombol 
 Blok dari atas ke bawah:
 1. **Status akun.** Lencana FREE atau PRO; untuk Pro tampilkan "Berlaku hingga {tanggal}". Gagal memuat: "Gagal memuat status langganan, coba muat ulang halaman".
 2. **Paket Pro.** Dua pilihan berdampingan (satu terpilih): "1 bulan, Rp 30.000" dan "3 bulan, Rp 80.000". Daftar manfaat: batch aktif tidak dibatasi, 30 soal per batch, 50 jawaban per batch, ekspor rekap nilai. Catatan: "Langganan Pro tidak diperpanjang otomatis."
-3. **Tombol.** "Upgrade ke Pro" (untuk akun Pro yang masih berlaku, label "Perpanjang Pro", usulan) membuka ringkasan paket terpilih (harga dan manfaat) dengan tombol "Lanjutkan ke Pembayaran", yang membawa pengguna ke halaman pembayaran Midtrans (Sandbox). Galat: "Transaksi gagal dibuat, Silahkan coba lagi", "Gagal mencatat transaksi, silakan coba lagi".
+3. **Tombol.** "Upgrade ke Pro" (untuk akun Pro yang masih berlaku, label "Perpanjang Pro", usulan) membuka ringkasan paket terpilih (harga dan manfaat) dengan tombol "Lanjutkan ke Pembayaran", yang membawa pengguna ke halaman pembayaran Midtrans (Sandbox). Galat: "Transaksi gagal dibuat, silakan coba lagi", "Gagal mencatat transaksi, silakan coba lagi".
 4. **Status transaksi terakhir.** Saat pengguna kembali dari pembayaran: lencana status (Menunggu, Berhasil, Gagal, Kedaluwarsa; label usulan) beserta paket dan nominalnya. Status Berhasil diikuti perubahan lencana akun menjadi PRO.
 
 ### 7. Dashboard Pantauan (`/admin`, Admin, nanti)
 
-Hanya angka agregat, tanpa isi kunci, jawaban, atau hasil koreksi. Kartu angka dalam grid, dikelompokkan dengan judul kecil:
-- **Akun:** total akun Pengajar, akun Free, akun Pro.
-- **Aktivitas:** jumlah batch; jumlah file jawaban per status (Diproses, Selesai, Gagal), tiga kartu.
-- **Kuota API:** pemakaian kuota API harian (angka terpakai dan batas harian).
+Hanya angka agregat, tanpa isi kunci, jawaban, atau hasil koreksi. Judul halaman TANPA garis aksen (garis aksen hanya di Pemasaran). Kartu angka dalam grid, dikelompokkan dengan judul kecil yang berikon:
+- **Akun** (`users`): total akun Pengajar (`users`), akun Free (`user-check`), akun Pro (`crown`, kotak ikon `bg-biru-utama text-permukaan`).
+- **Aktivitas** (`layers`): jumlah batch (`layers`); file Diproses (`loader-circle`, berputar HANYA bila jumlah lebih dari 0 dan dengan `motion-reduce:animate-none`), File Selesai (`file-check`), File Gagal (`file-x`, angka `text-kurang-mirip`).
+- **Kuota API** (`gauge`): satu kartu berisi "Terpakai hari ini" dan "Batas harian" serta bilah pemakaian (`role="progressbar"`, `aria-valuenow` dan `aria-valuemax` dari data). Lebar isi bilah dihitung dari data (gaya sebaris, `terpakai / batas`, batas 0 menghasilkan lebar 0, maksimal 100 persen), bukan kelas tetap. Warna isi `bg-biru-utama` di atas jalur `bg-biru-muda` (kontras komponen non-teks minimal 3:1; `merek-hijau` di atas `biru-muda` hanya sekitar 1,9:1).
+- Ukuran kartu angka (radius dan padding) BELUM diputuskan pemilik proyek. Pilihan: `rounded-lg p-4` (versi desainer) atau `rounded-xl p-5` (berkas `dashboard-pantauan_1_.html`). Kartu Kuota API `p-6`. Jangan diimplementasi sebelum diputuskan.
+- Kartu angka memakai garis aksen dekoratif di tepi atas (`h-1`, `aria-hidden`; warna `merek-biru`, `merek-hijau`, `biru-utama`, atau `kurang-mirip` menurut maknanya) dan kotak ikon `size-9 rounded-lg`. Ikon dan garis aksen bersifat dekoratif; angka dan label teks tetap pembawa makna.
 
 Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba muat ulang halaman."
 
@@ -407,3 +427,11 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 7. Ikon diizinkan, hanya dari Lucide (bagian Ikon).
 8. Tautan di halaman Atur Ulang Password untuk token tidak sah memakai teks "Lupa Password" (pilihan pemilik proyek). Alt teks logo: "Koreksi-in". Tautan "Langganan" di navbar dan "Lupa password?" di Masuk memakai penanda "nanti" sampai fiturnya dikerjakan.
 9. Tampilan mendukung tablet: tabel berubah menjadi kartu di bawah 1024 px, dan menu Bilah atas berpindah ke laci di bawah 1024 px, satu titik henti (`lg`) yang sama untuk tabel dan menu (bagian Gaya visual dan Komponen bersama).
+10. Teks tambahan dari desain tahap 3, disetujui sementara (perubahan lewat pemilik proyek):
+    - Pemasaran: judul seksi "Cara kerja", "Fitur utama", "Free dan Pro". Deskripsi kartu fitur: "Lembar jawaban foto atau PDF dibaca menjadi teks.", "Skor sebagai rekomendasi, bukan nilai akhir.", "Edit teks hasil baca dan nilai akhir.", "Unduh rekap nilai dalam file .xlsx.". Penutup: "Siap mulai mengoreksi lebih cepat?".
+    - Langganan: judul halaman "Langganan"; judul seksi "Paket Pro" dan "Status transaksi terakhir"; lencana transaksi "Menunggu", "Berhasil", "Gagal", "Kedaluwarsa".
+    - Dashboard Pantauan: judul halaman "Dashboard Pantauan"; kelompok "Akun", "Aktivitas", "Kuota API"; label kartu "Total akun Pengajar", "Akun Free", "Akun Pro", "Jumlah batch", "File Diproses", "File Selesai", "File Gagal", "Terpakai hari ini", "Batas harian".
+    - Akun Pengajar: judul halaman "Akun Pengajar"; label "Cari", "Status langganan", "Status akun", "Masa berlaku"; tombol dialog "Simpan", "Batal", "Ya". Dialog nonaktifkan: judul "Nonaktifkan Akun", kalimat "Akun {nama} akan dinonaktifkan dan tidak dapat masuk. Lanjutkan?". Dialog aktifkan: judul "Aktifkan Akun", kalimat "Akun {nama} akan diaktifkan dan dapat masuk kembali. Lanjutkan?".
+11. Ejaan baku "silakan" dipakai di semua pesan (SPEC sudah disesuaikan, SRS menyusul saat sinkronisasi).
+12. Tabel Free dan Pro di Pemasaran tetap tabel di semua lebar tanpa gulir horizontal (pengecualian dari aturan tabel menjadi kartu di bawah 1024 px).
+13. Garis hijau pendek di atas judul hanya dipakai di Pemasaran. Halaman aplikasi (termasuk Dashboard Pantauan) tidak memakainya.
