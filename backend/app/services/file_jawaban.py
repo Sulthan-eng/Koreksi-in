@@ -10,12 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.models.enums import StatusProses
+from app.models.enums import StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
-from app.services.batch import ambil_batch
-from app.utils.berkas import hitung_halaman
+from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
+from app.utils.berkas import REL_PREFIX, hitung_halaman
 
 BELUM_ADA_SOAL = AppError(
     kode="BELUM_ADA_SOAL",
@@ -65,7 +65,6 @@ _MAKS_PANJANG_NAMA = 100
 _MAKS_UKURAN_BYTE = 10 * 1024 * 1024
 _MAKS_HALAMAN_PDF = 15
 _UKURAN_CHUNK = 1024 * 1024
-_REL_PREFIX = "uploads"
 
 _SIGNATURE_PDF = b"%PDF-"
 _SIGNATURE_PNG = b"\x89PNG\r\n\x1a\n"
@@ -105,7 +104,7 @@ def _hitung_halaman_pdf(konten: bytes) -> int:
 
 
 def _rel_path(id_batch: uuid.UUID, id_file: uuid.UUID, ext: str) -> str:
-    return f"{_REL_PREFIX}/{id_batch}/{id_file}.{ext}"
+    return f"{REL_PREFIX}/{id_batch}/{id_file}.{ext}"
 
 
 async def daftar_file_jawaban(
@@ -128,6 +127,9 @@ async def unggah_jawaban(
     nama_peserta_didik: list[str],
 ) -> list[FileJawaban]:
     batch = await ambil_batch(db, pengguna, id_batch)
+
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
 
     ada_soal = await db.scalar(select(Soal.id_soal).where(Soal.id_batch == batch.id_batch).limit(1))
     if ada_soal is None:
