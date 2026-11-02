@@ -1,4 +1,12 @@
 import { useEffect, useId, useRef } from "react";
+import Spinner from "./Spinner.jsx";
+
+const KELAS_UTAMA =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50";
+const KELAS_SEKUNDER =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis px-4 font-semibold text-teks disabled:opacity-50";
+const KELAS_SEKUNDER_MERUSAK =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis px-4 font-semibold text-kurang-mirip disabled:opacity-50";
 
 function DialogKonfirmasi({
   terbuka,
@@ -8,6 +16,9 @@ function DialogKonfirmasi({
   labelYa,
   onBatal,
   onYa,
+  tombolUtama = "batal",
+  variasiYa,
+  prosesBerjalan = false,
 }) {
   const dialogRef = useRef(null);
   const tombolBatalRef = useRef(null);
@@ -24,6 +35,14 @@ function DialogKonfirmasi({
     }
   }, [terbuka]);
 
+  const kelasBatal = tombolUtama === "batal" ? KELAS_UTAMA : KELAS_SEKUNDER;
+  const kelasYa =
+    tombolUtama === "ya"
+      ? KELAS_UTAMA
+      : variasiYa === "merusak"
+        ? KELAS_SEKUNDER_MERUSAK
+        : KELAS_SEKUNDER;
+
   return (
     <dialog
       ref={dialogRef}
@@ -31,7 +50,7 @@ function DialogKonfirmasi({
       className="w-full max-w-md rounded-xl p-0 shadow-lg backdrop:bg-teks/40"
       onCancel={(peristiwa) => {
         peristiwa.preventDefault();
-        onBatal();
+        if (!prosesBerjalan) onBatal();
       }}
     >
       <div className="flex flex-col gap-4 p-6">
@@ -44,15 +63,18 @@ function DialogKonfirmasi({
             type="button"
             ref={tombolBatalRef}
             onClick={onBatal}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan"
+            disabled={prosesBerjalan}
+            className={kelasBatal}
           >
             {labelBatal}
           </button>
           <button
             type="button"
             onClick={onYa}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-garis px-4 font-semibold text-teks"
+            disabled={prosesBerjalan}
+            className={kelasYa}
           >
+            {prosesBerjalan && <Spinner ukuran="size-4" />}
             {labelYa}
           </button>
         </div>
