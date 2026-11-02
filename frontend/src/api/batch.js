@@ -26,6 +26,13 @@ export async function tambahSoal(idBatch, { kunci_jawaban }) {
   });
 }
 
+export async function ocrKunci(idBatch, formData) {
+  return permintaan(`/api/batch/${idBatch}/soal/ocr-kunci`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export async function daftarFileJawaban(idBatch) {
   return permintaan(`/api/batch/${idBatch}/file-jawaban`);
 }
