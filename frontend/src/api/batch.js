@@ -40,3 +40,11 @@ export async function unggahFileJawaban(idBatch, formData) {
 export async function daftarHasilKoreksi(idBatch) {
   return permintaan(`/api/batch/${idBatch}/hasil`);
 }
+
+export async function hapusBatch(idBatch) {
+  return permintaan(`/api/batch/${idBatch}`, { method: "DELETE" });
+}
+
+export async function selesaikanBatch(idBatch) {
+  return permintaan(`/api/batch/${idBatch}/selesaikan`, { method: "POST" });
+}
