@@ -11,6 +11,7 @@ import KeadaanData from "./components/KeadaanData.jsx";
 import TataLetakTerproteksi from "./components/TataLetakTerproteksi.jsx";
 import Masuk from "./pages/Masuk.jsx";
 import Daftar from "./pages/Daftar.jsx";
+import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
 
@@ -20,6 +21,17 @@ function RouteTamu({ children }) {
     return <Navigate to="/" replace />;
   }
   return children;
+}
+
+function RuteUtama() {
+  const { status, pesanSesi } = useAuth();
+  if (status === "terautentikasi") {
+    return <TataLetakTerproteksi />;
+  }
+  if (pesanSesi) {
+    return <Navigate to="/masuk" replace />;
+  }
+  return <Pemasaran />;
 }
 
 function GerbangAutentikasi() {
@@ -50,8 +62,10 @@ const rute = createRoutesFromElements(
         </RouteTamu>
       }
     />
-    <Route element={<TataLetakTerproteksi />}>
+    <Route element={<RuteUtama />}>
       <Route path="/" element={<Beranda />} />
+    </Route>
+    <Route element={<TataLetakTerproteksi />}>
       <Route path="/batch/:id" element={<HalamanBatch />} />
     </Route>
   </Route>,

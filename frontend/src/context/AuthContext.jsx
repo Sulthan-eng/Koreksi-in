@@ -9,10 +9,12 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState("memuat");
   const [nama, setNama] = useState(null);
   const [pesanSesi, setPesanSesi] = useState(null);
+  const [keluarSengaja, setKeluarSengaja] = useState(false);
   const sudahJalanRef = useRef(false);
 
   useEffect(() => {
     setPenangananSesiBerakhir(() => {
+      setKeluarSengaja(false);
       setPesanSesi(pesanUntukKode("SESI_BERAKHIR"));
       setNama(null);
       setStatus("tidak-terautentikasi");
@@ -40,6 +42,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   function tandaiMasuk(namaPengguna) {
+    setKeluarSengaja(false);
     setNama(namaPengguna);
     setStatus("terautentikasi");
   }
@@ -48,6 +51,7 @@ export function AuthProvider({ children }) {
     try {
       await auth.keluar();
     } finally {
+      setKeluarSengaja(true);
       setNama(null);
       setStatus("tidak-terautentikasi");
     }
@@ -59,6 +63,7 @@ export function AuthProvider({ children }) {
         status,
         nama,
         pesanSesi,
+        keluarSengaja,
         bersihkanPesanSesi,
         tandaiMasuk,
         keluar,
