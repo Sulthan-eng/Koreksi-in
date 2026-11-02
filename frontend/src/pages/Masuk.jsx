@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { PESAN_KODE } from "../api/pesan.js";
+import { REGEX_EMAIL } from "../lib/validasi.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
@@ -18,8 +19,6 @@ function Masuk() {
   const [pesanFlash] = useState(
     () => location.state?.pesan ?? pesanSesi ?? null,
   );
-
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     if (location.state?.pesan) {
@@ -37,7 +36,7 @@ function Masuk() {
     peristiwa.preventDefault();
     const tidakValid = new Set();
 
-    if (email.trim() === "" || !regexEmail.test(email.trim())) {
+    if (email.trim() === "" || !REGEX_EMAIL.test(email.trim())) {
       tidakValid.add("email");
     }
     if (password === "") {
@@ -68,12 +67,12 @@ function Masuk() {
     }
   }
 
-  const varianPesan = pesanFlash
-    ? pesanFlash === PESAN_KODE.SESI_BERAKHIR
-      ? "netral"
-      : "sukses"
-    : kesalahan
-      ? "galat"
+  const varianPesan = kesalahan
+    ? "galat"
+    : pesanFlash
+      ? pesanFlash === PESAN_KODE.SESI_BERAKHIR
+        ? "netral"
+        : "sukses"
       : null;
 
   return (
@@ -104,6 +103,7 @@ function Masuk() {
               <input
                 id="email"
                 type="text"
+                autoComplete="email"
                 value={email}
                 onChange={(peristiwa) => setEmail(peristiwa.target.value)}
                 aria-invalid={kolomTidakValid.has("email") ? "true" : undefined}
@@ -116,6 +116,7 @@ function Masuk() {
               <input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(peristiwa) => setPassword(peristiwa.target.value)}
                 aria-invalid={
@@ -138,7 +139,10 @@ function Masuk() {
 
         <p className="text-center text-sm text-teks-redup">
           Belum punya akun?{" "}
-          <Link to="/daftar" className="font-semibold text-biru-utama">
+          <Link
+            to="/daftar"
+            className="inline-flex min-h-11 items-center font-semibold text-biru-utama underline"
+          >
             Daftar
           </Link>
         </p>
