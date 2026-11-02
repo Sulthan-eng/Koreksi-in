@@ -38,6 +38,17 @@ export const PESAN_KODE = {
   JUDUL_TINGGALKAN_HALAMAN: "Tinggalkan Halaman",
   PESAN_TINGGALKAN_HALAMAN:
     "Ada file yang belum diunggah. Yakin ingin meninggalkan halaman ini?",
+  MASIH_ADA_FILE_DIPROSES: "Tunggu hingga semua file selesai diproses.",
+  BATCH_SUDAH_SELESAI: "Batch yang sudah selesai tidak dapat diubah lagi.",
+  GAGAL_SELESAIKAN_BATCH: "Gagal menyelesaikan batch, silakan coba lagi",
+  GAGAL_HAPUS_BATCH: "Gagal menghapus batch, silakan coba lagi",
+  JUDUL_HAPUS_BATCH: "Hapus Batch",
+  PESAN_HAPUS_BATCH:
+    "Batch ini beserta seluruh data koreksi akan dihapus permanen dan tidak dapat dikembalikan. Lanjutkan?",
+  JUDUL_SELESAIKAN_BATCH: "Selesaikan Batch",
+  PESAN_SELESAIKAN_BATCH:
+    "Batch yang diselesaikan tidak dapat diubah lagi. Lanjutkan?",
+  BATCH_SELESAI_SUKSES: "Batch berhasil diselesaikan.",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 
