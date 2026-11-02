@@ -48,12 +48,25 @@ function Pemasaran() {
   const { hash } = useLocation();
 
   useEffect(() => {
+    const sedangBerpotongan = new Set();
     const pengamat = new IntersectionObserver(
       (entri) => {
         entri.forEach((item) => {
-          if (!item.isIntersecting) return;
-          setSeksiAktif(item.target.id);
+          if (item.isIntersecting) {
+            sedangBerpotongan.add(item.target.id);
+          } else {
+            sedangBerpotongan.delete(item.target.id);
+          }
         });
+
+        const masuk = entri.find((item) => item.isIntersecting);
+        if (masuk) {
+          setSeksiAktif(masuk.target.id);
+        } else if (sedangBerpotongan.size === 0) {
+          setSeksiAktif(null);
+        } else {
+          setSeksiAktif([...sedangBerpotongan].at(-1));
+        }
       },
       { rootMargin: "-40% 0px -55% 0px" },
     );
