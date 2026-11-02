@@ -10,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.models.enums import StatusProses
+from app.models.enums import StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
-from app.services.batch import ambil_batch
+from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
 from app.utils.berkas import REL_PREFIX, hitung_halaman
 
 BELUM_ADA_SOAL = AppError(
@@ -127,6 +127,9 @@ async def unggah_jawaban(
     nama_peserta_didik: list[str],
 ) -> list[FileJawaban]:
     batch = await ambil_batch(db, pengguna, id_batch)
+
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
 
     ada_soal = await db.scalar(select(Soal.id_soal).where(Soal.id_batch == batch.id_batch).limit(1))
     if ada_soal is None:

@@ -5,10 +5,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
+from app.models.enums import StatusBatch
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
-from app.services.batch import ambil_batch
+from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
 
 KUNCI_KOSONG = AppError(
     kode="KUNCI_KOSONG", pesan="Kunci jawaban tidak boleh kosong", status_code=400
@@ -41,6 +42,9 @@ async def tambah_soal(
     db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID, kunci_jawaban: str
 ) -> Soal:
     batch = await ambil_batch(db, pengguna, id_batch)
+
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
 
     kunci = kunci_jawaban.strip()
     if not kunci:

@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.models.batch import Batch
+from app.models.enums import StatusBatch, StatusProses
+from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.utils.berkas import direktori_batch
 
@@ -24,6 +26,21 @@ GAGAL_BUAT_BATCH = AppError(
 )
 GAGAL_HAPUS_BATCH = AppError(
     kode="GAGAL_HAPUS_BATCH", pesan="Gagal menghapus batch, silakan coba lagi", status_code=500
+)
+MASIH_ADA_FILE_DIPROSES = AppError(
+    kode="MASIH_ADA_FILE_DIPROSES",
+    pesan="Tunggu hingga semua file selesai diproses.",
+    status_code=400,
+)
+BATCH_SUDAH_SELESAI = AppError(
+    kode="BATCH_SUDAH_SELESAI",
+    pesan="Batch yang sudah selesai tidak dapat diubah lagi.",
+    status_code=400,
+)
+GAGAL_SELESAIKAN_BATCH = AppError(
+    kode="GAGAL_SELESAIKAN_BATCH",
+    pesan="Gagal menyelesaikan batch, silakan coba lagi",
+    status_code=500,
 )
 
 
@@ -57,6 +74,31 @@ async def ambil_batch(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID)
     )
     if batch is None:
         raise BATCH_TIDAK_DITEMUKAN
+    return batch
+
+
+async def selesaikan_batch(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID) -> Batch:
+    batch = await ambil_batch(db, pengguna, id_batch)
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
+
+    ada_diproses = await db.scalar(
+        select(FileJawaban.id_file)
+        .where(
+            FileJawaban.id_batch == batch.id_batch,
+            FileJawaban.status_proses == StatusProses.DIPROSES,
+        )
+        .limit(1)
+    )
+    if ada_diproses is not None:
+        raise MASIH_ADA_FILE_DIPROSES
+
+    batch.status = StatusBatch.SELESAI
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise GAGAL_SELESAIKAN_BATCH from None
     return batch
 
 

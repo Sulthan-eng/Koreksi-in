@@ -390,3 +390,120 @@ async def test_hapus_batch_tanpa_token(client: AsyncClient) -> None:
     response = await client.delete(f"/api/batch/{uuid.uuid4()}")
     assert response.status_code == 401
     assert response.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def test_selesaikan_batch_sukses(client: AsyncClient) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+    assert response.status_code == 200
+    assert response.json()["status"] == "selesai"
+
+    response = await client.get(f"/api/batch/{id_batch}", headers=_auth(token))
+    assert response.json()["status"] == "selesai"
+
+
+async def test_selesaikan_batch_dengan_file_diproses_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    await _unggah_satu_jawaban(client, token, id_batch)
+
+    response = await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "MASIH_ADA_FILE_DIPROSES",
+        "pesan": "Tunggu hingga semua file selesai diproses.",
+    }
+
+    batch = await db_session.get(Batch, uuid.UUID(id_batch))
+    assert batch.status == StatusBatch.AKTIF
+
+
+async def test_selesaikan_batch_dua_kali_ditolak(client: AsyncClient) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    pertama = await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+    assert pertama.status_code == 200
+
+    kedua = await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+    assert kedua.status_code == 400
+    assert kedua.json() == {
+        "kode": "BATCH_SUDAH_SELESAI",
+        "pesan": "Batch yang sudah selesai tidak dapat diubah lagi.",
+    }
+
+
+async def test_selesaikan_batch_404_milik_pengguna_lain(client: AsyncClient) -> None:
+    token_a = await _token(client, "a@contoh.com")
+    token_b = await _token(client, "b@contoh.com")
+
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch A"}, headers=_auth(token_a))
+    id_batch = buat.json()["id_batch"]
+
+    response = await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token_b))
+    assert response.status_code == 404
+    assert response.json()["kode"] == "BATCH_TIDAK_DITEMUKAN"
+
+
+async def test_selesaikan_batch_tanpa_token(client: AsyncClient) -> None:
+    response = await client.post(f"/api/batch/{uuid.uuid4()}/selesaikan")
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def test_tambah_soal_ke_batch_selesai_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+
+    jumlah_sebelum = len(
+        list(await db_session.scalars(select(Soal).where(Soal.id_batch == uuid.UUID(id_batch))))
+    )
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal",
+        json={"kunci_jawaban": "Kunci baru"},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "BATCH_SUDAH_SELESAI",
+        "pesan": "Batch yang sudah selesai tidak dapat diubah lagi.",
+    }
+
+    jumlah_sesudah = len(
+        list(await db_session.scalars(select(Soal).where(Soal.id_batch == uuid.UUID(id_batch))))
+    )
+    assert jumlah_sesudah == jumlah_sebelum
+
+
+async def test_unggah_jawaban_ke_batch_selesai_ditolak(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    await client.post(f"/api/batch/{id_batch}/selesaikan", headers=_auth(token))
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=[("files", ("a.png", _PNG, "image/png"))],
+        data={"nama_peserta_didik": ["Budi"]},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "BATCH_SUDAH_SELESAI",
+        "pesan": "Batch yang sudah selesai tidak dapat diubah lagi.",
+    }
+
+    jumlah_file = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_file is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
