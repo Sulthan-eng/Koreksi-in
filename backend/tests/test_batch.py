@@ -1,14 +1,23 @@
 import uuid
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.enums import StatusProses
+from app.core.config import settings
+from app.models.batch import Batch
+from app.models.enums import StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.soal import Soal
 
 _DAFTAR = {"nama": "Budi Santoso", "email": "Budi@Contoh.com", "password": "rahasia123"}
+_PNG = b"\x89PNG\r\n\x1a\n" + b"konten png palsu"
+
+
+@pytest.fixture(autouse=True)
+def _upload_dir_sementara(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path))
 
 
 async def _daftar_dan_masuk(client: AsyncClient, email: str = "budi@contoh.com") -> dict:
@@ -24,6 +33,26 @@ async def _token(client: AsyncClient, email: str = "budi@contoh.com") -> str:
 
 def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+async def _buat_batch_dengan_soal(client: AsyncClient, token: str) -> str:
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch"}, headers=_auth(token))
+    id_batch = buat.json()["id_batch"]
+    await client.post(
+        f"/api/batch/{id_batch}/soal", json={"kunci_jawaban": "Kunci"}, headers=_auth(token)
+    )
+    return id_batch
+
+
+async def _unggah_satu_jawaban(client: AsyncClient, token: str, id_batch: str) -> dict:
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=[("files", ("a.png", _PNG, "image/png"))],
+        data={"nama_peserta_didik": ["Budi"]},
+        headers=_auth(token),
+    )
+    assert response.status_code == 201
+    return response.json()[0]
 
 
 async def test_buat_batch_dan_daftar_batch_sukses(client: AsyncClient) -> None:
@@ -279,5 +308,85 @@ async def test_daftar_soal_tanpa_token(client: AsyncClient) -> None:
 
 async def test_tambah_soal_tanpa_token(client: AsyncClient) -> None:
     response = await client.post(f"/api/batch/{uuid.uuid4()}/soal", json={"kunci_jawaban": "Kunci"})
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def test_hapus_batch_sukses_beserta_berkas(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    rel_path = (
+        await db_session.scalar(
+            select(FileJawaban).where(FileJawaban.id_file == uuid.UUID(fj["id_file"]))
+        )
+    ).path
+    assert (tmp_path / rel_path).exists()
+
+    response = await client.delete(f"/api/batch/{id_batch}", headers=_auth(token))
+    assert response.status_code == 204
+
+    response = await client.get(f"/api/batch/{id_batch}", headers=_auth(token))
+    assert response.status_code == 404
+
+    assert await db_session.get(Batch, uuid.UUID(id_batch)) is None
+    assert not (tmp_path / "uploads" / id_batch).exists()
+
+
+async def test_hapus_batch_404_milik_pengguna_lain(client: AsyncClient) -> None:
+    token_a = await _token(client, "a@contoh.com")
+    token_b = await _token(client, "b@contoh.com")
+
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch A"}, headers=_auth(token_a))
+    id_batch = buat.json()["id_batch"]
+
+    response = await client.delete(f"/api/batch/{id_batch}", headers=_auth(token_b))
+    assert response.status_code == 404
+    assert response.json()["kode"] == "BATCH_TIDAK_DITEMUKAN"
+
+
+async def test_hapus_batch_404_id_acak(client: AsyncClient) -> None:
+    token = await _token(client)
+
+    response = await client.delete(f"/api/batch/{uuid.uuid4()}", headers=_auth(token))
+    assert response.status_code == 404
+    assert response.json()["kode"] == "BATCH_TIDAK_DITEMUKAN"
+
+
+async def test_hapus_batch_berstatus_selesai_boleh(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    batch = await db_session.get(Batch, uuid.UUID(id_batch))
+    batch.status = StatusBatch.SELESAI
+    await db_session.commit()
+
+    response = await client.delete(f"/api/batch/{id_batch}", headers=_auth(token))
+    assert response.status_code == 204
+
+
+async def test_hapus_batch_saat_ada_file_diproses_boleh(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    """FR22 tidak mensyaratkan menunggu pemrosesan selesai (berbeda dari FR23).
+    Keamanan tugas latar terhadap race ini dibuktikan terpisah di
+    test_pemrosesan.py (batch dihapus lewat sesi lain saat tugas latar
+    berjalan)."""
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    assert fj["status_proses"] == "diproses"
+
+    response = await client.delete(f"/api/batch/{id_batch}", headers=_auth(token))
+    assert response.status_code == 204
+    assert await db_session.get(Batch, uuid.UUID(id_batch)) is None
+
+
+async def test_hapus_batch_tanpa_token(client: AsyncClient) -> None:
+    response = await client.delete(f"/api/batch/{uuid.uuid4()}")
     assert response.status_code == 401
     assert response.json()["kode"] == "SESI_BERAKHIR"

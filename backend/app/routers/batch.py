@@ -82,6 +82,15 @@ async def ambil_batch(
     return _batch_response(batch)
 
 
+@router.delete("/{id_batch}", status_code=204)
+async def hapus_batch(
+    id_batch: uuid.UUID,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await batch_service.hapus_batch(db, pengguna, id_batch)
+
+
 @router.get("/{id_batch}/soal", response_model=list[SoalResponse])
 async def daftar_soal(
     id_batch: uuid.UUID,
