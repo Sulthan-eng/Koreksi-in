@@ -159,7 +159,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 
 | Fungsi | Ikon Lucide | Ukuran | Dipakai di |
 |---|---|---|---|
-| Edit | `pencil` | `size-4` | Aksi di Dashboard Hasil Koreksi (nanti) |
+| Edit | `pencil` | `size-4` | Aksi di Dashboard Hasil Koreksi |
 | Ubah Nilai Akhir | `badge-check` | `size-4` | Dashboard Hasil Koreksi (nanti) |
 | Buka menu | `menu` | `size-5` | Bilah atas ponsel (`aria-label` "Buka menu") |
 | Tutup menu | `x` | `size-5` | Laci menu (`aria-label` "Tutup menu") |
@@ -362,9 +362,10 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 
 - Pilihan soal di atas tabel: dropdown berisi "Soal 1", "Soal 2", dan seterusnya (hingga 30). Soal pertama terpilih awal. Jika batch belum punya soal, dropdown tidak dirender dan pesan kosong tetap tampil.
 - Tabel untuk soal terpilih, satu baris per peserta didik yang file-nya berstatus Selesai. Kolom: Peserta Didik, Teks OCR, Skor Kemiripan (0 sampai 100), Kategori Kualitatif (lencana bernama, bukan hanya warna). Teks OCR panjang dipotong beberapa baris dengan tautan "Tampilkan lengkap"; setelah dibuka, tautan berganti "Tampilkan ringkas" untuk memotongnya kembali (tombol dengan `aria-expanded`). Jawaban tidak ditemukan: "(jawaban tidak ditemukan)".
-- (nanti) Kolom Nilai Akhir dan aksi per baris: "Edit" (ubah teks OCR, FR15) dan "Ubah Nilai Akhir" (FR16). Nilai akhir yang sudah diisi tampil sebagai nilai resmi dan skor kemiripan sistem tetap terlihat sebagai rekomendasi.
+- Kolom Aksi (hanya saat batch Aktif, FR15): tombol "Edit" (ikon `pencil`, nama aksesibel "Edit jawaban {nama peserta didik}") di tiap baris mengubah sel Teks OCR menjadi area teks beberapa baris berisi teks saat ini, dengan tombol "Simpan" dan "Batal" di bawahnya. Hanya satu baris dapat diedit sekaligus: tombol Edit baris lain memakai `aria-disabled`, dan dropdown Soal di atas tabel memakai `disabled` selama ada baris yang diedit. Fokus pindah ke area teks saat Edit dibuka; Esc atau "Batal" mengembalikan sel ke tampilan semula dan fokus kembali ke tombol Edit baris itu. Batas 10.000 karakter divalidasi saat Simpan ditekan (bukan membatasi ketikan): lebih dari itu menampilkan "Teks jawaban maksimal 10.000 karakter." tanpa permintaan terkirim. Teks kosong atau hanya spasi: "Teks jawaban tidak boleh kosong" di bawah area teks, juga tanpa permintaan terkirim. Simpan tidak diblokir walau teks tidak berubah. Selama permintaan berjalan, tombol Simpan dan Batal memakai `aria-disabled` (fokus tidak hilang) dan Esc diabaikan, dengan indikator putar pada Simpan. Sukses: sel kembali ke tampilan baca, Skor Kemiripan dan Kategori Kualitatif di baris itu ikut diperbarui, fokus kembali ke tombol Edit. Jika skor belum berhasil dihitung ulang (`skor_hitung_ulang` true): "Teks tersimpan, tetapi skor belum berhasil dihitung ulang. Coba lagi." tampil di bawah Skor Kemiripan/Kategori baris itu selama kondisi itu berlaku, termasuk setelah muat ulang halaman (saat itu tampil sebagai teks biasa, bukan pengumuman, karena bukan hasil aksi yang baru saja terjadi). Berpindah ke tab Soal dan Jawaban saat sedang mengedit membuang draf tanpa peringatan (tab ini lepas dari halaman saat tidak aktif, sama seperti keadaan sementara lain di tab ini).
+- (nanti) Kolom Nilai Akhir dan aksi "Ubah Nilai Akhir" (FR16). Nilai akhir yang sudah diisi tampil sebagai nilai resmi dan skor kemiripan sistem tetap terlihat sebagai rekomendasi.
 - Kosong: "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai." Gagal memuat: "Koneksi internet terputus, coba muat ulang halaman."
-- Di bawah 1024 px (ponsel dan tablet): tiap baris menjadi kartu dengan nama di atas, skor dan lencana kategori, lalu teks OCR.
+- Di bawah 1024 px (ponsel dan tablet): tiap baris menjadi kartu dengan nama di atas, skor dan lencana kategori, lalu teks OCR. Keadaan edit (area teks dan tombol Simpan/Batal) tetap di dalam kartu yang sama, tanpa tata letak terpisah untuk ponsel.
 
 #### Batch Selesai (FR23)
 
