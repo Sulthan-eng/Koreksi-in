@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
+import { BadgeCheck, Pencil } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import KeadaanData from "./KeadaanData.jsx";
@@ -62,13 +62,18 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
   );
 
   const [idKoreksiDiedit, setIdKoreksiDiedit] = useState(null);
+  const [modeEdit, setModeEdit] = useState(null); // 'teks' | 'nilai'
   const [teksDraft, setTeksDraft] = useState("");
+  const [nilaiDraft, setNilaiDraft] = useState("");
   const [sedangSimpan, setSedangSimpan] = useState(false);
   const [kesalahanEdit, setKesalahanEdit] = useState(null);
+  const [kesalahanNilai, setKesalahanNilai] = useState(null);
   const [idBaruGagalHitungUlang, setIdBaruGagalHitungUlang] = useState(null);
 
   const refTeksarea = useRef(null);
+  const refInputNilai = useRef(null);
   const refTombolEdit = useRef({});
+  const refTombolNilai = useRef({});
 
   useEffect(() => {
     let dibatalkan = false;
@@ -89,20 +94,38 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
   }, [idBatch]);
 
   useEffect(() => {
-    if (idKoreksiDiedit) refTeksarea.current?.focus();
-  }, [idKoreksiDiedit]);
+    if (idKoreksiDiedit && modeEdit === "teks") refTeksarea.current?.focus();
+    if (idKoreksiDiedit && modeEdit === "nilai") refInputNilai.current?.focus();
+  }, [idKoreksiDiedit, modeEdit]);
 
   function mulaiEdit(item) {
     setIdKoreksiDiedit(item.id_koreksi);
+    setModeEdit("teks");
     setTeksDraft(item.teks_ocr);
     setKesalahanEdit(null);
   }
 
   function batalEdit(item) {
     setIdKoreksiDiedit(null);
+    setModeEdit(null);
     setTeksDraft("");
     setKesalahanEdit(null);
     refTombolEdit.current[item.id_koreksi]?.focus();
+  }
+
+  function mulaiEditNilai(item) {
+    setIdKoreksiDiedit(item.id_koreksi);
+    setModeEdit("nilai");
+    setNilaiDraft(String(item.skor_revisi ?? item.skor_sistem ?? ""));
+    setKesalahanNilai(null);
+  }
+
+  function batalEditNilai(item) {
+    setIdKoreksiDiedit(null);
+    setModeEdit(null);
+    setNilaiDraft("");
+    setKesalahanNilai(null);
+    refTombolNilai.current[item.id_koreksi]?.focus();
   }
 
   async function tanganiSimpan(item) {
@@ -138,10 +161,52 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
         hasilBaru.skor_hitung_ulang ? hasilBaru.id_koreksi : null,
       );
       setIdKoreksiDiedit(null);
+      setModeEdit(null);
       setTeksDraft("");
       refTombolEdit.current[item.id_koreksi]?.focus();
     } catch (error) {
       setKesalahanEdit(error.pesan);
+    } finally {
+      setSedangSimpan(false);
+    }
+  }
+
+  async function tanganiSimpanNilai(item) {
+    const teks = nilaiDraft.trim();
+    const n = Number(teks);
+    const valid =
+      teks !== "" &&
+      !Number.isNaN(n) &&
+      Number.isInteger(n) &&
+      String(n) === teks;
+    if (!valid || n < 0 || n > 100) {
+      setKesalahanNilai(PESAN_KODE.NILAI_AKHIR_TIDAK_VALID);
+      return;
+    }
+
+    setSedangSimpan(true);
+    setKesalahanNilai(null);
+    try {
+      const hasilBaru = await batchApi.ubahNilaiAkhir(
+        idBatch,
+        item.id_koreksi,
+        {
+          skor_revisi: n,
+        },
+      );
+      setDaftarHasil((sebelumnya) =>
+        sebelumnya.map((baris) =>
+          baris.id_koreksi === hasilBaru.id_koreksi
+            ? { ...baris, skor_revisi: hasilBaru.skor_revisi }
+            : baris,
+        ),
+      );
+      setIdKoreksiDiedit(null);
+      setModeEdit(null);
+      setNilaiDraft("");
+      refTombolNilai.current[item.id_koreksi]?.focus();
+    } catch (error) {
+      setKesalahanNilai(error.pesan);
     } finally {
       setSedangSimpan(false);
     }
@@ -214,6 +279,13 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
                 >
                   Kategori Kualitatif
                 </th>
+                <th
+                  role="columnheader"
+                  scope="col"
+                  className="border-b border-garis p-4 text-left text-sm font-semibold text-teks-redup"
+                >
+                  Nilai Akhir
+                </th>
                 {!bacaSaja && (
                   <th
                     role="columnheader"
@@ -228,10 +300,18 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
             <tbody role="rowgroup" className="max-lg:block">
               {hasilSoalTerpilih.map((item) => {
                 const sedangDiedit =
-                  !bacaSaja && idKoreksiDiedit === item.id_koreksi;
-                const kunciEdit =
+                  !bacaSaja &&
+                  idKoreksiDiedit === item.id_koreksi &&
+                  modeEdit === "teks";
+                const sedangEditNilai =
+                  !bacaSaja &&
+                  idKoreksiDiedit === item.id_koreksi &&
+                  modeEdit === "nilai";
+                const kunciBarisLain =
                   idKoreksiDiedit !== null &&
                   idKoreksiDiedit !== item.id_koreksi;
+                const kunciEdit = kunciBarisLain || sedangEditNilai;
+                const kunciNilai = kunciBarisLain || sedangDiedit;
 
                 return (
                   <tr
@@ -363,6 +443,99 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
                           </p>
                         ))}
                     </td>
+                    <td
+                      role="cell"
+                      className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
+                    >
+                      <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                        Nilai Akhir
+                      </span>
+                      {sedangEditNilai ? (
+                        <form
+                          onSubmit={(peristiwa) => {
+                            peristiwa.preventDefault();
+                            tanganiSimpanNilai(item);
+                          }}
+                          noValidate
+                          className="flex flex-col gap-2"
+                        >
+                          <label className="flex flex-col gap-1.5">
+                            <span className="sr-only">
+                              Nilai Akhir untuk {item.nama_peserta_didik}
+                            </span>
+                            <input
+                              ref={refInputNilai}
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={nilaiDraft}
+                              onChange={(peristiwa) =>
+                                setNilaiDraft(peristiwa.target.value)
+                              }
+                              onKeyDown={(peristiwa) => {
+                                if (
+                                  peristiwa.key === "Escape" &&
+                                  !sedangSimpan
+                                ) {
+                                  peristiwa.preventDefault();
+                                  batalEditNilai(item);
+                                }
+                              }}
+                              aria-invalid={kesalahanNilai ? "true" : undefined}
+                              aria-describedby={
+                                kesalahanNilai
+                                  ? `galat-nilai-${item.id_koreksi}`
+                                  : undefined
+                              }
+                              className="w-24 rounded-lg border border-garis bg-permukaan p-2 text-teks aria-invalid:border-kurang-mirip"
+                            />
+                          </label>
+                          {kesalahanNilai && (
+                            <PesanForm
+                              varian="galat"
+                              id={`galat-nilai-${item.id_koreksi}`}
+                              pesan={kesalahanNilai}
+                              className="text-sm leading-5"
+                            />
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="submit"
+                              aria-disabled={sedangSimpan ? "true" : undefined}
+                              onClick={(peristiwa) => {
+                                if (sedangSimpan) peristiwa.preventDefault();
+                              }}
+                              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 text-sm font-semibold text-permukaan aria-disabled:opacity-50"
+                            >
+                              {sedangSimpan && <Spinner ukuran="size-4" />}
+                              Simpan
+                            </button>
+                            <button
+                              type="button"
+                              aria-disabled={sedangSimpan ? "true" : undefined}
+                              onClick={() => {
+                                if (sedangSimpan) return;
+                                batalEditNilai(item);
+                              }}
+                              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-garis bg-permukaan px-4 text-sm font-semibold text-teks aria-disabled:opacity-50"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </form>
+                      ) : item.skor_revisi != null ? (
+                        <span className="font-semibold text-teks">
+                          {item.skor_revisi}
+                        </span>
+                      ) : (
+                        <>
+                          <span aria-hidden="true">—</span>
+                          <span className="sr-only">Belum diisi</span>
+                        </>
+                      )}
+                    </td>
                     {!bacaSaja && (
                       <td
                         role="cell"
@@ -371,22 +544,40 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
                         <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
                           Aksi
                         </span>
-                        <button
-                          type="button"
-                          ref={(el) => {
-                            refTombolEdit.current[item.id_koreksi] = el;
-                          }}
-                          aria-label={`Edit jawaban ${item.nama_peserta_didik}`}
-                          aria-disabled={kunciEdit ? "true" : undefined}
-                          onClick={() => {
-                            if (kunciEdit) return;
-                            mulaiEdit(item);
-                          }}
-                          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-garis bg-permukaan px-3 text-sm font-semibold text-teks aria-disabled:opacity-50"
-                        >
-                          <Pencil className="size-4" aria-hidden="true" />
-                          Edit
-                        </button>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            ref={(el) => {
+                              refTombolEdit.current[item.id_koreksi] = el;
+                            }}
+                            aria-label={`Edit jawaban ${item.nama_peserta_didik}`}
+                            aria-disabled={kunciEdit ? "true" : undefined}
+                            onClick={() => {
+                              if (kunciEdit) return;
+                              mulaiEdit(item);
+                            }}
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-garis bg-permukaan px-3 text-sm font-semibold text-teks aria-disabled:opacity-50"
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            ref={(el) => {
+                              refTombolNilai.current[item.id_koreksi] = el;
+                            }}
+                            aria-label={`Ubah Nilai Akhir ${item.nama_peserta_didik}`}
+                            aria-disabled={kunciNilai ? "true" : undefined}
+                            onClick={() => {
+                              if (kunciNilai) return;
+                              mulaiEditNilai(item);
+                            }}
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-garis bg-permukaan px-3 text-sm font-semibold text-teks aria-disabled:opacity-50"
+                          >
+                            <BadgeCheck className="size-4" aria-hidden="true" />
+                            Ubah Nilai Akhir
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

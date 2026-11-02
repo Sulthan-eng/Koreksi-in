@@ -28,6 +28,9 @@ export const PESAN_KODE = {
   TEKS_OCR_KOSONG: "Teks jawaban tidak boleh kosong",
   TEKS_OCR_TERLALU_PANJANG: "Teks jawaban maksimal 10.000 karakter.",
   HASIL_KOREKSI_TIDAK_DITEMUKAN: "Hasil koreksi tidak ditemukan.",
+  NILAI_AKHIR_TIDAK_VALID: "Nilai akhir harus bilangan bulat 0 sampai 100.",
+  GAGAL_SIMPAN_NILAI_AKHIR:
+    "Nilai gagal disimpan, silakan mencoba menyimpan kembali.",
   MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
   TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
   NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",

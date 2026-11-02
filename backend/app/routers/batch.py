@@ -12,6 +12,8 @@ from app.schemas.hasil_koreksi import (
     EditTeksOcrRequest,
     HasilKoreksiEditResponse,
     HasilKoreksiItem,
+    HasilKoreksiNilaiResponse,
+    UbahNilaiAkhirRequest,
 )
 from app.schemas.soal import SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
@@ -56,6 +58,7 @@ def _hasil_koreksi_response(baris) -> HasilKoreksiItem:
         teks_ocr=baris.teks_ocr,
         skor_sistem=baris.skor_sistem,
         kategori=baris.kategori,
+        skor_revisi=baris.skor_revisi,
         skor_hitung_ulang=baris.skor_hitung_ulang,
     )
 
@@ -188,3 +191,19 @@ async def edit_hasil_koreksi(
         db, pengguna, id_batch, id_koreksi, body.teks_ocr
     )
     return _hasil_koreksi_edit_response(baris)
+
+
+@router.patch(
+    "/{id_batch}/hasil/{id_koreksi}/nilai-akhir", response_model=HasilKoreksiNilaiResponse
+)
+async def ubah_nilai_akhir_hasil_koreksi(
+    id_batch: uuid.UUID,
+    id_koreksi: uuid.UUID,
+    body: UbahNilaiAkhirRequest,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> HasilKoreksiNilaiResponse:
+    baris = await hasil_koreksi_service.ubah_nilai_akhir(
+        db, pengguna, id_batch, id_koreksi, body.skor_revisi
+    )
+    return HasilKoreksiNilaiResponse(id_koreksi=baris.id_koreksi, skor_revisi=baris.skor_revisi)

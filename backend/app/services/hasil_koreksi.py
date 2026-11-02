@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import Row, select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
@@ -24,6 +25,16 @@ TEKS_OCR_TERLALU_PANJANG = AppError(
 HASIL_KOREKSI_TIDAK_DITEMUKAN = AppError(
     kode="HASIL_KOREKSI_TIDAK_DITEMUKAN", pesan="Hasil koreksi tidak ditemukan.", status_code=404
 )
+NILAI_AKHIR_TIDAK_VALID = AppError(
+    kode="NILAI_AKHIR_TIDAK_VALID",
+    pesan="Nilai akhir harus bilangan bulat 0 sampai 100.",
+    status_code=400,
+)
+GAGAL_SIMPAN_NILAI_AKHIR = AppError(
+    kode="GAGAL_SIMPAN_NILAI_AKHIR",
+    pesan="Nilai gagal disimpan, silakan mencoba menyimpan kembali.",
+    status_code=500,
+)
 
 _MAKS_PANJANG_TEKS_OCR = 10_000
 
@@ -41,6 +52,7 @@ async def daftar_hasil_koreksi(
             HasilKoreksi.teks_ocr,
             HasilKoreksi.skor_sistem,
             HasilKoreksi.kategori,
+            HasilKoreksi.skor_revisi,
             HasilKoreksi.skor_hitung_ulang,
         )
         .join(HasilKoreksi, HasilKoreksi.id_file == FileJawaban.id_file)
@@ -127,3 +139,43 @@ async def edit_teks_ocr(
     if baris_terbaru is None:
         raise HASIL_KOREKSI_TIDAK_DITEMUKAN
     return baris_terbaru
+
+
+async def ubah_nilai_akhir(
+    db: AsyncSession,
+    pengguna: Pengguna,
+    id_batch: uuid.UUID,
+    id_koreksi: uuid.UUID,
+    skor_revisi: object,
+) -> HasilKoreksi:
+    """FR16/F-NILAI: tetapkan Nilai Akhir manual (skor_revisi) satu baris
+    Hasil_Koreksi. Tidak menyentuh skor_sistem, kategori, teks_ocr, atau
+    skor_hitung_ulang. Lihat SPEC bagian 9 untuk aturan lengkap."""
+    if not isinstance(skor_revisi, int) or isinstance(skor_revisi, bool):
+        raise NILAI_AKHIR_TIDAK_VALID
+    if not (0 <= skor_revisi <= 100):
+        raise NILAI_AKHIR_TIDAK_VALID
+
+    batch = await ambil_batch(db, pengguna, id_batch)
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
+
+    baris = await db.scalar(
+        select(HasilKoreksi)
+        .join(FileJawaban, FileJawaban.id_file == HasilKoreksi.id_file)
+        .where(
+            HasilKoreksi.id_koreksi == id_koreksi,
+            FileJawaban.id_batch == batch.id_batch,
+            FileJawaban.status_proses == StatusProses.SELESAI,
+        )
+    )
+    if baris is None:
+        raise HASIL_KOREKSI_TIDAK_DITEMUKAN
+
+    baris.skor_revisi = skor_revisi
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise GAGAL_SIMPAN_NILAI_AKHIR from None
+    return baris
