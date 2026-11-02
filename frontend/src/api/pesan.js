@@ -38,6 +38,8 @@ export const PESAN_KODE = {
   JUDUL_TINGGALKAN_HALAMAN: "Tinggalkan Halaman",
   PESAN_TINGGALKAN_HALAMAN:
     "Ada file yang belum diunggah. Yakin ingin meninggalkan halaman ini?",
+  ADA_FILE_BELUM_UNGGAH:
+    "Ada file yang belum diunggah. Unggah file tersebut atau batalkan pilihannya sebelum menyelesaikan batch.",
   MASIH_ADA_FILE_DIPROSES: "Tunggu hingga semua file selesai diproses.",
   BATCH_SUDAH_SELESAI: "Batch yang sudah selesai tidak dapat diubah lagi.",
   GAGAL_SELESAIKAN_BATCH: "Gagal menyelesaikan batch, silakan coba lagi",

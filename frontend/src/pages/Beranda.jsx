@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useAksiBatch } from "../hooks/useAksiBatch.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
@@ -19,28 +20,40 @@ function formatTanggal(iso) {
 }
 
 function Beranda() {
-  const [daftarBatch, setDaftarBatch] = useState([]);
-  const [status, setStatus] = useState("memuat");
-  const [kesalahan, setKesalahan] = useState(null);
   const [formTerbuka, setFormTerbuka] = useState(false);
   const [namaBatch, setNamaBatch] = useState("");
   const [kesalahanForm, setKesalahanForm] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
-  const [dialogAksi, setDialogAksi] = useState(null);
-  const [pesanAksi, setPesanAksi] = useState(null);
-  const [idBatchMemeriksa, setIdBatchMemeriksa] = useState(null);
-  const [sedangMemprosesAksi, setSedangMemprosesAksi] = useState(false);
+  const [status, setStatus] = useState("memuat");
+  const [kesalahan, setKesalahan] = useState(null);
+  const [daftarBatch, setDaftarBatch] = useState([]);
   const navigate = useNavigate();
   const { nama } = useAuth();
   const judulDaftarRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
 
+  const aksi = useAksiBatch({
+    onSelesaiSukses: (batchSelesai) => {
+      setDaftarBatch((daftar) =>
+        daftar.map((item) =>
+          item.id_batch === batchSelesai.id_batch ? batchSelesai : item,
+        ),
+      );
+    },
+    onHapusSukses: (batchHapus) => {
+      setDaftarBatch((daftar) =>
+        daftar.filter((item) => item.id_batch !== batchHapus.id_batch),
+      );
+      fokusJudulTertunda.current = true;
+    },
+  });
+
   useEffect(() => {
-    if (dialogAksi === null && fokusJudulTertunda.current) {
+    if (aksi.dialog === null && fokusJudulTertunda.current) {
       fokusJudulTertunda.current = false;
       judulDaftarRef.current?.focus();
     }
-  }, [dialogAksi]);
+  }, [aksi.dialog]);
 
   useEffect(() => {
     let dibatalkan = false;
@@ -80,73 +93,6 @@ function Beranda() {
       setKesalahanForm(error.pesan || PESAN_KODE.GAGAL_BUAT_BATCH);
       setSedangKirim(false);
     }
-  }
-
-  async function tanganiPilihSelesaikan(batch) {
-    setPesanAksi(null);
-    setIdBatchMemeriksa(batch.id_batch);
-    try {
-      const daftarFile = await batchApi.daftarFileJawaban(batch.id_batch);
-      const adaFileDiproses = daftarFile.some(
-        (fileJawaban) => fileJawaban.status_proses === "diproses",
-      );
-      if (adaFileDiproses) {
-        setPesanAksi({
-          varian: "galat",
-          teks: PESAN_KODE.MASIH_ADA_FILE_DIPROSES,
-        });
-      } else {
-        setDialogAksi({ jenis: "selesaikan", batch });
-      }
-    } catch (error) {
-      setPesanAksi({ varian: "galat", teks: error.pesan });
-    } finally {
-      setIdBatchMemeriksa(null);
-    }
-  }
-
-  function tanganiPilihHapus(batch) {
-    setPesanAksi(null);
-    setDialogAksi({ jenis: "hapus", batch });
-  }
-
-  async function konfirmasiSelesaikan() {
-    const { batch } = dialogAksi;
-    setSedangMemprosesAksi(true);
-    try {
-      const hasil = await batchApi.selesaikanBatch(batch.id_batch);
-      setDaftarBatch((daftar) =>
-        daftar.map((item) => (item.id_batch === batch.id_batch ? hasil : item)),
-      );
-      setPesanAksi({ varian: "sukses", teks: PESAN_KODE.BATCH_SELESAI_SUKSES });
-    } catch (error) {
-      setPesanAksi({ varian: "galat", teks: error.pesan });
-    } finally {
-      setSedangMemprosesAksi(false);
-      setDialogAksi(null);
-    }
-  }
-
-  async function konfirmasiHapus() {
-    const { batch } = dialogAksi;
-    setSedangMemprosesAksi(true);
-    try {
-      await batchApi.hapusBatch(batch.id_batch);
-      setDaftarBatch((daftar) =>
-        daftar.filter((item) => item.id_batch !== batch.id_batch),
-      );
-      fokusJudulTertunda.current = true;
-    } catch (error) {
-      setPesanAksi({ varian: "galat", teks: error.pesan });
-    } finally {
-      setSedangMemprosesAksi(false);
-      setDialogAksi(null);
-    }
-  }
-
-  function batalkanDialog() {
-    if (sedangMemprosesAksi) return;
-    setDialogAksi(null);
   }
 
   return (
@@ -234,10 +180,10 @@ function Beranda() {
               </form>
             )}
 
-            {pesanAksi && (
+            {aksi.pesanAksi && (
               <PesanForm
-                varian={pesanAksi.varian}
-                pesan={pesanAksi.teks}
+                varian={aksi.pesanAksi.varian}
+                pesan={aksi.pesanAksi.teks}
                 kotak
               />
             )}
@@ -276,14 +222,14 @@ function Beranda() {
                     />
                     <MenuAksi
                       label={`Aksi untuk batch ${batch.nama_batch}`}
-                      nonaktif={idBatchMemeriksa === batch.id_batch}
+                      nonaktif={aksi.idBatchMemeriksa === batch.id_batch}
                       aksi={[
                         ...(batch.status !== "selesai"
                           ? [
                               {
                                 key: "selesaikan",
                                 label: "Selesaikan Batch",
-                                onPilih: () => tanganiPilihSelesaikan(batch),
+                                onPilih: () => aksi.pilihSelesaikan(batch),
                               },
                             ]
                           : []),
@@ -291,7 +237,7 @@ function Beranda() {
                           key: "hapus",
                           label: "Hapus Batch",
                           varian: "merusak",
-                          onPilih: () => tanganiPilihHapus(batch),
+                          onPilih: () => aksi.pilihHapus(batch),
                         },
                       ]}
                     />
@@ -304,27 +250,27 @@ function Beranda() {
       </main>
 
       <DialogKonfirmasi
-        terbuka={dialogAksi?.jenis === "selesaikan"}
+        terbuka={aksi.dialog?.jenis === "selesaikan"}
         judul={PESAN_KODE.JUDUL_SELESAIKAN_BATCH}
         isi={PESAN_KODE.PESAN_SELESAIKAN_BATCH}
         labelBatal="Batal"
         labelYa="Ya"
         tombolUtama="ya"
-        prosesBerjalan={sedangMemprosesAksi}
-        onBatal={batalkanDialog}
-        onYa={konfirmasiSelesaikan}
+        prosesBerjalan={aksi.sedangMemproses}
+        onBatal={aksi.batalkan}
+        onYa={aksi.konfirmasi}
       />
 
       <DialogKonfirmasi
-        terbuka={dialogAksi?.jenis === "hapus"}
+        terbuka={aksi.dialog?.jenis === "hapus"}
         judul={PESAN_KODE.JUDUL_HAPUS_BATCH}
         isi={PESAN_KODE.PESAN_HAPUS_BATCH}
         labelBatal="Batal"
         labelYa="Ya"
         variasiYa="merusak"
-        prosesBerjalan={sedangMemprosesAksi}
-        onBatal={batalkanDialog}
-        onYa={konfirmasiHapus}
+        prosesBerjalan={aksi.sedangMemproses}
+        onBatal={aksi.batalkan}
+        onYa={aksi.konfirmasi}
       />
     </div>
   );
