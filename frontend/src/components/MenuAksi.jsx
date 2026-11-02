@@ -34,6 +34,7 @@ function MenuAksi({ label, aksi, nonaktif = false }) {
   }
 
   function tanganiPapanKetikTombol(peristiwa) {
+    if (nonaktif) return;
     if (peristiwa.key === "ArrowDown" || peristiwa.key === "ArrowUp") {
       peristiwa.preventDefault();
       setTerbuka(true);
@@ -67,10 +68,15 @@ function MenuAksi({ label, aksi, nonaktif = false }) {
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={terbuka}
-        disabled={nonaktif}
-        onClick={() => setTerbuka((sebelumnya) => !sebelumnya)}
+        aria-disabled={nonaktif || undefined}
+        onClick={() => {
+          if (nonaktif) return;
+          setTerbuka((sebelumnya) => !sebelumnya);
+        }}
         onKeyDown={tanganiPapanKetikTombol}
-        className="inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks disabled:opacity-50"
+        className={`inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks ${
+          nonaktif ? "opacity-50" : ""
+        }`}
       >
         <MoreVertical className="size-5" aria-hidden="true" />
       </button>
