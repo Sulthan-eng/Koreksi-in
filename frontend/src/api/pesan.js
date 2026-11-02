@@ -25,6 +25,9 @@ export const PESAN_KODE = {
   KONEKSI_TERPUTUS: "Koneksi internet terputus, coba muat ulang halaman.",
   BELUM_ADA_HASIL_SOAL:
     "Belum ada hasil koreksi untuk soal ini. Tunggu proses selesai.",
+  TEKS_OCR_KOSONG: "Teks jawaban tidak boleh kosong",
+  TEKS_OCR_TERLALU_PANJANG: "Teks jawaban maksimal 10.000 karakter.",
+  HASIL_KOREKSI_TIDAK_DITEMUKAN: "Hasil koreksi tidak ditemukan.",
   MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
   TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
   NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",
