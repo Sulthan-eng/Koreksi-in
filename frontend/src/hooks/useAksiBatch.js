@@ -74,7 +74,13 @@ export function useAksiBatch({
       // Pengaman: batch ternyata sudah Selesai (misalnya diselesaikan dari
       // tab atau perangkat lain). Perbarui tampilan agar ikut baca-saja.
       if (error?.kode === "BATCH_SUDAH_SELESAI") {
-        await onBatchSudahSelesai?.(batch);
+        try {
+          await onBatchSudahSelesai?.(batch);
+        } catch {
+          // Pesan galat BATCH_SUDAH_SELESAI sudah tampil ke pengguna;
+          // kegagalan pembaruan tampilan (misalnya jaringan) tidak boleh
+          // bocor sebagai unhandled rejection.
+        }
       }
     } finally {
       setSedangMemproses(false);

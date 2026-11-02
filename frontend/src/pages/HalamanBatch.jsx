@@ -61,6 +61,9 @@ function HalamanBatch() {
     onBatchSudahSelesai: async (batchSelesai) => {
       const hasil = await batchApi.ambilBatch(batchSelesai.id_batch);
       setBatch(hasil);
+      // Tombol Selesaikan hilang setelah batch Selesai: arahkan fokus ke
+      // judul agar tidak jatuh ke tubuh halaman (pola onSelesaiSukses).
+      fokusJudulTertunda.current = true;
     },
     onHapusSukses: () => {
       bolehLewatRef.current = true;
