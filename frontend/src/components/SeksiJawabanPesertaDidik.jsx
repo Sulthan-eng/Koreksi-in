@@ -10,15 +10,22 @@ import Spinner from "./Spinner.jsx";
 function SeksiJawabanPesertaDidik({
   idBatch,
   adaSoal,
+  bacaSaja = false,
   daftarFileJawaban,
   kesalahanStatus,
+  bolehLewatRef,
+  onPilihanBelumUnggah,
+  onUnggahBerjalan,
   onUploadSukses,
 }) {
   const [fileTerpilih, setFileTerpilih] = useState([]);
   const [sedangUpload, setSedangUpload] = useState(false);
   const [kesalahanUpload, setKesalahanUpload] = useState(null);
 
-  const blocker = useKonfirmasiTinggalkan(fileTerpilih.length > 0);
+  const blocker = useKonfirmasiTinggalkan(
+    fileTerpilih.length > 0,
+    bolehLewatRef,
+  );
 
   function tanganiPilihFile(peristiwa) {
     const fileBaru = Array.from(peristiwa.target.files).map((file) => ({
@@ -27,6 +34,7 @@ function SeksiJawabanPesertaDidik({
     }));
     setFileTerpilih(fileBaru);
     setKesalahanUpload(null);
+    onPilihanBelumUnggah?.(fileBaru.length > 0);
     peristiwa.target.value = "";
   }
 
@@ -41,11 +49,13 @@ function SeksiJawabanPesertaDidik({
   function tanganiBatal() {
     setFileTerpilih([]);
     setKesalahanUpload(null);
+    onPilihanBelumUnggah?.(false);
   }
 
   async function tanganiUpload(peristiwa) {
     peristiwa.preventDefault();
     setSedangUpload(true);
+    onUnggahBerjalan?.(true);
     setKesalahanUpload(null);
     try {
       const formData = new FormData();
@@ -56,10 +66,12 @@ function SeksiJawabanPesertaDidik({
       const hasil = await batchApi.unggahFileJawaban(idBatch, formData);
       onUploadSukses(hasil);
       setFileTerpilih([]);
+      onPilihanBelumUnggah?.(false);
     } catch (error) {
       setKesalahanUpload(error.pesan);
     } finally {
       setSedangUpload(false);
+      onUnggahBerjalan?.(false);
     }
   }
 
@@ -73,13 +85,15 @@ function SeksiJawabanPesertaDidik({
 
       {adaSoal && (
         <div className="flex flex-col gap-4">
-          {daftarFileJawaban.length === 0 && fileTerpilih.length === 0 && (
-            <p className="text-sm leading-5 text-teks-redup">
-              {PESAN_KODE.PERINGATAN_SEBELUM_UNGGAH}
-            </p>
-          )}
+          {!bacaSaja &&
+            daftarFileJawaban.length === 0 &&
+            fileTerpilih.length === 0 && (
+              <p className="text-sm leading-5 text-teks-redup">
+                {PESAN_KODE.PERINGATAN_SEBELUM_UNGGAH}
+              </p>
+            )}
 
-          {fileTerpilih.length === 0 && (
+          {!bacaSaja && fileTerpilih.length === 0 && (
             <div>
               <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan focus-within:ring-2 focus-within:ring-biru-utama">
                 <Upload className="size-4" aria-hidden="true" />
@@ -95,7 +109,7 @@ function SeksiJawabanPesertaDidik({
             </div>
           )}
 
-          {fileTerpilih.length > 0 && (
+          {!bacaSaja && fileTerpilih.length > 0 && (
             <form
               onSubmit={tanganiUpload}
               noValidate
