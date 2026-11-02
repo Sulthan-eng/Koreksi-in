@@ -469,7 +469,11 @@ function HalamanBatch() {
             role="tabpanel"
             aria-labelledby="tab-dashboard"
           >
-            <TabHasilKoreksi idBatch={id} daftarSoal={daftarSoal} />
+            <TabHasilKoreksi
+              idBatch={id}
+              daftarSoal={daftarSoal}
+              bacaSaja={bacaSaja}
+            />
           </div>
         )}
       </main>
