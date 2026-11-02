@@ -14,10 +14,11 @@ Sumber kebutuhan untuk agent coding. Dokumen ini mencakup sistem penuh dengan st
 
 Koreksi-in membantu Pengajar (guru atau dosen) mengoreksi jawaban esai atau jawaban singkat peserta didik. Sistem hanya memberi skor kemiripan dan kategori sebagai rekomendasi. Pengajar memegang nilai akhir. Sistem tidak pernah mengeluarkan nilai huruf. Ada dua peran: Pengajar dan Admin (Admin hanya mengelola akun Pengajar dan memantau penggunaan, tanpa akses ke isi kunci jawaban dan jawaban peserta didik).
 
-Status per Oktober 2026:
+Status per November 2026:
 
 - Prototipe UTS sudah berjalan di localhost: daftar akun, masuk, buat batch, ketik kunci jawaban, unggah lembar jawaban beserta nama peserta didik, pemrosesan otomatis (OCR lalu LLM-judge), lihat status pemrosesan, lihat tabel Dashboard Hasil Koreksi, keluar.
-- Tahap berikutnya: memperbaiki temuan pengujian prototipe, merombak tampilan (bagian 9 dan `docs/UI.md`), lalu mengerjakan fitur yang berstatus "Belum dikerjakan" satu per satu atas permintaan pemilik proyek.
+- Setelah prototipe: hapus batch (FR22) dan selesaikan batch (FR23) sudah ada, dan tampilan sudah dirombak (bagian 9 dan `docs/UI.md`, termasuk tab Status Pemrosesan yang dihapus).
+- Tahap berikutnya: mengerjakan fitur yang berstatus "Belum dikerjakan" satu per satu atas permintaan pemilik proyek.
 
 ## 2. Glosarium dan istilah UI
 
@@ -49,17 +50,17 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 
 | FR | Isi singkat | UC | Status |
 |---|---|---|---|
-| FR1 | Registrasi, login, logout, reset password Pengajar. Admin login dan logout | - | Registrasi, login, logout: Perbaikan (validasi format email). Reset password (tautan lewat email, lihat F-RESET) dan login Admin: Belum dikerjakan |
+| FR1 | Registrasi, login, logout, reset password Pengajar. Admin login dan logout | - | Registrasi, login, logout: Selesai (validasi format email di backend 422 dan frontend). Reset password (tautan lewat email, lihat F-RESET) dan login Admin: Belum dikerjakan |
 | FR2 | Status langganan di profil | UC-01 | Belum dikerjakan |
 | FR3 | Buat batch | UC-02 | Selesai. Batas batch aktif akun Free ikut FR18 |
-| FR4 | Kunci jawaban diketik | UC-04 | Perbaikan (pesan kunci kosong dari aplikasi, bukan bubble browser) |
+| FR4 | Kunci jawaban diketik | UC-04 | Selesai |
 | FR5 | Kunci jawaban dari file | UC-04 | Belum dikerjakan |
 | FR6 | OCR file kunci | UC-04 | Belum dikerjakan |
 | FR7 | Tinjau atau edit hasil OCR kunci sebelum disimpan | UC-04 | Belum dikerjakan |
 | FR8 | Unggah jawaban peserta didik | UC-05 | Selesai. Batas jumlah jawaban per akun ikut FR18 |
 | FR9 | Nama peserta didik diisi manual | UC-05 | Selesai |
 | FR10 | OCR jawaban peserta didik | UC-05 | Selesai |
-| FR11 | Status pemrosesan per file dan Coba Lagi manual | UC-06 | Status: Perbaikan (dipindah ke daftar di tab Soal dan Jawaban, tab Status Pemrosesan dihapus). Coba Lagi: Belum dikerjakan |
+| FR11 | Status pemrosesan per file dan Coba Lagi manual | UC-06 | Status: Selesai (di daftar tab Soal dan Jawaban, tab Status Pemrosesan dihapus). Coba Lagi: Belum dikerjakan |
 | FR12 | Hitung skor kemiripan | - | Selesai |
 | FR13 | Petakan skor ke kategori (ambang tetap 80 dan 40) | - | Selesai |
 | FR14 | tabel Dashboard Hasil Koreksi | UC-07 | Selesai |
@@ -444,3 +445,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-11-02 | Tugas PR A (hapus batch backend, FR22): catat path `DELETE /api/batch/{id_batch}` di bagian 9 (F-HAPUS); tambah kode error `GAGAL_HAPUS_BATCH` di bagian 10. Keputusan: hapus boleh langsung dilakukan meski masih ada file Diproses, karena tugas latar pemrosesan selalu query ulang baris sebelum menulis dan menelan StaleDataError/ObjectDeletedError saat menandai baris yang sudah hilang — perbaikan kecil di `services/pemrosesan.py` (`_tandai_baris_gagal` menangkap `StaleDataError`/`ObjectDeletedError` dari `sqlalchemy.orm.exc` dan menelannya, bukan membiarkannya menjalar) dibuktikan lewat dua test race di `test_pemrosesan.py`. Urutan hapus: baris database dulu (dapat gagal dan dibatalkan, `GAGAL_HAPUS_BATCH`), lalu direktori fisik dihapus best-effort (gagal hanya dicatat log, tidak mengembalikan error karena data sudah pasti terhapus). Status FR22 di bagian 3 tetap "Belum dikerjakan" sampai frontend-nya ada (PR terpisah) |
 | 2026-11-02 | Tugas PR A (selesaikan batch backend, FR23): catat path `POST /api/batch/{id_batch}/selesaikan` di bagian 9 (F-SELESAI); tambah 3 kode error (`MASIH_ADA_FILE_DIPROSES`, `BATCH_SUDAH_SELESAI`, `GAGAL_SELESAIKAN_BATCH`) di bagian 10; `POST .../soal` dan `POST .../file-jawaban` menolak batch Selesai dengan `BATCH_SUDAH_SELESAI` (batch Selesai read-only, bagian 4). Status FR23 di bagian 3 tetap "Belum dikerjakan" sampai frontend-nya ada (PR terpisah) |
 | 2026-11-02 | PR B2 (frontend FR22 dan FR23): lencana status, tombol "Selesaikan Batch" dan "Hapus Batch" di kepala Halaman Batch (baris tombol di bawah judul pada semua lebar, sesuai mockup halaman-batch, disetujui pemilik proyek), mode baca-saja batch Selesai (daftar soal dan daftar jawaban tetap terbaca), dan aturan file terpilih belum diunggah sebelum menyelesaikan batch dengan teks baru "Ada file yang belum diunggah. Unggah file tersebut atau batalkan pilihannya sebelum menyelesaikan batch." (disetujui pemilik proyek). Status FR22 dan FR23 di bagian 3 menjadi "Selesai": backend (PR #27) dan frontend lolos ujung ke ujung di localhost |
+| 2026-11-02 | Sinkronisasi status di bagian 3 dengan kode main: FR1 registrasi, login, logout Selesai (validasi format email di backend 422, PR #15, dan di frontend `lib/validasi.js`); FR4 Selesai (pesan kunci kosong dari aplikasi melalui `noValidate` dan `KUNCI_KOSONG` di `api/pesan.js`, PR #16); FR11 bagian status Selesai (status per file bertanda Lencana dan `pesan_error` di daftar `SeksiJawabanPesertaDidik`, tab Status Pemrosesan dihapus, PR #21). Bagian 1 diperbarui per November 2026: temuan pengujian prototipe dan perombakan tampilan selesai, tahap berikutnya mengerjakan fitur Belum dikerjakan satu per satu. Legenda "Perbaikan" di bagian 3 tidak lagi dipakai baris mana pun dan dipertahankan |
