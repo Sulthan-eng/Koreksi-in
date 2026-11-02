@@ -26,3 +26,4 @@ class HasilKoreksiEditResponse(BaseModel):
     skor_sistem: int | None
     kategori: Kategori | None
     skor_hitung_ulang: bool
+
