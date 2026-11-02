@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import { REGEX_EMAIL } from "../lib/validasi.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
@@ -14,8 +15,6 @@ function Daftar() {
   const [sedangKirim, setSedangKirim] = useState(false);
   const navigate = useNavigate();
 
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
   async function tanganiSubmit(peristiwa) {
     peristiwa.preventDefault();
     const tidakValid = new Set();
@@ -23,7 +22,7 @@ function Daftar() {
     if (nama.trim() === "") {
       tidakValid.add("nama");
     }
-    if (email.trim() === "" || !regexEmail.test(email.trim())) {
+    if (email.trim() === "" || !REGEX_EMAIL.test(email.trim())) {
       tidakValid.add("email");
     }
     if (password === "") {
@@ -89,6 +88,7 @@ function Daftar() {
               <input
                 id="nama"
                 type="text"
+                autoComplete="name"
                 value={nama}
                 onChange={(peristiwa) => setNama(peristiwa.target.value)}
                 aria-invalid={kolomTidakValid.has("nama") ? "true" : undefined}
@@ -101,6 +101,7 @@ function Daftar() {
               <input
                 id="email"
                 type="text"
+                autoComplete="email"
                 value={email}
                 onChange={(peristiwa) => setEmail(peristiwa.target.value)}
                 aria-invalid={kolomTidakValid.has("email") ? "true" : undefined}
@@ -113,14 +114,15 @@ function Daftar() {
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(peristiwa) => setPassword(peristiwa.target.value)}
                 aria-invalid={
                   kolomTidakValid.has("password") ? "true" : undefined
                 }
                 aria-describedby={
-                  kesalahan
-                    ? `petunjuk-password pesan-daftar`
+                  kolomTidakValid.has("password")
+                    ? "petunjuk-password pesan-daftar"
                     : "petunjuk-password"
                 }
                 className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
@@ -145,7 +147,10 @@ function Daftar() {
 
         <p className="text-center text-sm text-teks-redup">
           Sudah punya akun?{" "}
-          <Link to="/masuk" className="font-semibold text-biru-utama">
+          <Link
+            to="/masuk"
+            className="inline-flex min-h-11 items-center font-semibold text-biru-utama underline"
+          >
             Masuk
           </Link>
         </p>
