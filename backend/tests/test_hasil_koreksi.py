@@ -232,6 +232,29 @@ async def test_edit_teks_ocr_tidak_berubah_tanpa_panggilan_judge(
     judge_mock.assert_not_awaited()
 
 
+async def test_edit_teks_ocr_hanya_beda_whitespace_tanpa_panggilan_judge(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    """teks_ocr tersimpan berakhiran spasi/newline (umum dari hasil OCR); teks yang
+    dikirim sama setelah di-trim harus dianggap tidak berubah (NFR14), tanpa
+    memanggil judge dan tanpa menulis ulang teks tersimpan."""
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token, teks_ocr="Jawaban lama  \n")
+    judge_mock = AsyncMock()
+    monkeypatch.setattr(gemini, "judge_grup", judge_mock)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}",
+        json={"teks_ocr": "Jawaban lama"},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["teks_ocr"] == "Jawaban lama  \n"
+    assert body["skor_sistem"] == 50
+    judge_mock.assert_not_awaited()
+
+
 async def test_edit_teks_ocr_kosong_ditolak(client: AsyncClient, db_session: AsyncSession) -> None:
     token = await _token(client)
     id_batch, baris = await _siapkan_hasil(client, db_session, token)
@@ -489,3 +512,35 @@ async def test_edit_teks_ocr_dua_edit_overtaking_tidak_menimpa_skor_usang(
     baris_db = await db_session.get(HasilKoreksi, id_koreksi, populate_existing=True)
     assert baris_db.teks_ocr == "Teks B dari edit lain"
     assert baris_db.skor_sistem != 99
+
+
+async def test_edit_teks_ocr_batch_terhapus_saat_judge_berjalan(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, _engine
+) -> None:
+    """Batch (dan turunannya lewat cascade) terhapus oleh request lain selagi
+    judge masih berjalan. Re-select baris setelah judge mengembalikan None;
+    endpoint harus melempar HASIL_KOREKSI_TIDAK_DITEMUKAN, bukan error tak
+    terduga."""
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+    id_koreksi = baris.id_koreksi
+
+    async def _judge_dengan_hapus_batch(items):
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        sesi_lain = async_sessionmaker(_engine, expire_on_commit=False)
+        async with sesi_lain() as sesi:
+            batch_lain = await sesi.get(Batch, uuid.UUID(id_batch))
+            await sesi.delete(batch_lain)
+            await sesi.commit()
+        return gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item=str(id_koreksi), skor=90)])
+
+    monkeypatch.setattr(gemini, "judge_grup", AsyncMock(side_effect=_judge_dengan_hapus_batch))
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{id_koreksi}",
+        json={"teks_ocr": "Jawaban baru"},
+        headers=_auth(token),
+    )
+    assert response.status_code == 404
+    assert response.json()["kode"] == "HASIL_KOREKSI_TIDAK_DITEMUKAN"

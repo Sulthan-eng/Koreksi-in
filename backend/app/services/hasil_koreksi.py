@@ -85,7 +85,7 @@ async def edit_teks_ocr(
     if baris is None:
         raise HASIL_KOREKSI_TIDAK_DITEMUKAN
 
-    if teks_trim == baris.teks_ocr and not baris.skor_hitung_ulang:
+    if teks_trim == baris.teks_ocr.strip() and not baris.skor_hitung_ulang:
         return baris
 
     soal = await db.get(Soal, baris.id_soal)
@@ -123,4 +123,7 @@ async def edit_teks_ocr(
         )
         await db.commit()
 
-    return await db.get(HasilKoreksi, id_koreksi, populate_existing=True)
+    baris_terbaru = await db.get(HasilKoreksi, id_koreksi, populate_existing=True)
+    if baris_terbaru is None:
+        raise HASIL_KOREKSI_TIDAK_DITEMUKAN
+    return baris_terbaru
