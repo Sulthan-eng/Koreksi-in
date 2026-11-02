@@ -46,6 +46,12 @@ function Beranda() {
       );
       fokusJudulTertunda.current = true;
     },
+    onBatchSudahSelesai: async (batchSelesai) => {
+      const hasil = await batchApi.ambilBatch(batchSelesai.id_batch);
+      setDaftarBatch((daftar) =>
+        daftar.map((item) => (item.id_batch === hasil.id_batch ? hasil : item)),
+      );
+    },
   });
 
   useEffect(() => {

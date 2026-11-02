@@ -51,11 +51,16 @@ function HalamanBatch() {
 
   const aksi = useAksiBatch({
     cekPilihanBelumUnggah: () => pilihanBelumUnggah,
-    onSelesaiSukses: () => {
+    onSelesaiSukses: (batchHasil) => {
+      setBatch(batchHasil);
       // Pilihan yang belum diunggah tidak lolos ke server; halaman tidak perlu
       // diblokir lagi setelah batch berubah Selesai.
       bolehLewatRef.current = true;
       fokusJudulTertunda.current = true;
+    },
+    onBatchSudahSelesai: async (batchSelesai) => {
+      const hasil = await batchApi.ambilBatch(batchSelesai.id_batch);
+      setBatch(hasil);
     },
     onHapusSukses: () => {
       bolehLewatRef.current = true;

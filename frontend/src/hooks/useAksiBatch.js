@@ -11,6 +11,7 @@ import { PESAN_KODE } from "../api/pesan.js";
 export function useAksiBatch({
   cekPilihanBelumUnggah,
   onSelesaiSukses,
+  onBatchSudahSelesai,
   onHapusSukses,
 }) {
   const [dialog, setDialog] = useState(null); // { jenis, batch }
@@ -70,6 +71,11 @@ export function useAksiBatch({
       }
     } catch (error) {
       setPesanAksi({ varian: "galat", teks: error.pesan });
+      // Pengaman: batch ternyata sudah Selesai (misalnya diselesaikan dari
+      // tab atau perangkat lain). Perbarui tampilan agar ikut baca-saja.
+      if (error?.kode === "BATCH_SUDAH_SELESAI") {
+        await onBatchSudahSelesai?.(batch);
+      }
     } finally {
       setSedangMemproses(false);
       setDialog(null);
