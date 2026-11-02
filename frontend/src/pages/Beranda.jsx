@@ -33,6 +33,14 @@ function Beranda() {
   const navigate = useNavigate();
   const { nama } = useAuth();
   const judulDaftarRef = useRef(null);
+  const fokusJudulTertunda = useRef(false);
+
+  useEffect(() => {
+    if (dialogAksi === null && fokusJudulTertunda.current) {
+      fokusJudulTertunda.current = false;
+      judulDaftarRef.current?.focus();
+    }
+  }, [dialogAksi]);
 
   useEffect(() => {
     let dibatalkan = false;
@@ -127,7 +135,7 @@ function Beranda() {
       setDaftarBatch((daftar) =>
         daftar.filter((item) => item.id_batch !== batch.id_batch),
       );
-      judulDaftarRef.current?.focus();
+      fokusJudulTertunda.current = true;
     } catch (error) {
       setPesanAksi({ varian: "galat", teks: error.pesan });
     } finally {
