@@ -65,7 +65,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 | FR13 | Petakan skor ke kategori (ambang tetap 80 dan 40) | - | Selesai |
 | FR14 | tabel Dashboard Hasil Koreksi | UC-07 | Selesai |
 | FR15 | Edit teks OCR, skor dihitung ulang | UC-08 | Selesai |
-| FR16 | Nilai akhir manual | UC-09 | Selesai (backend dan frontend lolos lint dan test otomatis; verifikasi manual ujung ke ujung di browser belum dilakukan, lihat changelog) |
+| FR16 | Nilai akhir manual | UC-09 | Selesai |
 | FR17 | Ekspor rekap nilai .xlsx (Pro) | UC-12 | Belum dikerjakan |
 | FR18 | Batas batch aktif, soal, dan jawaban per jenis akun | UC-02, UC-04, UC-05 | Belum dikerjakan |
 | FR19 | Integrasi payment gateway (Midtrans, Sandbox) | UC-10 | Belum dikerjakan |
