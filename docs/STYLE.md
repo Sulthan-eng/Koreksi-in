@@ -46,6 +46,8 @@ Struktur di `frontend/src/`:
 
 - `pages/`: satu file per halaman sesuai Inventaris halaman di `docs/UI.md` (Pemasaran, Daftar, Masuk, LupaPassword, AturUlangPassword, Beranda, HalamanBatch, Langganan, DashboardPantauan, AkunPengajar). File halaman tipis: merangkai komponen dan memegang state halaman, bukan menampung markup panjang.
 - `components/`: komponen bersama (daftar di `docs/UI.md`, bagian Komponen bersama: bilah atas, Lencana, dialog konfirmasi, kartu angka, tabel, keadaan data) dan komponen per tab. Satu definisi per komponen; jangan menyalin markup yang sama ke halaman lain.
+- `hooks/`: hook bersama (fungsi `use...` yang memakai hook React), misalnya `useKonfirmasiTinggalkan`.
+- `lib/`: konstanta dan fungsi murni bersama yang bukan komponen, bukan hook, dan bukan pemanggilan API, misalnya `REGEX_EMAIL` di `lib/validasi.js`. Satu berkas per bidang.
 - `api/`: semua pemanggilan ke backend. Komponen TIDAK memanggil `fetch` langsung.
 - `api/klien.js`: satu wrapper `fetch` yang menempelkan access token, menangani 401 dengan satu panggilan refresh bersama (single-flight), dan memetakan `kode` error ke teks Indonesia.
 - `index.css`: `@import "tailwindcss"` dan token `@theme` dari `docs/UI.md`.
