@@ -1,10 +1,15 @@
+import asyncio
+import shutil
+import threading
 import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 from app.models.batch import Batch
@@ -67,6 +72,38 @@ async def _buat_file_jawaban(db: AsyncSession, tmp_path: Path, batch: Batch) -> 
 
 def _fake_berkas(ukuran_byte: int, halaman: int = 1) -> pemrosesan._Berkas:
     return pemrosesan._Berkas(row=None, konten=b"0" * ukuran_byte, ext="png", halaman=halaman)
+
+
+def _url_test():
+    base = make_url(settings.DATABASE_URL)
+    return base.set(database=f"{base.database}_test", drivername="postgresql+asyncpg")
+
+
+async def _hapus_batch_async(id_batch: uuid.UUID) -> None:
+    """Simulasikan DELETE /api/batch/{id} dari request lain: sesi dan koneksi
+    terpisah dari db_session yang dipakai pemrosesan di test."""
+    engine = create_async_engine(_url_test(), poolclass=NullPool)
+    try:
+        async with AsyncSession(engine) as sesi:
+            batch = await sesi.get(Batch, id_batch)
+            if batch is not None:
+                await sesi.delete(batch)
+                await sesi.commit()
+    finally:
+        await engine.dispose()
+
+
+def _hapus_batch_lewat_sesi_lain(id_batch: uuid.UUID) -> None:
+    """Jalankan penghapusan di event loop terpisah (thread lain) agar benar-benar
+    independen dari loop yang sedang menjalankan tugas pemrosesan, meniru request
+    DELETE yang datang bersamaan saat tugas latar berjalan."""
+
+    def _jalankan() -> None:
+        asyncio.run(_hapus_batch_async(id_batch))
+
+    t = threading.Thread(target=_jalankan)
+    t.start()
+    t.join()
 
 
 def test_kategori_dari_skor_batas() -> None:
@@ -477,3 +514,60 @@ async def test_ocr_no_soal_di_luar_batch_diabaikan(
     )
     assert len(daftar_hasil) == 1
     assert daftar_hasil[0].teks_ocr == "Jawaban satu"
+
+
+async def test_batch_terhapus_saat_ocr_berjalan_tidak_error_dan_tanpa_hasil_yatim(
+    db_session: AsyncSession, tmp_path, monkeypatch
+) -> None:
+    """Pembuktian untuk FR22: batch dihapus (lewat sesi/koneksi lain) persis saat
+    tugas latar sedang menunggu Gemini. Tugas latar TIDAK BOLEH error dan TIDAK
+    BOLEH menulis Hasil_Koreksi untuk batch yang sudah hilang."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj = await _buat_file_jawaban(db_session, tmp_path, batch)
+    id_batch, id_file = batch.id_batch, fj.id_file
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        _hapus_batch_lewat_sesi_lain(id_batch)
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban")])
+
+    monkeypatch.setattr(gemini, "ocr_grup", fake_ocr)
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=90)])
+        ),
+    )
+
+    await pemrosesan.proses_file_jawaban([id_file], db=db_session)
+
+    hasil = await db_session.scalar(select(HasilKoreksi).where(HasilKoreksi.id_file == id_file))
+    assert hasil is None
+    assert await db_session.get(Batch, id_batch) is None
+
+
+async def test_baris_dan_berkas_hilang_sebelum_dimuat_tidak_error(
+    db_session: AsyncSession, tmp_path, monkeypatch
+) -> None:
+    """Pembuktian untuk FR22: baris File_Jawaban dan berkas fisiknya sudah
+    terhapus (batch dihapus lewat sesi lain) tepat sebelum _muat_berkas membaca.
+    Tugas latar TIDAK BOLEH melempar exception ke pemanggil."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj1 = await _buat_file_jawaban(db_session, tmp_path, batch)
+    fj2 = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    asli_muat_berkas = pemrosesan._muat_berkas
+    sudah_dihapus = {"v": False}
+
+    def fake_muat_berkas(row):
+        if not sudah_dihapus["v"]:
+            sudah_dihapus["v"] = True
+            _hapus_batch_lewat_sesi_lain(batch.id_batch)
+            shutil.rmtree(tmp_path / "uploads" / str(batch.id_batch), ignore_errors=True)
+        return asli_muat_berkas(row)
+
+    monkeypatch.setattr(pemrosesan, "_muat_berkas", fake_muat_berkas)
+
+    await pemrosesan.proses_file_jawaban([fj1.id_file, fj2.id_file], db=db_session)
+
+    assert await db_session.scalar(select(HasilKoreksi)) is None

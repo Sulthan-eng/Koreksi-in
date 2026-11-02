@@ -7,6 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -252,7 +253,16 @@ async def _tandai_gagal(db: AsyncSession, grup: list[_Berkas], pesan: str) -> No
 
 
 async def _tandai_baris_gagal(db: AsyncSession, baris: list[FileJawaban], pesan: str) -> None:
+    """Tandai baris gagal. Baris bisa saja sudah hilang (batch dihapus lewat
+    request lain sementara tugas latar ini berjalan) — SQLAlchemy melempar
+    StaleDataError/ObjectDeletedError saat commit karena baris tidak lagi ada
+    untuk di-UPDATE. Itu bukan kegagalan nyata di sini: tidak ada lagi yang
+    perlu ditandai, jadi ditelan tanpa menjalar ke pemanggil."""
     for row in baris:
         row.status_proses = StatusProses.GAGAL
         row.pesan_error = pesan
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        logger.warning("pemrosesan_tandai_gagal_baris_hilang", exc_info=True)
+        await db.rollback()
