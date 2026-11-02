@@ -62,3 +62,9 @@ export async function hapusBatch(idBatch) {
 export async function selesaikanBatch(idBatch) {
   return permintaan(`/api/batch/${idBatch}/selesaikan`, { method: "POST" });
 }
+
+export async function cobaLagiFileJawaban(idBatch, idFile) {
+  return permintaan(`/api/batch/${idBatch}/file-jawaban/${idFile}/coba-lagi`, {
+    method: "POST",
+  });
+}

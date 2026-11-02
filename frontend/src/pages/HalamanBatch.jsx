@@ -459,6 +459,14 @@ function HalamanBatch() {
                   ...fileBaru,
                 ])
               }
+              onCobaLagiSukses={(fileBaru) =>
+                setDaftarFileJawaban((sebelumnya) =>
+                  sebelumnya.map((fj) =>
+                    fj.id_file === fileBaru.id_file ? fileBaru : fj,
+                  ),
+                )
+              }
+              onMuatUlangDaftarFileJawaban={setDaftarFileJawaban}
             />
           </div>
         )}

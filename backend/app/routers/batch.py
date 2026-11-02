@@ -169,6 +169,21 @@ async def unggah_jawaban(
     return [_file_jawaban_response(fj) for fj in file_jawaban_list]
 
 
+@router.post("/{id_batch}/file-jawaban/{id_file}/coba-lagi", response_model=FileJawabanResponse)
+async def coba_lagi_jawaban(
+    id_batch: uuid.UUID,
+    id_file: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> FileJawabanResponse:
+    file_jawaban = await file_jawaban_service.coba_lagi_file_jawaban(
+        db, pengguna, id_batch, id_file
+    )
+    background_tasks.add_task(pemrosesan.proses_file_jawaban, [file_jawaban.id_file])
+    return _file_jawaban_response(file_jawaban)
+
+
 @router.get("/{id_batch}/hasil", response_model=list[HasilKoreksiItem])
 async def daftar_hasil_koreksi(
     id_batch: uuid.UUID,

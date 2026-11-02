@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
@@ -7,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.batch import Batch
-from app.models.enums import StatusBatch, StatusProses
+from app.models.enums import Kategori, StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
+from app.models.hasil_koreksi import HasilKoreksi
 from app.models.soal import Soal
+from app.services import gemini, pemrosesan
 
 _DAFTAR = {"nama": "Budi Santoso", "email": "Budi@Contoh.com", "password": "rahasia123"}
 _PNG = b"\x89PNG\r\n\x1a\n" + b"konten png palsu"
@@ -53,6 +56,22 @@ async def _unggah_satu_jawaban(client: AsyncClient, token: str, id_batch: str) -
     )
     assert response.status_code == 201
     return response.json()[0]
+
+
+async def _tandai_gagal(
+    db_session: AsyncSession, id_file: str, pesan_error: str = "Pesan kesalahan lama"
+) -> None:
+    fj = await db_session.get(FileJawaban, uuid.UUID(id_file))
+    fj.status_proses = StatusProses.GAGAL
+    fj.pesan_error = pesan_error
+    await db_session.commit()
+
+
+async def _ambil_id_soal(db_session: AsyncSession, id_batch: str) -> str:
+    id_soal = await db_session.scalar(
+        select(Soal.id_soal).where(Soal.id_batch == uuid.UUID(id_batch))
+    )
+    return str(id_soal)
 
 
 async def test_buat_batch_dan_daftar_batch_sukses(client: AsyncClient) -> None:
@@ -507,3 +526,327 @@ async def test_unggah_jawaban_ke_batch_selesai_ditolak(
     )
     assert jumlah_file is None
     assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_coba_lagi_sukses_sampai_selesai(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status_proses"] == "diproses"
+    assert body["pesan_error"] is None
+
+    monkeypatch.setattr(
+        gemini,
+        "ocr_grup",
+        AsyncMock(
+            return_value=gemini.ResponsOcr(
+                items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban")]
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=90)])
+        ),
+    )
+    func, args, kwargs = _background_tasks_tidak_dijalankan[-1]
+    assert func is pemrosesan.proses_file_jawaban
+    await func(*args, db=db_session, **kwargs)
+
+    response = await client.get(f"/api/batch/{id_batch}/file-jawaban", headers=_auth(token))
+    daftar = response.json()
+    assert daftar[0]["status_proses"] == "selesai"
+
+
+async def test_coba_lagi_jumlah_retry_bertambah(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    sebelum = await db_session.get(FileJawaban, uuid.UUID(fj["id_file"]))
+    assert sebelum.jumlah_retry == 0
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 200
+
+    sesudah = await db_session.get(FileJawaban, uuid.UUID(fj["id_file"]))
+    await db_session.refresh(sesudah)
+    assert sesudah.jumlah_retry == 1
+
+
+async def test_coba_lagi_file_bukan_gagal_ditolak(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    assert fj["status_proses"] == "diproses"
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "FILE_BUKAN_GAGAL",
+        "pesan": "File ini tidak berstatus Gagal.",
+    }
+
+
+async def test_coba_lagi_batch_sudah_selesai_ditolak(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    batch = await db_session.get(Batch, uuid.UUID(id_batch))
+    batch.status = StatusBatch.SELESAI
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "BATCH_SUDAH_SELESAI",
+        "pesan": "Batch yang sudah selesai tidak dapat diubah lagi.",
+    }
+
+
+async def test_coba_lagi_file_milik_batch_lain_404(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch_a = await _buat_batch_dengan_soal(client, token)
+    id_batch_b = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch_a)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    response = await client.post(
+        f"/api/batch/{id_batch_b}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 404
+    assert response.json() == {
+        "kode": "FILE_JAWABAN_TIDAK_DITEMUKAN",
+        "pesan": "File jawaban tidak ditemukan.",
+    }
+
+
+async def test_coba_lagi_klik_ganda_tidak_memicu_dua_pemrosesan(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+    jumlah_sebelum_retry = len(_background_tasks_tidak_dijalankan)
+
+    pertama = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert pertama.status_code == 200
+
+    kedua = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert kedua.status_code == 400
+    assert kedua.json()["kode"] == "FILE_BUKAN_GAGAL"
+
+    assert len(_background_tasks_tidak_dijalankan) == jumlah_sebelum_retry + 1
+
+
+async def test_coba_lagi_gagal_lagi_pesan_error_baru(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 200
+
+    monkeypatch.setattr(gemini, "ocr_grup", AsyncMock(side_effect=gemini.GagalPermanen()))
+    func, args, kwargs = _background_tasks_tidak_dijalankan[-1]
+    await func(*args, db=db_session, **kwargs)
+
+    sesudah = await db_session.get(FileJawaban, uuid.UUID(fj["id_file"]))
+    await db_session.refresh(sesudah)
+    assert sesudah.status_proses == StatusProses.GAGAL
+    assert sesudah.pesan_error == "Gagal membaca file, silakan coba lagi."
+    assert sesudah.jumlah_retry == 1
+
+
+async def test_coba_lagi_upsert_tidak_menyentuh_skor_revisi(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    id_soal = await _ambil_id_soal(db_session, id_batch)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    db_session.add(
+        HasilKoreksi(
+            id_file=uuid.UUID(fj["id_file"]),
+            id_soal=uuid.UUID(id_soal),
+            teks_ocr="Jawaban lama",
+            skor_sistem=50,
+            kategori=Kategori.KURANG_MIRIP,
+            skor_revisi=77,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 200
+
+    monkeypatch.setattr(
+        gemini,
+        "ocr_grup",
+        AsyncMock(
+            return_value=gemini.ResponsOcr(
+                items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban baru")]
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=95)])
+        ),
+    )
+    func, args, kwargs = _background_tasks_tidak_dijalankan[-1]
+    await func(*args, db=db_session, **kwargs)
+
+    hasil = await db_session.scalar(
+        select(HasilKoreksi).where(HasilKoreksi.id_file == uuid.UUID(fj["id_file"]))
+    )
+    await db_session.refresh(hasil)
+    assert hasil.skor_sistem == 95
+    assert hasil.teks_ocr == "Jawaban baru"
+    assert hasil.skor_revisi == 77
+
+
+async def test_coba_lagi_ocr_sukses_judge_gagal_lalu_retry_sukses(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    id_soal = await _ambil_id_soal(db_session, id_batch)
+    fj = await _unggah_satu_jawaban(client, token, id_batch)
+    await _tandai_gagal(
+        db_session,
+        fj["id_file"],
+        pesan_error="Layanan AI sedang sibuk atau kuota harian habis, coba lagi nanti.",
+    )
+    db_session.add(
+        HasilKoreksi(
+            id_file=uuid.UUID(fj["id_file"]),
+            id_soal=uuid.UUID(id_soal),
+            teks_ocr="Jawaban",
+            skor_sistem=None,
+            kategori=None,
+        )
+    )
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token)
+    )
+    assert response.status_code == 200
+
+    monkeypatch.setattr(
+        gemini,
+        "ocr_grup",
+        AsyncMock(
+            return_value=gemini.ResponsOcr(
+                items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban")]
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=80)])
+        ),
+    )
+    func, args, kwargs = _background_tasks_tidak_dijalankan[-1]
+    await func(*args, db=db_session, **kwargs)
+
+    fj_sesudah = await db_session.get(FileJawaban, uuid.UUID(fj["id_file"]))
+    await db_session.refresh(fj_sesudah)
+    assert fj_sesudah.status_proses == StatusProses.SELESAI
+
+    hasil = await db_session.scalar(
+        select(HasilKoreksi).where(HasilKoreksi.id_file == uuid.UUID(fj["id_file"]))
+    )
+    await db_session.refresh(hasil)
+    assert hasil.skor_sistem == 80
+
+
+async def test_coba_lagi_404_batch_milik_pengguna_lain(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token_a = await _token(client, "a@contoh.com")
+    token_b = await _token(client, "b@contoh.com")
+    id_batch = await _buat_batch_dengan_soal(client, token_a)
+    fj = await _unggah_satu_jawaban(client, token_a, id_batch)
+    await _tandai_gagal(db_session, fj["id_file"])
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{fj['id_file']}/coba-lagi", headers=_auth(token_b)
+    )
+    assert response.status_code == 404
+    assert response.json() == {
+        "kode": "BATCH_TIDAK_DITEMUKAN",
+        "pesan": "Batch tidak ditemukan",
+    }
+
+
+async def test_coba_lagi_tanpa_token(client: AsyncClient) -> None:
+    response = await client.post(f"/api/batch/{uuid.uuid4()}/file-jawaban/{uuid.uuid4()}/coba-lagi")
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"

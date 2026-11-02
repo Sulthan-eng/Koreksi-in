@@ -164,7 +164,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Buka menu | `menu` | `size-5` | Bilah atas ponsel (`aria-label` "Buka menu") |
 | Tutup menu | `x` | `size-5` | Laci menu (`aria-label` "Tutup menu") |
 | Menu aksi | `ellipsis-vertical` | `size-5` | Titik tiga (`aria-label` berisi nama batch) |
-| Coba Lagi | `rotate-ccw` | `size-4` | File yang Gagal (nanti) |
+| Coba Lagi | `rotate-ccw` | `size-4` | File yang Gagal |
 | Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi" |
 | Unggah | `upload` | `size-4` | "Upload Jawaban Peserta Didik" |
 | Tambah | `plus` | `size-4` | "Tambah Soal" |
@@ -355,7 +355,8 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 - Jika belum ada lembar jawaban: teks kecil "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi."
 - Tombol utama "Upload Jawaban Peserta Didik" memilih 1 sampai 10 file (PDF, PNG, JPG). Setelah dipilih, tombol berganti daftar file terpilih: tiap baris berisi nama file dan kolom "Nama peserta didik" (wajib, maksimal 100 karakter), dengan tombol "Upload" dan "Batal" (kosongkan pilihan, kembali ke tombol awal).
 - Galat unggah di atas tombol "Upload", memakai teks SPEC: "Nama peserta didik wajib untuk semua file", "Maksimal 10 file per unggahan.", "Pilih minimal satu file untuk diunggah.", "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.", "Ukuran file maksimal 10 MB.", "PDF maksimal 15 halaman.", "File PDF rusak atau tidak dapat dibaca.", "Gagal menyimpan jawaban, silakan coba lagi." Unggahan semua-atau-tidak-sama-sekali: bila ada yang tidak valid, tidak ada yang tersimpan dan daftar file terpilih tetap tampil.
-- Daftar jawaban yang sudah diunggah (tabel ringkas, urut waktu unggah): kolom Peserta Didik dan Status (lencana Diproses, Selesai, Gagal sesuai bagian Pemakaian). Untuk Gagal, `pesan_error` tampil di bawah nama. Kolom aksi "Coba Lagi" untuk file Gagal (nanti, FR11). Daftar diperbarui sendiri tiap 5 detik selama ada file Diproses (tanpa kedipan atau lompatan tata letak). Gagal memuat: "Gagal memuat status pemrosesan, coba muat ulang halaman". Kosong: tidak ada teks khusus, seksi hanya menampilkan tombol unggah.
+- Daftar jawaban yang sudah diunggah (tabel ringkas, urut waktu unggah): kolom Peserta Didik dan Status (lencana Diproses, Selesai, Gagal sesuai bagian Pemakaian). Untuk Gagal, `pesan_error` tampil di bawah nama. Daftar diperbarui sendiri tiap 5 detik selama ada file Diproses (tanpa kedipan atau lompatan tata letak). Gagal memuat: "Gagal memuat status pemrosesan, coba muat ulang halaman". Kosong: tidak ada teks khusus, seksi hanya menampilkan tombol unggah.
+- Kolom Aksi (hanya saat batch Aktif, FR11): tombol "Coba Lagi" (ikon `rotate-ccw`, nama aksesibel "Coba Lagi untuk {nama peserta didik}") hanya untuk baris berstatus Gagal, mengirim ulang file itu sendiri ke OCR. Setelah diklik, baris berpindah ke status Diproses dan tombol tidak dirender lagi (polling 5 detik di atas mengambil alih sampai Selesai atau Gagal lagi). Selama permintaan berjalan: `aria-disabled` dan indikator putar pada tombol, fokus tidak hilang. Gagal diminta: pesan galat tampil di bawah tombol. Fokus dipindah ke lencana Status baris itu begitu tombol hilang karena baris tidak lagi Gagal, supaya tidak jatuh ke tubuh halaman.
 - Konfirmasi meninggalkan halaman: jika ada file terpilih yang belum diunggah, meninggalkan Halaman Batch (kembali, pindah halaman, tutup tab) memunculkan dialog "Ada file yang belum diunggah. Yakin ingin meninggalkan halaman ini?" dengan tombol "Tetap di Halaman" dan "Tinggalkan". Tanpa file terpilih, tidak ada dialog.
 
 #### Tab Dashboard Hasil Koreksi
