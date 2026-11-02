@@ -3,10 +3,10 @@ import { useAuth } from "../context/AuthContext.jsx";
 import BilahAtas from "./BilahAtas.jsx";
 
 function TataLetakTerproteksi() {
-  const { status } = useAuth();
+  const { status, keluarSengaja } = useAuth();
 
   if (status !== "terautentikasi") {
-    return <Navigate to="/masuk" replace />;
+    return <Navigate to={keluarSengaja ? "/" : "/masuk"} replace />;
   }
 
   return (
