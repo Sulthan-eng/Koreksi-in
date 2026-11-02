@@ -24,7 +24,9 @@ function SeksiJawabanPesertaDidik({
   const [fileTerpilih, setFileTerpilih] = useState([]);
   const [sedangUpload, setSedangUpload] = useState(false);
   const [kesalahanUpload, setKesalahanUpload] = useState(null);
-  const [idFileDicobaLagi, setIdFileDicobaLagi] = useState(null);
+  const [idFileSedangDicobaLagi, setIdFileSedangDicobaLagi] = useState(
+    () => new Set(),
+  );
   const [kesalahanCobaLagi, setKesalahanCobaLagi] = useState({});
 
   const refTombolCobaLagi = useRef({});
@@ -48,7 +50,7 @@ function SeksiJawabanPesertaDidik({
 
   async function tanganiCobaLagi(fileJawaban) {
     const idFile = fileJawaban.id_file;
-    setIdFileDicobaLagi(idFile);
+    setIdFileSedangDicobaLagi((sebelumnya) => new Set(sebelumnya).add(idFile));
     setKesalahanCobaLagi((sebelumnya) => ({ ...sebelumnya, [idFile]: null }));
     try {
       const fileBaru = await batchApi.cobaLagiFileJawaban(idBatch, idFile);
@@ -68,7 +70,11 @@ function SeksiJawabanPesertaDidik({
         [idFile]: error.pesan,
       }));
     } finally {
-      setIdFileDicobaLagi(null);
+      setIdFileSedangDicobaLagi((sebelumnya) => {
+        const baru = new Set(sebelumnya);
+        baru.delete(idFile);
+        return baru;
+      });
     }
   }
 
@@ -267,8 +273,9 @@ function SeksiJawabanPesertaDidik({
                 </thead>
                 <tbody role="rowgroup" className="max-lg:block">
                   {daftarFileJawaban.map((fileJawaban) => {
-                    const sedangDicobaLagi =
-                      idFileDicobaLagi === fileJawaban.id_file;
+                    const sedangDicobaLagi = idFileSedangDicobaLagi.has(
+                      fileJawaban.id_file,
+                    );
                     return (
                       <tr
                         key={fileJawaban.id_file}
@@ -314,11 +321,11 @@ function SeksiJawabanPesertaDidik({
                             role="cell"
                             className="p-4 align-top max-lg:block max-lg:p-0 max-lg:py-1"
                           >
-                            <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
-                              Aksi
-                            </span>
                             {fileJawaban.status_proses === "gagal" && (
                               <>
+                                <span className="hidden text-xs font-semibold text-teks-redup max-lg:block">
+                                  Aksi
+                                </span>
                                 <button
                                   type="button"
                                   ref={(el) => {
