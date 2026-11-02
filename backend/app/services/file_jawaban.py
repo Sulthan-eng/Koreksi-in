@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,6 +57,21 @@ PDF_TIDAK_DAPAT_DIBACA = AppError(
 GAGAL_SIMPAN_JAWABAN = AppError(
     kode="GAGAL_SIMPAN_JAWABAN",
     pesan="Gagal menyimpan jawaban, silakan coba lagi.",
+    status_code=500,
+)
+FILE_JAWABAN_TIDAK_DITEMUKAN = AppError(
+    kode="FILE_JAWABAN_TIDAK_DITEMUKAN",
+    pesan="File jawaban tidak ditemukan.",
+    status_code=404,
+)
+FILE_BUKAN_GAGAL = AppError(
+    kode="FILE_BUKAN_GAGAL",
+    pesan="File ini tidak berstatus Gagal.",
+    status_code=400,
+)
+GAGAL_COBA_LAGI = AppError(
+    kode="GAGAL_COBA_LAGI",
+    pesan="Gagal mengirim ulang file, silakan coba lagi.",
     status_code=500,
 )
 
@@ -196,3 +211,45 @@ async def unggah_jawaban(
         raise GAGAL_SIMPAN_JAWABAN from None
 
     return baris_baru
+
+
+async def coba_lagi_file_jawaban(
+    db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID, id_file: uuid.UUID
+) -> FileJawaban:
+    batch = await ambil_batch(db, pengguna, id_batch)
+    if batch.status == StatusBatch.SELESAI:
+        raise BATCH_SUDAH_SELESAI
+
+    stmt = (
+        update(FileJawaban)
+        .where(
+            FileJawaban.id_file == id_file,
+            FileJawaban.id_batch == batch.id_batch,
+            FileJawaban.status_proses == StatusProses.GAGAL,
+        )
+        .values(
+            status_proses=StatusProses.DIPROSES,
+            pesan_error=None,
+            jumlah_retry=FileJawaban.jumlah_retry + 1,
+        )
+        .returning(FileJawaban)
+    )
+    baris = (await db.execute(stmt)).scalar_one_or_none()
+
+    if baris is None:
+        file_ada = await db.scalar(
+            select(FileJawaban).where(
+                FileJawaban.id_file == id_file, FileJawaban.id_batch == batch.id_batch
+            )
+        )
+        if file_ada is None:
+            raise FILE_JAWABAN_TIDAK_DITEMUKAN
+        raise FILE_BUKAN_GAGAL
+
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        raise GAGAL_COBA_LAGI from None
+
+    return baris
