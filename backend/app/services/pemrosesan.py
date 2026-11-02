@@ -7,8 +7,8 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import ObjectDeletedError, StaleDataError
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -263,6 +263,6 @@ async def _tandai_baris_gagal(db: AsyncSession, baris: list[FileJawaban], pesan:
         row.pesan_error = pesan
     try:
         await db.commit()
-    except SQLAlchemyError:
+    except (StaleDataError, ObjectDeletedError):
         logger.warning("pemrosesan_tandai_gagal_baris_hilang", exc_info=True)
         await db.rollback()
