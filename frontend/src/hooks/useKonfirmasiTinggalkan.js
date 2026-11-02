@@ -1,8 +1,18 @@
 import { useEffect } from "react";
 import { useBlocker } from "react-router-dom";
 
-export function useKonfirmasiTinggalkan(adaDataBelumTerkirim) {
-  const blocker = useBlocker(() => adaDataBelumTerkirim);
+/**
+ * Memblokir navigasi (bila argumen dipenuhi) dan menutup tab.
+ * bolehLewatRef (opsional) adalah ref boolean dari pemanggil: bila berisi
+ * true, pemblokir navigasi diam — dipakai contohnya setelah batch berhasil
+ * dihapus atau diselesaikan, ketika halaman memang harus ditinggalkan.
+ * Ref dibaca langsung pada saat navigasi, bukan nilai hasil render, agar
+ * berpindah halaman di tick yang sama tetap melewati pemblokir.
+ */
+export function useKonfirmasiTinggalkan(adaDataBelumTerkirim, bolehLewatRef) {
+  const blocker = useBlocker(
+    () => !bolehLewatRef?.current && adaDataBelumTerkirim,
+  );
 
   useEffect(() => {
     if (!adaDataBelumTerkirim) return;
