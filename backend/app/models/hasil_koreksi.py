@@ -15,6 +15,10 @@ class HasilKoreksi(Base):
             "skor_sistem IS NULL OR (skor_sistem >= 0 AND skor_sistem <= 100)",
             name="ck_hasil_koreksi_skor_sistem_range",
         ),
+        CheckConstraint(
+            "skor_revisi IS NULL OR (skor_revisi >= 0 AND skor_revisi <= 100)",
+            name="ck_hasil_koreksi_skor_revisi_range",
+        ),
     )
 
     id_koreksi: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

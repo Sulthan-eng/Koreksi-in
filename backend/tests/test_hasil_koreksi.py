@@ -544,3 +544,244 @@ async def test_edit_teks_ocr_batch_terhapus_saat_judge_berjalan(
     )
     assert response.status_code == 404
     assert response.json()["kode"] == "HASIL_KOREKSI_TIDAK_DITEMUKAN"
+
+
+async def test_ubah_nilai_akhir_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    assert response.json() == {"id_koreksi": str(baris.id_koreksi), "skor_revisi": 90}
+
+    await db_session.refresh(baris)
+    assert baris.skor_revisi == 90
+
+
+async def test_ubah_nilai_akhir_nol_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 0},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    assert response.json()["skor_revisi"] == 0
+
+
+async def test_ubah_nilai_akhir_seratus_sukses(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 100},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    assert response.json()["skor_revisi"] == 100
+
+
+async def test_ubah_nilai_akhir_negatif_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": -1},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_lebih_dari_100_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 101},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_bukan_angka_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": "abc"},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_desimal_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 85.5},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_boolean_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": True},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_null_ditolak(client: AsyncClient, db_session: AsyncSession) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": None},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "NILAI_AKHIR_TIDAK_VALID"
+
+
+async def test_ubah_nilai_akhir_batch_selesai_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+    batch = await db_session.get(Batch, uuid.UUID(id_batch))
+    batch.status = StatusBatch.SELESAI
+    await db_session.commit()
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json()["kode"] == "BATCH_SUDAH_SELESAI"
+
+
+async def test_ubah_nilai_akhir_milik_pengajar_lain_404(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token_a = await _token(client, "a3@contoh.com")
+    token_b = await _token(client, "b3@contoh.com")
+    id_batch, baris = await _siapkan_hasil(client, db_session, token_a)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token_b),
+    )
+    assert response.status_code == 404
+    assert response.json()["kode"] == "BATCH_TIDAK_DITEMUKAN"
+
+
+async def test_ubah_nilai_akhir_id_koreksi_acak_404(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, _ = await _siapkan_hasil(client, db_session, token)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{uuid.uuid4()}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token),
+    )
+    assert response.status_code == 404
+    assert response.json()["kode"] == "HASIL_KOREKSI_TIDAK_DITEMUKAN"
+
+
+async def test_ubah_nilai_akhir_file_belum_selesai_404(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    id_soal = await _tambah_soal(client, token, id_batch)
+    file_diproses = await _buat_file_jawaban(db_session, id_batch, "Ani", StatusProses.DIPROSES)
+    baris = await _buat_hasil_koreksi(db_session, file_diproses.id_file, id_soal)
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token),
+    )
+    assert response.status_code == 404
+    assert response.json()["kode"] == "HASIL_KOREKSI_TIDAK_DITEMUKAN"
+
+
+async def test_ubah_nilai_akhir_tidak_mengubah_field_lain(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(
+        client,
+        db_session,
+        token,
+        teks_ocr="Jawaban lama",
+        skor_sistem=50,
+        kategori=Kategori.CUKUP_MIRIP,
+        skor_hitung_ulang=False,
+    )
+
+    response = await client.patch(
+        f"/api/batch/{id_batch}/hasil/{baris.id_koreksi}/nilai-akhir",
+        json={"skor_revisi": 90},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+
+    await db_session.refresh(baris)
+    assert baris.teks_ocr == "Jawaban lama"
+    assert baris.skor_sistem == 50
+    assert baris.kategori == Kategori.CUKUP_MIRIP
+    assert baris.skor_hitung_ulang is False
+
+
+async def test_daftar_hasil_koreksi_memuat_skor_revisi(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    id_batch, baris = await _siapkan_hasil(client, db_session, token)
+    baris.skor_revisi = 88
+    await db_session.commit()
+
+    response = await client.get(f"/api/batch/{id_batch}/hasil", headers=_auth(token))
+    assert response.status_code == 200
+    daftar = response.json()
+    assert daftar[0]["skor_revisi"] == 88
