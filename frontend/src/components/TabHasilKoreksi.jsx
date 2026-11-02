@@ -116,7 +116,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
   function mulaiEditNilai(item) {
     setIdKoreksiDiedit(item.id_koreksi);
     setModeEdit("nilai");
-    setNilaiDraft(item.skor_revisi ?? item.skor_sistem ?? "");
+    setNilaiDraft(String(item.skor_revisi ?? item.skor_sistem ?? ""));
     setKesalahanNilai(null);
   }
 
