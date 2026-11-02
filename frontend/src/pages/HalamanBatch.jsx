@@ -157,6 +157,7 @@ function HalamanBatch() {
 
   async function tanganiSimpanSoal(peristiwa) {
     peristiwa.preventDefault();
+    if (sedangOcr) return;
     if (kunciJawaban.trim() === "") {
       setKesalahanSoal(PESAN_KODE.KUNCI_KOSONG);
       return;
@@ -493,7 +494,8 @@ function HalamanBatch() {
                       <button
                         type="submit"
                         disabled={sedangSimpan}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50"
+                        aria-disabled={sedangOcr ? "true" : undefined}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50 aria-disabled:opacity-50"
                       >
                         {sedangSimpan && <Spinner ukuran="size-4" />}
                         Simpan Kunci Jawaban
