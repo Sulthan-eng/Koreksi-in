@@ -60,7 +60,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 | FR8 | Unggah jawaban peserta didik | UC-05 | Selesai. Batas jumlah jawaban per akun ikut FR18 |
 | FR9 | Nama peserta didik diisi manual | UC-05 | Selesai |
 | FR10 | OCR jawaban peserta didik | UC-05 | Selesai |
-| FR11 | Status pemrosesan per file dan Coba Lagi manual | UC-06 | Status: Selesai (di daftar tab Soal dan Jawaban, tab Status Pemrosesan dihapus). Coba Lagi: backend dan frontend lolos ujung ke ujung di localhost, menunggu konfirmasi tes manual pemilik proyek sebelum ditandai Selesai |
+| FR11 | Status pemrosesan per file dan Coba Lagi manual | UC-06 | Status: Selesai (di daftar tab Soal dan Jawaban, tab Status Pemrosesan dihapus). Coba Lagi: backend dan frontend lolos test otomatis, menunggu konfirmasi tes manual pemilik proyek sebelum ditandai Selesai |
 | FR12 | Hitung skor kemiripan | - | Selesai |
 | FR13 | Petakan skor ke kategori (ambang tetap 80 dan 40) | - | Selesai |
 | FR14 | tabel Dashboard Hasil Koreksi | UC-07 | Selesai |
