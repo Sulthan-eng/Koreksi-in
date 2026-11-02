@@ -8,7 +8,11 @@ from app.core.dependencies import pengguna_saat_ini
 from app.models.pengguna import Pengguna
 from app.schemas.batch import BatchResponse, BuatBatchRequest
 from app.schemas.file_jawaban import FileJawabanResponse
-from app.schemas.hasil_koreksi import HasilKoreksiItem
+from app.schemas.hasil_koreksi import (
+    EditTeksOcrRequest,
+    HasilKoreksiEditResponse,
+    HasilKoreksiItem,
+)
 from app.schemas.soal import SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
 from app.services import file_jawaban as file_jawaban_service
@@ -45,12 +49,24 @@ def _file_jawaban_response(file_jawaban) -> FileJawabanResponse:
 
 def _hasil_koreksi_response(baris) -> HasilKoreksiItem:
     return HasilKoreksiItem(
+        id_koreksi=baris.id_koreksi,
         id_file=baris.id_file,
         nama_peserta_didik=baris.nama_peserta_didik,
         no_soal=baris.no_soal,
         teks_ocr=baris.teks_ocr,
         skor_sistem=baris.skor_sistem,
         kategori=baris.kategori,
+        skor_hitung_ulang=baris.skor_hitung_ulang,
+    )
+
+
+def _hasil_koreksi_edit_response(baris) -> HasilKoreksiEditResponse:
+    return HasilKoreksiEditResponse(
+        id_koreksi=baris.id_koreksi,
+        teks_ocr=baris.teks_ocr,
+        skor_sistem=baris.skor_sistem,
+        kategori=baris.kategori,
+        skor_hitung_ulang=baris.skor_hitung_ulang,
     )
 
 
@@ -158,3 +174,17 @@ async def daftar_hasil_koreksi(
 ) -> list[HasilKoreksiItem]:
     baris_list = await hasil_koreksi_service.daftar_hasil_koreksi(db, pengguna, id_batch)
     return [_hasil_koreksi_response(baris) for baris in baris_list]
+
+
+@router.patch("/{id_batch}/hasil/{id_koreksi}", response_model=HasilKoreksiEditResponse)
+async def edit_hasil_koreksi(
+    id_batch: uuid.UUID,
+    id_koreksi: uuid.UUID,
+    body: EditTeksOcrRequest,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> HasilKoreksiEditResponse:
+    baris = await hasil_koreksi_service.edit_teks_ocr(
+        db, pengguna, id_batch, id_koreksi, body.teks_ocr
+    )
+    return _hasil_koreksi_edit_response(baris)
