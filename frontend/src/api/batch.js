@@ -41,6 +41,13 @@ export async function daftarHasilKoreksi(idBatch) {
   return permintaan(`/api/batch/${idBatch}/hasil`);
 }
 
+export async function ubahTeksOcr(idBatch, idKoreksi, { teks_ocr }) {
+  return permintaan(`/api/batch/${idBatch}/hasil/${idKoreksi}`, {
+    method: "PATCH",
+    body: { teks_ocr },
+  });
+}
+
 export async function hapusBatch(idBatch) {
   return permintaan(`/api/batch/${idBatch}`, { method: "DELETE" });
 }
