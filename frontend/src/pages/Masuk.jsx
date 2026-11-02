@@ -102,7 +102,7 @@ function Masuk() {
               <span className="text-sm font-semibold text-teks">Email</span>
               <input
                 id="email"
-                type="text"
+                type="email"
                 autoComplete="email"
                 value={email}
                 onChange={(peristiwa) => setEmail(peristiwa.target.value)}
