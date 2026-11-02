@@ -48,6 +48,13 @@ export async function ubahTeksOcr(idBatch, idKoreksi, { teks_ocr }) {
   });
 }
 
+export async function ubahNilaiAkhir(idBatch, idKoreksi, { skor_revisi }) {
+  return permintaan(`/api/batch/${idBatch}/hasil/${idKoreksi}/nilai-akhir`, {
+    method: "PATCH",
+    body: { skor_revisi },
+  });
+}
+
 export async function hapusBatch(idBatch) {
   return permintaan(`/api/batch/${idBatch}`, { method: "DELETE" });
 }
