@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
-import { PESAN_KODE } from "../api/pesan.js";
+import { BATAS_SOAL_PER_BATCH, PESAN_KODE } from "../api/pesan.js";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
@@ -16,7 +16,6 @@ const JEDA_POLLING_MS = 5000;
 
 const TAB_SOAL = "soal";
 const TAB_DASHBOARD = "dashboard";
-const BATAS_SOAL_PER_BATCH = 20;
 
 const DAFTAR_TAB = [
   { id: TAB_SOAL, label: "Soal dan Jawaban" },

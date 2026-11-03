@@ -15,11 +15,16 @@ from app.services import gemini
 from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
 from app.services.file_jawaban import TIDAK_ADA_FILE, baca_dan_validasi_file
 
+_MAKS_SOAL_PER_BATCH = 15
+_MAKS_PERCOBAAN_NO_SOAL = 5
+
 KUNCI_KOSONG = AppError(
     kode="KUNCI_KOSONG", pesan="Kunci jawaban tidak boleh kosong", status_code=400
 )
 BATAS_SOAL_TERLAMPAUI = AppError(
-    kode="BATAS_SOAL_TERLAMPAUI", pesan="Maksimal 20 soal per batch.", status_code=400
+    kode="BATAS_SOAL_TERLAMPAUI",
+    pesan=f"Maksimal {_MAKS_SOAL_PER_BATCH} soal per batch.",
+    status_code=400,
 )
 SOAL_SETELAH_JAWABAN = AppError(
     kode="SOAL_SETELAH_JAWABAN",
@@ -34,9 +39,6 @@ OCR_KUNCI_GAGAL = AppError(
     pesan="Gagal membaca file, silakan coba lagi atau masukkan teks secara manual",
     status_code=500,
 )
-
-_MAKS_SOAL_PER_BATCH = 20
-_MAKS_PERCOBAAN_NO_SOAL = 5
 
 
 async def pastikan_bisa_tambah_soal(db: AsyncSession, batch: Batch) -> None:

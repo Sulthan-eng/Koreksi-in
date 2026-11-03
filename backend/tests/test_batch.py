@@ -244,12 +244,12 @@ async def test_tambah_soal_kunci_spasi_saja(client: AsyncClient) -> None:
     assert response.json()["kode"] == "KUNCI_KOSONG"
 
 
-async def test_tambah_soal_ke_21_ditolak(client: AsyncClient) -> None:
+async def test_tambah_soal_ke_16_ditolak(client: AsyncClient) -> None:
     token = await _token(client)
     buat = await client.post("/api/batch", json={"nama_batch": "Batch"}, headers=_auth(token))
     id_batch = buat.json()["id_batch"]
 
-    for nomor in range(1, 21):
+    for nomor in range(1, 16):
         response = await client.post(
             f"/api/batch/{id_batch}/soal",
             json={"kunci_jawaban": f"Kunci {nomor}"},
@@ -259,13 +259,13 @@ async def test_tambah_soal_ke_21_ditolak(client: AsyncClient) -> None:
 
     response = await client.post(
         f"/api/batch/{id_batch}/soal",
-        json={"kunci_jawaban": "Kunci ke-21"},
+        json={"kunci_jawaban": "Kunci ke-16"},
         headers=_auth(token),
     )
     assert response.status_code == 400
     assert response.json() == {
         "kode": "BATAS_SOAL_TERLAMPAUI",
-        "pesan": "Maksimal 20 soal per batch.",
+        "pesan": "Maksimal 15 soal per batch.",
     }
 
 

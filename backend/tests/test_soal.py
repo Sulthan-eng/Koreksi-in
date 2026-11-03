@@ -288,7 +288,7 @@ async def test_ocr_kunci_sudah_ada_jawaban(
 async def test_ocr_kunci_batas_soal_tercapai(client: AsyncClient, monkeypatch) -> None:
     token = await _token(client)
     id_batch = await _buat_batch(client, token)
-    for nomor in range(1, 21):
+    for nomor in range(1, 16):
         response = await client.post(
             f"/api/batch/{id_batch}/soal",
             json={"kunci_jawaban": f"Kunci {nomor}"},
