@@ -1,3 +1,5 @@
+export const BATAS_SOAL_PER_BATCH = 15;
+
 export const PESAN_KODE = {
   VALIDASI_GAGAL: "Data yang dikirim tidak valid.",
   EMAIL_SUDAH_TERDAFTAR: "Email sudah terdaftar",
@@ -10,14 +12,14 @@ export const PESAN_KODE = {
   BELUM_ADA_BATCH:
     "Belum ada batch. Buat batch pertama untuk mulai mengoreksi.",
   KUNCI_KOSONG: "Kunci jawaban tidak boleh kosong",
-  BATAS_SOAL_TERLAMPAUI: "Maksimal 20 soal per batch.",
+  BATAS_SOAL_TERLAMPAUI: `Maksimal ${BATAS_SOAL_PER_BATCH} soal per batch.`,
   SOAL_SETELAH_JAWABAN: "Soal tidak dapat ditambah setelah jawaban diunggah.",
   GAGAL_BUAT_BATCH: "Gagal membuat batch, silakan coba lagi",
   GAGAL_TAMBAH_SOAL: "Gagal menambah soal, silakan coba lagi.",
   BELUM_ADA_SOAL: "Tambahkan minimal satu soal sebelum mengunggah jawaban.",
   BELUM_ADA_SOAL_BATCH: "Belum ada soal pada batch ini.",
   KUNCI_TERSIMPAN: "Kunci jawaban tersimpan.",
-  SUDAH_MAKSIMAL_SOAL: "Sudah mencapai jumlah maksimal 20 soal per batch.",
+  SUDAH_MAKSIMAL_SOAL: `Sudah mencapai jumlah maksimal ${BATAS_SOAL_PER_BATCH} soal per batch.`,
   PERINGATAN_SEBELUM_UNGGAH:
     "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi.",
   GAGAL_STATUS_PEMROSESAN:
