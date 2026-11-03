@@ -25,6 +25,19 @@ _SEM = asyncio.Semaphore(2)
 _RETRY_DELAYS = (10, 30, 60)
 _TIMEOUT_MS = 120_000
 
+# Jalur OCR kunci jawaban (F-KUNCI-FILE) sinkron dengan NFR1 (maks 120 detik
+# total): kebijakan retry lebih ketat daripada OCR jawaban/judge di atas, dan
+# dibungkus batas waktu total terpisah supaya antrean semaphore yang penuh
+# tidak membuat total melewati 120 detik.
+_RETRY_DELAYS_KUNCI = (10,)
+_TIMEOUT_MS_KUNCI = 50_000
+_BATAS_WAKTU_TOTAL_KUNCI = 115
+
+# Penanda yang diminta dibalas model (bukan kalimat bebas) saat berkas tidak
+# berisi teks yang dapat dibaca, supaya soal.py dapat mendeteksinya tanpa
+# bergantung pada kalimat penjelas yang bisa berubah-ubah antar respons.
+PENANDA_TIDAK_ADA_TEKS = "[[TIDAK_ADA_TEKS]]"
+
 _MIME_PER_EXT = {
     "pdf": "application/pdf",
     "png": "image/png",
@@ -123,6 +136,16 @@ def _prompt_ocr(no_soal_list: list[int]) -> str:
     )
 
 
+def _prompt_ocr_kunci() -> str:
+    return (
+        "Salin seluruh teks pada berkas ini apa adanya, pertahankan baris baru. "
+        "Jangan menambah, meringkas, atau menafsirkan isi. Jangan membuat atau "
+        "menyebutkan nomor soal. Jika berkas ini TIDAK berisi teks yang dapat "
+        f'dibaca, balas PERSIS dengan "{PENANDA_TIDAK_ADA_TEKS}" saja, tanpa '
+        "kalimat penjelas lain."
+    )
+
+
 def _prompt_judge() -> str:
     return (
         "Nilai kemiripan tiap jawaban peserta didik terhadap kunci jawaban, dengan skala "
@@ -173,6 +196,25 @@ async def _panggil_sdk_judge(items: list[ItemJudgeMasuk]) -> ResponsJudge:
     return ResponsJudge.model_validate_json(response.text)
 
 
+async def _panggil_sdk_ocr_kunci(konten: bytes, ext: str) -> str:
+    """Satu-satunya titik yang memanggil SDK untuk OCR kunci jawaban (satu file,
+    tanpa judge, tanpa structured output -- keluarannya memang cuma teks).
+    Timeout per panggilan diturunkan (_TIMEOUT_MS_KUNCI) lewat http_options
+    khusus permintaan ini, client bersama (_ambil_client) tidak disentuh."""
+    client = _ambil_client()
+    response = await client.aio.models.generate_content(
+        model=_MODEL,
+        contents=[
+            types.Part.from_text(text=_prompt_ocr_kunci()),
+            types.Part.from_bytes(data=konten, mime_type=_MIME_PER_EXT[ext]),
+        ],
+        config=types.GenerateContentConfig(
+            http_options=types.HttpOptions(timeout=_TIMEOUT_MS_KUNCI),
+        ),
+    )
+    return response.text or ""
+
+
 def _klasifikasikan(exc: Exception) -> str:
     """503/timeout -> transient. 429 -> cek teks pesan untuk indikasi per-menit/rate;
     jika tidak jelas -> kuota_harian (tanpa retry, sesuai aturan 'default ke yang lebih aman').
@@ -192,7 +234,9 @@ def _klasifikasikan(exc: Exception) -> str:
     return "permanen"
 
 
-async def _dengan_retry_dan_anggaran(model: str, jumlah_item: int, fn) -> ResponsOcr | ResponsJudge:
+async def _dengan_retry_dan_anggaran(
+    model: str, jumlah_item: int, fn, retry_delays: tuple[int, ...] = _RETRY_DELAYS
+):
     if not _anggaran.boleh_panggil(model):
         logger.info("gemini_call_skipped model=%s items=%d reason=rpd_habis", model, jumlah_item)
         raise KuotaHarianHabis()
@@ -217,9 +261,9 @@ async def _dengan_retry_dan_anggaran(model: str, jumlah_item: int, fn) -> Respon
                     raise KuotaHarianHabis() from exc
                 if klasifikasi == "permanen":
                     raise GagalPermanen() from exc
-                if percobaan >= len(_RETRY_DELAYS):
+                if percobaan >= len(retry_delays):
                     raise GagalSementara() from exc
-                delay = _RETRY_DELAYS[percobaan]
+                delay = retry_delays[percobaan]
 
         await asyncio.sleep(delay)
         percobaan += 1
@@ -235,3 +279,20 @@ async def ocr_grup(
 
 async def judge_grup(items: list[ItemJudgeMasuk]) -> ResponsJudge:
     return await _dengan_retry_dan_anggaran(_MODEL, len(items), lambda: _panggil_sdk_judge(items))
+
+
+async def ocr_kunci(konten: bytes, ext: str) -> str:
+    """OCR satu file kunci jawaban (F-KUNCI-FILE), tanpa judge. Dibungkus batas
+    waktu total terpisah (_BATAS_WAKTU_TOTAL_KUNCI) yang mencakup antrean
+    semaphore dan retry, supaya NFR1 (120 detik) tetap terjaga walau semaphore
+    sedang penuh dipakai OCR jawaban/judge."""
+    try:
+        async with asyncio.timeout(_BATAS_WAKTU_TOTAL_KUNCI):
+            return await _dengan_retry_dan_anggaran(
+                _MODEL,
+                1,
+                lambda: _panggil_sdk_ocr_kunci(konten, ext),
+                retry_delays=_RETRY_DELAYS_KUNCI,
+            )
+    except TimeoutError:
+        raise GagalSementara() from None

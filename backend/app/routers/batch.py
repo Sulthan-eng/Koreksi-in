@@ -15,7 +15,7 @@ from app.schemas.hasil_koreksi import (
     HasilKoreksiNilaiResponse,
     UbahNilaiAkhirRequest,
 )
-from app.schemas.soal import SoalResponse, TambahSoalRequest
+from app.schemas.soal import OcrKunciResponse, SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
 from app.services import file_jawaban as file_jawaban_service
 from app.services import hasil_koreksi as hasil_koreksi_service
@@ -139,6 +139,17 @@ async def tambah_soal(
 ) -> SoalResponse:
     soal = await soal_service.tambah_soal(db, pengguna, id_batch, body.kunci_jawaban)
     return _soal_response(soal)
+
+
+@router.post("/{id_batch}/soal/ocr-kunci", response_model=OcrKunciResponse)
+async def ocr_kunci_soal(
+    id_batch: uuid.UUID,
+    file: UploadFile | None = File(default=None),
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> OcrKunciResponse:
+    teks = await soal_service.ocr_kunci(db, pengguna, id_batch, file)
+    return OcrKunciResponse(teks=teks)
 
 
 @router.get("/{id_batch}/file-jawaban", response_model=list[FileJawabanResponse])

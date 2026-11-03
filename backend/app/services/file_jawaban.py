@@ -118,6 +118,18 @@ def _hitung_halaman_pdf(konten: bytes) -> int:
         raise PDF_TIDAK_DAPAT_DIBACA from None
 
 
+async def baca_dan_validasi_file(file: UploadFile) -> tuple[bytes, str]:
+    """Baca satu file dan validasi format/ukuran/halaman PDF (dipakai ulang oleh
+    unggah jawaban dan OCR kunci jawaban, F-KUNCI-FILE)."""
+    konten = await _baca_dengan_batas(file)
+    ext = _deteksi_format(konten)
+    if ext == "pdf":
+        jumlah_halaman = _hitung_halaman_pdf(konten)
+        if jumlah_halaman > _MAKS_HALAMAN_PDF:
+            raise PDF_TERLALU_BANYAK_HALAMAN
+    return konten, ext
+
+
 def _rel_path(id_batch: uuid.UUID, id_file: uuid.UUID, ext: str) -> str:
     return f"{REL_PREFIX}/{id_batch}/{id_file}.{ext}"
 
@@ -170,13 +182,7 @@ async def unggah_jawaban(
 
     item_tervalidasi: list[tuple[bytes, str]] = []
     for file in files:
-        konten = await _baca_dengan_batas(file)
-        ext = _deteksi_format(konten)
-        if ext == "pdf":
-            jumlah_halaman = _hitung_halaman_pdf(konten)
-            if jumlah_halaman > _MAKS_HALAMAN_PDF:
-                raise PDF_TERLALU_BANYAK_HALAMAN
-        item_tervalidasi.append((konten, ext))
+        item_tervalidasi.append(await baca_dan_validasi_file(file))
 
     basis = datetime.now(UTC)
     path_tertulis: list[Path] = []

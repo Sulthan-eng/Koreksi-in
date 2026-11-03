@@ -41,6 +41,11 @@ export const PESAN_KODE = {
   PDF_TERLALU_BANYAK_HALAMAN: "PDF maksimal 15 halaman.",
   PDF_TIDAK_DAPAT_DIBACA: "File PDF rusak atau tidak dapat dibaca.",
   GAGAL_SIMPAN_JAWABAN: "Gagal menyimpan jawaban, silakan coba lagi.",
+  OCR_KUNCI_GAGAL:
+    "Gagal membaca file, silakan coba lagi atau masukkan teks secara manual",
+  JUDUL_GANTI_KUNCI: "Ganti Kunci Jawaban",
+  PESAN_GANTI_KUNCI:
+    "Isi kolom akan diganti dengan hasil baca file. Lanjutkan?",
   FILE_JAWABAN_TIDAK_DITEMUKAN: "File jawaban tidak ditemukan.",
   FILE_BUKAN_GAGAL: "File ini tidak berstatus Gagal.",
   GAGAL_COBA_LAGI: "Gagal mengirim ulang file, silakan coba lagi.",

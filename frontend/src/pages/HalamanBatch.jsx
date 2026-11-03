@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
@@ -41,11 +41,17 @@ function HalamanBatch() {
   const [pilihanBelumUnggah, setPilihanBelumUnggah] = useState(false);
   const [sedangUnggah, setSedangUnggah] = useState(false);
 
+  const [sedangOcr, setSedangOcr] = useState(false);
+  const [dialogGantiKunciTerbuka, setDialogGantiKunciTerbuka] = useState(false);
+
   const navigate = useNavigate();
   const tabRefs = useRef([]);
   const judulRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
   const bolehLewatRef = useRef(false);
+  const refInputFileKunci = useRef(null);
+  const refKunciTextarea = useRef(null);
+  const fileOcrTertundaRef = useRef(null);
 
   const bacaSaja = batch?.status === "selesai";
 
@@ -151,6 +157,7 @@ function HalamanBatch() {
 
   async function tanganiSimpanSoal(peristiwa) {
     peristiwa.preventDefault();
+    if (sedangOcr) return;
     if (kunciJawaban.trim() === "") {
       setKesalahanSoal(PESAN_KODE.KUNCI_KOSONG);
       return;
@@ -170,6 +177,49 @@ function HalamanBatch() {
     } finally {
       setSedangSimpan(false);
     }
+  }
+
+  async function jalankanOcrKunci(file) {
+    setSedangOcr(true);
+    setKesalahanSoal(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const hasil = await batchApi.ocrKunci(id, formData);
+      setKunciJawaban(hasil.teks);
+      refKunciTextarea.current?.focus();
+    } catch (error) {
+      setKesalahanSoal(error.pesan);
+    } finally {
+      setSedangOcr(false);
+    }
+  }
+
+  // Dialog konfirmasi muncul SEBELUM memanggil Gemini (bukan setelah hasil OCR
+  // datang): kuota Gemini terbatas dan dibagi semua pengguna, jadi menekan
+  // Batal tidak boleh membuang panggilan yang sudah terkirim.
+  function tanganiPilihFileKunci(peristiwa) {
+    const file = peristiwa.target.files[0];
+    peristiwa.target.value = "";
+    if (!file) return;
+    if (kunciJawaban.trim() === "") {
+      jalankanOcrKunci(file);
+      return;
+    }
+    fileOcrTertundaRef.current = file;
+    setDialogGantiKunciTerbuka(true);
+  }
+
+  function tanganiGantiKunciYa() {
+    setDialogGantiKunciTerbuka(false);
+    const file = fileOcrTertundaRef.current;
+    fileOcrTertundaRef.current = null;
+    if (file) jalankanOcrKunci(file);
+  }
+
+  function tanganiGantiKunciBatal() {
+    setDialogGantiKunciTerbuka(false);
+    fileOcrTertundaRef.current = null;
   }
 
   function tanganiKeyDownTab(peristiwa, indeks) {
@@ -389,10 +439,39 @@ function HalamanBatch() {
                       <span className="text-sm font-semibold text-teks">
                         Soal {daftarSoal.length + 1}: Kunci Jawaban
                       </span>
+                      <div>
+                        <input
+                          type="file"
+                          ref={refInputFileKunci}
+                          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                          onChange={tanganiPilihFileKunci}
+                          className="sr-only"
+                          tabIndex={-1}
+                          aria-label="Pilih file kunci jawaban"
+                        />
+                        <button
+                          type="button"
+                          aria-disabled={sedangOcr ? "true" : undefined}
+                          onClick={() => {
+                            if (sedangOcr) return;
+                            refInputFileKunci.current?.click();
+                          }}
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks aria-disabled:opacity-50"
+                        >
+                          {sedangOcr ? (
+                            <Spinner ukuran="size-4" />
+                          ) : (
+                            <Upload className="size-4" aria-hidden="true" />
+                          )}
+                          Upload File
+                        </button>
+                      </div>
                       <textarea
                         id="kunci_jawaban"
+                        ref={refKunciTextarea}
                         rows={4}
                         value={kunciJawaban}
+                        readOnly={sedangOcr}
                         onChange={(peristiwa) =>
                           setKunciJawaban(peristiwa.target.value)
                         }
@@ -415,7 +494,8 @@ function HalamanBatch() {
                       <button
                         type="submit"
                         disabled={sedangSimpan}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50"
+                        aria-disabled={sedangOcr ? "true" : undefined}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50 aria-disabled:opacity-50"
                       >
                         {sedangSimpan && <Spinner ukuran="size-4" />}
                         Simpan Kunci Jawaban
@@ -508,6 +588,17 @@ function HalamanBatch() {
         prosesBerjalan={aksi.sedangMemproses}
         onBatal={aksi.batalkan}
         onYa={aksi.konfirmasi}
+      />
+
+      <DialogKonfirmasi
+        terbuka={dialogGantiKunciTerbuka}
+        judul={PESAN_KODE.JUDUL_GANTI_KUNCI}
+        isi={PESAN_KODE.PESAN_GANTI_KUNCI}
+        labelBatal="Batal"
+        labelYa="Ya"
+        tombolUtama="ya"
+        onBatal={tanganiGantiKunciBatal}
+        onYa={tanganiGantiKunciYa}
       />
     </div>
   );

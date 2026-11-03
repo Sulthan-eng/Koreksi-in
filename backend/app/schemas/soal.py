@@ -11,3 +11,7 @@ class SoalResponse(BaseModel):
     id_soal: uuid.UUID
     no_soal: int
     kunci_jawaban: str
+
+
+class OcrKunciResponse(BaseModel):
+    teks: str
