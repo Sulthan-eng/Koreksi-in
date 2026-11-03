@@ -33,6 +33,11 @@ _RETRY_DELAYS_KUNCI = (10,)
 _TIMEOUT_MS_KUNCI = 50_000
 _BATAS_WAKTU_TOTAL_KUNCI = 115
 
+# Penanda yang diminta dibalas model (bukan kalimat bebas) saat berkas tidak
+# berisi teks yang dapat dibaca, supaya soal.py dapat mendeteksinya tanpa
+# bergantung pada kalimat penjelas yang bisa berubah-ubah antar respons.
+PENANDA_TIDAK_ADA_TEKS = "[[TIDAK_ADA_TEKS]]"
+
 _MIME_PER_EXT = {
     "pdf": "application/pdf",
     "png": "image/png",
@@ -135,7 +140,9 @@ def _prompt_ocr_kunci() -> str:
     return (
         "Salin seluruh teks pada berkas ini apa adanya, pertahankan baris baru. "
         "Jangan menambah, meringkas, atau menafsirkan isi. Jangan membuat atau "
-        "menyebutkan nomor soal."
+        "menyebutkan nomor soal. Jika berkas ini TIDAK berisi teks yang dapat "
+        f'dibaca, balas PERSIS dengan "{PENANDA_TIDAK_ADA_TEKS}" saja, tanpa '
+        "kalimat penjelas lain."
     )
 
 

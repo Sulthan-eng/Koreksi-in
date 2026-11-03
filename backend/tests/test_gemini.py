@@ -245,6 +245,10 @@ def test_timeout_eksplisit_120_detik():
 # --- OCR kunci jawaban (F-KUNCI-FILE): retry lebih ketat, batas waktu total terpisah ---
 
 
+def test_prompt_ocr_kunci_memuat_penanda_tidak_ada_teks():
+    assert gemini.PENANDA_TIDAK_ADA_TEKS in gemini._prompt_ocr_kunci()
+
+
 async def test_ocr_kunci_sukses(monkeypatch):
     async def fake_ocr_kunci(konten, ext):
         return "Teks kunci apa adanya"

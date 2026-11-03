@@ -122,7 +122,7 @@ async def ocr_kunci(
     except (gemini.KuotaHarianHabis, gemini.GagalSementara, gemini.GagalPermanen):
         raise OCR_KUNCI_GAGAL from None
 
-    if not teks.strip():
+    if not teks.strip() or gemini.PENANDA_TIDAK_ADA_TEKS in teks:
         raise OCR_KUNCI_GAGAL
 
     return teks

@@ -92,6 +92,55 @@ async def test_ocr_kunci_hasil_kosong_dianggap_gagal(client: AsyncClient, monkey
     }
 
 
+async def test_ocr_kunci_penanda_tidak_ada_teks_dianggap_gagal(
+    client: AsyncClient, monkeypatch
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    _mock_ocr_kunci(monkeypatch, teks=gemini.PENANDA_TIDAK_ADA_TEKS)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "OCR_KUNCI_GAGAL",
+        "pesan": "Gagal membaca file, silakan coba lagi atau masukkan teks secara manual",
+    }
+
+
+async def test_ocr_kunci_penanda_tidak_ada_teks_dengan_spasi_sekitar_dianggap_gagal(
+    client: AsyncClient, monkeypatch
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    _mock_ocr_kunci(monkeypatch, teks=f"  \n{gemini.PENANDA_TIDAK_ADA_TEKS}\n  ")
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json()["kode"] == "OCR_KUNCI_GAGAL"
+
+
+async def test_ocr_kunci_teks_normal_tetap_sukses(client: AsyncClient, monkeypatch) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    _mock_ocr_kunci(monkeypatch, teks="Jawaban yang benar adalah fotosintesis.")
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    assert response.json() == {"teks": "Jawaban yang benar adalah fotosintesis."}
+
+
 async def test_ocr_kunci_kuota_harian_habis(client: AsyncClient, monkeypatch) -> None:
     token = await _token(client)
     id_batch = await _buat_batch(client, token)
