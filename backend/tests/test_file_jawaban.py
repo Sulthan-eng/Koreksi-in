@@ -605,6 +605,27 @@ async def test_unggah_jawaban_akun_pro_kedaluwarsa_di_atas_batas_free_ditolak_da
     }
 
 
+async def test_unggah_jawaban_format_tidak_didukung_dan_melebihi_batas_prioritaskan_format(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    await _isi_file_jawaban_awal(db_session, id_batch, 15)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("rusak.png", b"bukan png valid", "image/png")]),
+        data=_nama("Peserta 16"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "FORMAT_FILE_TIDAK_DIDUKUNG",
+        "pesan": "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.",
+    }
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
 async def test_balapan_unggah_jawaban_pada_sisa_slot_hanya_satu_lolos(
     client: AsyncClient, db_session: AsyncSession, _engine, tmp_path
 ) -> None:
