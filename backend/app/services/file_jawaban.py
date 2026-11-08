@@ -189,15 +189,6 @@ async def unggah_jawaban(
             kode="VALIDASI_GAGAL", pesan="Data yang dikirim tidak valid.", status_code=422
         )
 
-    jenis_akun = jenis_akun_efektif(pengguna)
-    batas_jawaban = BATAS_PER_JENIS_AKUN[jenis_akun].maks_jawaban_per_batch
-    jumlah_tersimpan = await db.scalar(
-        select(func.count()).select_from(FileJawaban).where(FileJawaban.id_batch == batch.id_batch)
-    )
-    if jumlah_tersimpan + len(files) > batas_jawaban:
-        sisa_slot = max(0, batas_jawaban - jumlah_tersimpan)
-        raise error_batas_jawaban(jenis_akun, batas_jawaban, sisa_slot)
-
     nama_tervalidasi: list[str] = []
     for nama in nama_peserta_didik:
         nama_bersih = nama.strip()
@@ -210,6 +201,15 @@ async def unggah_jawaban(
     item_tervalidasi: list[tuple[bytes, str]] = []
     for file in files:
         item_tervalidasi.append(await baca_dan_validasi_file(file))
+
+    jenis_akun = jenis_akun_efektif(pengguna)
+    batas_jawaban = BATAS_PER_JENIS_AKUN[jenis_akun].maks_jawaban_per_batch
+    jumlah_tersimpan = await db.scalar(
+        select(func.count()).select_from(FileJawaban).where(FileJawaban.id_batch == batch.id_batch)
+    )
+    if jumlah_tersimpan + len(files) > batas_jawaban:
+        sisa_slot = max(0, batas_jawaban - jumlah_tersimpan)
+        raise error_batas_jawaban(jenis_akun, batas_jawaban, sisa_slot)
 
     basis = datetime.now(UTC)
     path_tertulis: list[Path] = []
