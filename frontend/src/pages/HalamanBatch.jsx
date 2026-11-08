@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
-import { BATAS_SOAL_PER_BATCH, PESAN_KODE } from "../api/pesan.js";
+import {
+  batasSoalUntukAkun,
+  PESAN_KODE,
+  pesanSudahMaksimalSoal,
+} from "../api/pesan.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
@@ -44,6 +49,8 @@ function HalamanBatch() {
   const [dialogGantiKunciTerbuka, setDialogGantiKunciTerbuka] = useState(false);
 
   const navigate = useNavigate();
+  const { statusLangganan } = useAuth();
+  const batasSoal = batasSoalUntukAkun(statusLangganan);
   const tabRefs = useRef([]);
   const judulRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
@@ -147,7 +154,7 @@ function HalamanBatch() {
     sedangUnggah || aksi.sedangMemproses || aksi.idBatchMemeriksa !== null;
 
   function bukaFormTambahSoal() {
-    if (daftarSoal.length >= BATAS_SOAL_PER_BATCH) return;
+    if (daftarSoal.length >= batasSoal) return;
     setKesalahanSoal(null);
     setPesanSukses(null);
     setKunciJawaban("");
@@ -505,9 +512,9 @@ function HalamanBatch() {
                   <p className="rounded-lg bg-biru-muda px-4 py-3 text-sm leading-5 text-teks">
                     {PESAN_KODE.SOAL_SETELAH_JAWABAN}
                   </p>
-                ) : daftarSoal.length >= BATAS_SOAL_PER_BATCH ? (
+                ) : daftarSoal.length >= batasSoal ? (
                   <p className="rounded-lg bg-biru-muda px-4 py-3 text-sm leading-5 text-teks">
-                    {PESAN_KODE.SUDAH_MAKSIMAL_SOAL}
+                    {pesanSudahMaksimalSoal(statusLangganan)}
                   </p>
                 ) : (
                   <div>

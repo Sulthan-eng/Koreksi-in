@@ -1,16 +1,22 @@
+import asyncio
 import uuid
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import settings
+from app.core.database import get_db
+from app.main import app
 from app.models.batch import Batch
-from app.models.enums import Kategori, StatusBatch, StatusProses
+from app.models.enums import Kategori, StatusBatch, StatusLangganan, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.hasil_koreksi import HasilKoreksi
+from app.models.pengguna import Pengguna
 from app.models.soal import Soal
 from app.services import gemini, pemrosesan
 
@@ -108,7 +114,9 @@ async def test_daftar_batch_hanya_milik_sendiri(client: AsyncClient) -> None:
 async def test_daftar_batch_terbaru_dulu(client: AsyncClient) -> None:
     token = await _token(client)
 
-    await client.post("/api/batch", json={"nama_batch": "Pertama"}, headers=_auth(token))
+    pertama = await client.post("/api/batch", json={"nama_batch": "Pertama"}, headers=_auth(token))
+    id_pertama = pertama.json()["id_batch"]
+    await client.post(f"/api/batch/{id_pertama}/selesaikan", headers=_auth(token))
     await client.post("/api/batch", json={"nama_batch": "Kedua"}, headers=_auth(token))
 
     response = await client.get("/api/batch", headers=_auth(token))
@@ -265,7 +273,7 @@ async def test_tambah_soal_ke_16_ditolak(client: AsyncClient) -> None:
     assert response.status_code == 400
     assert response.json() == {
         "kode": "BATAS_SOAL_TERLAMPAUI",
-        "pesan": "Maksimal 15 soal per batch.",
+        "pesan": "Sudah mencapai jumlah maksimal 15 soal per batch.",
     }
 
 
@@ -638,6 +646,10 @@ async def test_coba_lagi_file_milik_batch_lain_404(
     client: AsyncClient, db_session: AsyncSession, tmp_path
 ) -> None:
     token = await _token(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.status_langganan = StatusLangganan.PRO
+    await db_session.commit()
+
     id_batch_a = await _buat_batch_dengan_soal(client, token)
     id_batch_b = await _buat_batch_dengan_soal(client, token)
     fj = await _unggah_satu_jawaban(client, token, id_batch_a)
@@ -850,3 +862,325 @@ async def test_coba_lagi_tanpa_token(client: AsyncClient) -> None:
     response = await client.post(f"/api/batch/{uuid.uuid4()}/file-jawaban/{uuid.uuid4()}/coba-lagi")
     assert response.status_code == 401
     assert response.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def _set_langganan(
+    db_session: AsyncSession,
+    email: str,
+    status: StatusLangganan,
+    masa_berlaku_pro: datetime | None = None,
+) -> None:
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == email))
+    pengguna.status_langganan = status
+    pengguna.masa_berlaku_pro = masa_berlaku_pro
+    await db_session.commit()
+
+
+async def test_buat_batch_kedua_akun_free_saat_batch_pertama_aktif_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+
+    pertama = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Pertama"}, headers=_auth(token)
+    )
+    assert pertama.status_code == 201
+
+    kedua = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Kedua"}, headers=_auth(token)
+    )
+    assert kedua.status_code == 400
+    assert kedua.json() == {
+        "kode": "BATAS_BATCH_AKTIF_TERCAPAI",
+        "pesan": (
+            "Batas batch aktif untuk akun Free telah tercapai. "
+            "Upgrade ke Pro untuk batch tidak terbatas."
+        ),
+    }
+
+    jumlah_batch = await db_session.scalar(select(func.count()).select_from(Batch))
+    assert jumlah_batch == 1
+
+
+async def test_buat_batch_kedua_akun_free_setelah_batch_pertama_selesai_boleh(
+    client: AsyncClient,
+) -> None:
+    token = await _token(client)
+
+    pertama = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Pertama"}, headers=_auth(token)
+    )
+    id_pertama = pertama.json()["id_batch"]
+
+    selesai = await client.post(f"/api/batch/{id_pertama}/selesaikan", headers=_auth(token))
+    assert selesai.status_code == 200
+
+    kedua = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Kedua"}, headers=_auth(token)
+    )
+    assert kedua.status_code == 201
+    assert kedua.json()["nama_batch"] == "Batch Kedua"
+    assert kedua.json()["status"] == "aktif"
+
+
+async def test_buat_batch_kedua_akun_free_setelah_batch_pertama_dihapus_boleh(
+    client: AsyncClient,
+) -> None:
+    token = await _token(client)
+
+    pertama = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Pertama"}, headers=_auth(token)
+    )
+    id_pertama = pertama.json()["id_batch"]
+
+    hapus = await client.delete(f"/api/batch/{id_pertama}", headers=_auth(token))
+    assert hapus.status_code == 204
+
+    kedua = await client.post(
+        "/api/batch", json={"nama_batch": "Batch Kedua"}, headers=_auth(token)
+    )
+    assert kedua.status_code == 201
+
+
+async def test_buat_banyak_batch_aktif_akun_pro_boleh(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) + timedelta(days=30),
+    )
+
+    for nomor in (1, 2, 3):
+        res = await client.post(
+            "/api/batch", json={"nama_batch": f"Batch Pro {nomor}"}, headers=_auth(token)
+        )
+        assert res.status_code == 201
+
+    daftar = await client.get("/api/batch", headers=_auth(token))
+    assert len(daftar.json()) == 3
+
+
+async def test_buat_batch_akun_pro_kedaluwarsa_diperlakukan_sebagai_free(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) + timedelta(days=30),
+    )
+
+    b1 = await client.post("/api/batch", json={"nama_batch": "Batch 1"}, headers=_auth(token))
+    b2 = await client.post("/api/batch", json={"nama_batch": "Batch 2"}, headers=_auth(token))
+    assert b1.status_code == 201
+    assert b2.status_code == 201
+    id_b1 = b1.json()["id_batch"]
+    id_b2 = b2.json()["id_batch"]
+
+    # Masa berlaku Pro lewat: akun efektif kembali ke Free.
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) - timedelta(seconds=1),
+    )
+
+    # Data lama tidak dihapus dan tetap dapat dibuka.
+    daftar = await client.get("/api/batch", headers=_auth(token))
+    assert len(daftar.json()) == 2
+    assert (await client.get(f"/api/batch/{id_b1}", headers=_auth(token))).status_code == 200
+    assert (await client.get(f"/api/batch/{id_b2}", headers=_auth(token))).status_code == 200
+
+    # Buat batch ke-3 ditolak karena masih punya >0 batch aktif.
+    b3 = await client.post("/api/batch", json={"nama_batch": "Batch 3"}, headers=_auth(token))
+    assert b3.status_code == 400
+    assert b3.json()["kode"] == "BATAS_BATCH_AKTIF_TERCAPAI"
+
+    # Selesaikan satu batch: sisa 1 batch aktif, buat batch baru masih ditolak.
+    await client.post(f"/api/batch/{id_b1}/selesaikan", headers=_auth(token))
+    b3_masih_ditolak = await client.post(
+        "/api/batch", json={"nama_batch": "Batch 3"}, headers=_auth(token)
+    )
+    assert b3_masih_ditolak.status_code == 400
+    assert b3_masih_ditolak.json()["kode"] == "BATAS_BATCH_AKTIF_TERCAPAI"
+
+    # Selesaikan batch aktif kedua: sisa 0 batch aktif, kini bisa membuat batch baru.
+    await client.post(f"/api/batch/{id_b2}/selesaikan", headers=_auth(token))
+    b3_sukses = await client.post(
+        "/api/batch", json={"nama_batch": "Batch 3"}, headers=_auth(token)
+    )
+    assert b3_sukses.status_code == 201
+
+
+async def test_tambah_soal_akun_pro_sampai_30_sukses_dan_ke_31_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) + timedelta(days=30),
+    )
+
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch Pro"}, headers=_auth(token))
+    id_batch = buat.json()["id_batch"]
+
+    for nomor in range(1, 31):
+        response = await client.post(
+            f"/api/batch/{id_batch}/soal",
+            json={"kunci_jawaban": f"Kunci {nomor}"},
+            headers=_auth(token),
+        )
+        assert response.status_code == 201
+        assert response.json()["no_soal"] == nomor
+
+    ke_31 = await client.post(
+        f"/api/batch/{id_batch}/soal",
+        json={"kunci_jawaban": "Kunci ke-31"},
+        headers=_auth(token),
+    )
+    assert ke_31.status_code == 400
+    assert ke_31.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 30 soal per batch.",
+    }
+
+
+async def test_tambah_soal_akun_pro_kedaluwarsa_di_atas_batas_free_ditolak_data_lama_utuh(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    token = await _token(client)
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) + timedelta(days=30),
+    )
+
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch"}, headers=_auth(token))
+    id_batch = buat.json()["id_batch"]
+
+    for nomor in range(1, 21):
+        res = await client.post(
+            f"/api/batch/{id_batch}/soal",
+            json={"kunci_jawaban": f"Kunci {nomor}"},
+            headers=_auth(token),
+        )
+        assert res.status_code == 201
+
+    # Masa berlaku Pro lewat saat batch sudah berisi 20 soal (>15).
+    await _set_langganan(
+        db_session,
+        "budi@contoh.com",
+        StatusLangganan.PRO,
+        datetime.now(UTC) - timedelta(seconds=1),
+    )
+
+    daftar = await client.get(f"/api/batch/{id_batch}/soal", headers=_auth(token))
+    assert daftar.status_code == 200
+    assert len(daftar.json()) == 20
+
+    ke_21 = await client.post(
+        f"/api/batch/{id_batch}/soal",
+        json={"kunci_jawaban": "Kunci ke-21"},
+        headers=_auth(token),
+    )
+    assert ke_21.status_code == 400
+    assert ke_21.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 15 soal per batch.",
+    }
+
+
+async def test_balapan_buat_batch_akun_free_hanya_satu_lolos(
+    client: AsyncClient, db_session: AsyncSession, _engine
+) -> None:
+    token = await _token(client)
+
+    sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
+
+    async def _get_db_per_request() -> AsyncGenerator[AsyncSession, None]:
+        async with sessionmaker() as sesi:
+            yield sesi
+
+    override_lama = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = _get_db_per_request
+    try:
+        r1, r2 = await asyncio.gather(
+            client.post("/api/batch", json={"nama_batch": "Balapan 1"}, headers=_auth(token)),
+            client.post("/api/batch", json={"nama_batch": "Balapan 2"}, headers=_auth(token)),
+        )
+    finally:
+        if override_lama is not None:
+            app.dependency_overrides[get_db] = override_lama
+        else:
+            app.dependency_overrides.pop(get_db, None)
+
+    assert sorted([r1.status_code, r2.status_code]) == [201, 400]
+    gagal = r1 if r1.status_code == 400 else r2
+    assert gagal.json()["kode"] == "BATAS_BATCH_AKTIF_TERCAPAI"
+
+    jumlah_aktif = await db_session.scalar(
+        select(func.count()).select_from(Batch).where(Batch.status != StatusBatch.SELESAI)
+    )
+    assert jumlah_aktif == 1
+
+
+async def test_balapan_tambah_soal_pada_batas_hanya_satu_lolos(
+    client: AsyncClient, db_session: AsyncSession, _engine
+) -> None:
+    token = await _token(client)
+    buat = await client.post("/api/batch", json={"nama_batch": "Batch"}, headers=_auth(token))
+    id_batch = buat.json()["id_batch"]
+
+    db_session.add_all(
+        [
+            Soal(id_batch=uuid.UUID(id_batch), no_soal=nomor, kunci_jawaban=f"Kunci {nomor}")
+            for nomor in range(1, 15)
+        ]
+    )
+    await db_session.commit()
+
+    sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
+
+    async def _get_db_per_request() -> AsyncGenerator[AsyncSession, None]:
+        async with sessionmaker() as sesi:
+            yield sesi
+
+    override_lama = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = _get_db_per_request
+    try:
+        r1, r2 = await asyncio.gather(
+            client.post(
+                f"/api/batch/{id_batch}/soal",
+                json={"kunci_jawaban": "Kunci balapan A"},
+                headers=_auth(token),
+            ),
+            client.post(
+                f"/api/batch/{id_batch}/soal",
+                json={"kunci_jawaban": "Kunci balapan B"},
+                headers=_auth(token),
+            ),
+        )
+    finally:
+        if override_lama is not None:
+            app.dependency_overrides[get_db] = override_lama
+        else:
+            app.dependency_overrides.pop(get_db, None)
+
+    assert sorted([r1.status_code, r2.status_code]) == [201, 400]
+    gagal = r1 if r1.status_code == 400 else r2
+    assert gagal.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 15 soal per batch.",
+    }
+
+    jumlah_soal = await db_session.scalar(
+        select(func.count()).select_from(Soal).where(Soal.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_soal == 15

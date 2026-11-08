@@ -12,19 +12,14 @@ from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
 from app.services import gemini
-from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
+from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch, ambil_batch_untuk_update
 from app.services.file_jawaban import TIDAK_ADA_FILE, baca_dan_validasi_file
+from app.services.langganan import batas_untuk_pengguna
 
-_MAKS_SOAL_PER_BATCH = 15
 _MAKS_PERCOBAAN_NO_SOAL = 5
 
 KUNCI_KOSONG = AppError(
     kode="KUNCI_KOSONG", pesan="Kunci jawaban tidak boleh kosong", status_code=400
-)
-BATAS_SOAL_TERLAMPAUI = AppError(
-    kode="BATAS_SOAL_TERLAMPAUI",
-    pesan=f"Maksimal {_MAKS_SOAL_PER_BATCH} soal per batch.",
-    status_code=400,
 )
 SOAL_SETELAH_JAWABAN = AppError(
     kode="SOAL_SETELAH_JAWABAN",
@@ -41,10 +36,18 @@ OCR_KUNCI_GAGAL = AppError(
 )
 
 
-async def pastikan_bisa_tambah_soal(db: AsyncSession, batch: Batch) -> None:
+def error_batas_soal(batas: int) -> AppError:
+    return AppError(
+        kode="BATAS_SOAL_TERLAMPAUI",
+        pesan=f"Sudah mencapai jumlah maksimal {batas} soal per batch.",
+        status_code=400,
+    )
+
+
+async def pastikan_bisa_tambah_soal(db: AsyncSession, batch: Batch, pengguna: Pengguna) -> None:
     """Pemeriksaan bersama sebelum menambah soal, baik lewat ketik (tambah_soal)
     maupun lewat OCR file (ocr_kunci, F-KUNCI-FILE): batch Aktif, belum ada
-    jawaban, dan belum mencapai batas soal."""
+    jawaban, dan belum mencapai batas soal akun efektif."""
     if batch.status == StatusBatch.SELESAI:
         raise BATCH_SUDAH_SELESAI
 
@@ -54,11 +57,12 @@ async def pastikan_bisa_tambah_soal(db: AsyncSession, batch: Batch) -> None:
     if ada_file is not None:
         raise SOAL_SETELAH_JAWABAN
 
+    batas_soal = batas_untuk_pengguna(pengguna).maks_soal_per_batch
     jumlah_soal = await db.scalar(
         select(func.count()).select_from(Soal).where(Soal.id_batch == batch.id_batch)
     )
-    if jumlah_soal >= _MAKS_SOAL_PER_BATCH:
-        raise BATAS_SOAL_TERLAMPAUI
+    if jumlah_soal >= batas_soal:
+        raise error_batas_soal(batas_soal)
 
 
 async def daftar_soal(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID) -> list[Soal]:
@@ -72,19 +76,16 @@ async def daftar_soal(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID)
 async def tambah_soal(
     db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID, kunci_jawaban: str
 ) -> Soal:
-    batch = await ambil_batch(db, pengguna, id_batch)
-    await pastikan_bisa_tambah_soal(db, batch)
+    batch = await ambil_batch_untuk_update(db, pengguna, id_batch)
+    await pastikan_bisa_tambah_soal(db, batch, pengguna)
 
     kunci = kunci_jawaban.strip()
     if not kunci:
         raise KUNCI_KOSONG
 
     for _ in range(_MAKS_PERCOBAAN_NO_SOAL):
-        jumlah_soal = await db.scalar(
-            select(func.count()).select_from(Soal).where(Soal.id_batch == batch.id_batch)
-        )
-        if jumlah_soal >= _MAKS_SOAL_PER_BATCH:
-            raise BATAS_SOAL_TERLAMPAUI
+        batch = await ambil_batch_untuk_update(db, pengguna, id_batch)
+        await pastikan_bisa_tambah_soal(db, batch, pengguna)
 
         no_soal_tertinggi = await db.scalar(
             select(func.max(Soal.no_soal)).where(Soal.id_batch == batch.id_batch)
@@ -112,7 +113,7 @@ async def ocr_kunci(
     ditulis ke UPLOAD_DIR atau database, hanya diproses lalu dibuang. Tidak
     menyentuh tabel Soal."""
     batch = await ambil_batch(db, pengguna, id_batch)
-    await pastikan_bisa_tambah_soal(db, batch)
+    await pastikan_bisa_tambah_soal(db, batch, pengguna)
 
     if file is None:
         raise TIDAK_ADA_FILE

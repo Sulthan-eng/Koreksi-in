@@ -16,6 +16,7 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.services import auth as auth_service
+from app.services.langganan import jenis_akun_efektif
 
 router = APIRouter(prefix="/auth")
 
@@ -74,4 +75,4 @@ async def keluar(request: Request, response: Response, db: AsyncSession = Depend
 
 @router.get("/saya", response_model=SayaResponse)
 async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
-    return SayaResponse(nama=pengguna.nama, status_langganan=pengguna.status_langganan)
+    return SayaResponse(nama=pengguna.nama, status_langganan=jenis_akun_efektif(pengguna))

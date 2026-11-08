@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 
 import pytest
@@ -8,8 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.enums import StatusProses
+from app.models.enums import StatusLangganan, StatusProses
 from app.models.file_jawaban import FileJawaban
+from app.models.pengguna import Pengguna
 from app.models.soal import Soal
 from app.services import gemini
 
@@ -303,7 +305,88 @@ async def test_ocr_kunci_batas_soal_tercapai(client: AsyncClient, monkeypatch) -
         headers=_auth(token),
     )
     assert response.status_code == 400
-    assert response.json()["kode"] == "BATAS_SOAL_TERLAMPAUI"
+    assert response.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 15 soal per batch.",
+    }
+
+
+async def test_ocr_kunci_akun_pro_batas_30_soal(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    token = await _token(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.status_langganan = StatusLangganan.PRO
+    pengguna.masa_berlaku_pro = datetime.now(UTC) + timedelta(days=30)
+    await db_session.commit()
+
+    id_batch = await _buat_batch(client, token)
+    db_session.add_all(
+        [
+            Soal(id_batch=uuid.UUID(id_batch), no_soal=nomor, kunci_jawaban=f"Kunci {nomor}")
+            for nomor in range(1, 30)
+        ]
+    )
+    await db_session.commit()
+    _mock_ocr_kunci(monkeypatch, teks="Kunci soal ke-30")
+
+    # Saat baru ada 29 soal, OCR kunci soal ke-30 masih diizinkan.
+    res_ke_30 = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert res_ke_30.status_code == 200
+    assert res_ke_30.json() == {"teks": "Kunci soal ke-30"}
+
+    # Tambah soal ke-30, lalu OCR kunci berikutnya ditolak.
+    await client.post(
+        f"/api/batch/{id_batch}/soal",
+        json={"kunci_jawaban": "Kunci 30"},
+        headers=_auth(token),
+    )
+
+    res_ke_31 = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert res_ke_31.status_code == 400
+    assert res_ke_31.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 30 soal per batch.",
+    }
+
+
+async def test_ocr_kunci_akun_pro_kedaluwarsa_di_atas_batas_free_ditolak(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    token = await _token(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.status_langganan = StatusLangganan.PRO
+    pengguna.masa_berlaku_pro = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+
+    id_batch = await _buat_batch(client, token)
+    db_session.add_all(
+        [
+            Soal(id_batch=uuid.UUID(id_batch), no_soal=nomor, kunci_jawaban=f"Kunci {nomor}")
+            for nomor in range(1, 17)
+        ]
+    )
+    await db_session.commit()
+    _mock_ocr_kunci(monkeypatch, teks="tidak akan tercapai")
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "BATAS_SOAL_TERLAMPAUI",
+        "pesan": "Sudah mencapai jumlah maksimal 15 soal per batch.",
+    }
 
 
 async def test_ocr_kunci_batch_milik_pengajar_lain(client: AsyncClient, monkeypatch) -> None:

@@ -11,6 +11,7 @@ from app.models.enums import StatusLangganan
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
 from app.services import auth as auth_service
+from app.services.langganan import jenis_akun_efektif
 
 _DAFTAR = {"nama": "Budi Santoso", "email": "Budi@Contoh.com", "password": "rahasia123"}
 
@@ -137,9 +138,7 @@ async def test_daftar_integrity_error_saat_commit_dipetakan_ke_email_sudah_terda
     # tepat di antara pengecekan "email sudah ada" dan commit milik db_session.
     sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
     async with sessionmaker() as session_lain:
-        session_lain.add(
-            Pengguna(nama="Lain", email="budi@contoh.com", password_hash="hash-lain")
-        )
+        session_lain.add(Pengguna(nama="Lain", email="budi@contoh.com", password_hash="hash-lain"))
         await session_lain.commit()
 
     with patch.object(db_session, "scalar", AsyncMock(return_value=None)):
@@ -304,3 +303,56 @@ async def test_saya_mengembalikan_status_langganan_pro(
 
     assert response.status_code == 200
     assert response.json() == {"nama": "Budi Santoso", "status_langganan": "pro"}
+
+
+def test_jenis_akun_efektif_free_pro_dan_kedaluwarsa() -> None:
+    sekarang = datetime.now(UTC)
+    akun_free = Pengguna(
+        nama="Free",
+        email="free@contoh.com",
+        password_hash="h",
+        status_langganan=StatusLangganan.FREE,
+    )
+    akun_pro_tanpa_batas = Pengguna(
+        nama="Pro",
+        email="pro1@contoh.com",
+        password_hash="h",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=None,
+    )
+    akun_pro_aktif = Pengguna(
+        nama="Pro Aktif",
+        email="pro2@contoh.com",
+        password_hash="h",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang + timedelta(days=7),
+    )
+    akun_pro_lewat = Pengguna(
+        nama="Pro Lewat",
+        email="pro3@contoh.com",
+        password_hash="h",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang - timedelta(seconds=1),
+    )
+
+    assert jenis_akun_efektif(akun_free) == StatusLangganan.FREE
+    assert jenis_akun_efektif(akun_pro_tanpa_batas) == StatusLangganan.PRO
+    assert jenis_akun_efektif(akun_pro_aktif) == StatusLangganan.PRO
+    assert jenis_akun_efektif(akun_pro_lewat) == StatusLangganan.FREE
+
+
+async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.status_langganan = StatusLangganan.PRO
+    pengguna.masa_berlaku_pro = datetime.now(UTC) - timedelta(minutes=1)
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/auth/saya", headers={"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "free"}

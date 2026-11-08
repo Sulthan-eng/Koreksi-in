@@ -52,12 +52,12 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 |---|---|---|---|
 | FR1 | Registrasi, login, logout, reset password Pengajar. Admin login dan logout | - | Registrasi, login, logout: Selesai (validasi format email di backend 422 dan frontend). Reset password (tautan lewat email, lihat F-RESET) dan login Admin: Belum dikerjakan |
 | FR2 | Status langganan di profil | UC-01 | Selesai |
-| FR3 | Buat batch | UC-02 | Selesai. Batas batch aktif akun Free ikut FR18 |
+| FR3 | Buat batch | UC-02 | Selesai. Batas batch aktif akun Free berlaku lewat FR18 |
 | FR4 | Kunci jawaban diketik | UC-04 | Selesai |
 | FR5 | Kunci jawaban dari file | UC-04 | Selesai |
 | FR6 | OCR file kunci | UC-04 | Selesai |
 | FR7 | Tinjau atau edit hasil OCR kunci sebelum disimpan | UC-04 | Selesai |
-| FR8 | Unggah jawaban peserta didik | UC-05 | Selesai. Batas jumlah jawaban per akun ikut FR18 |
+| FR8 | Unggah jawaban peserta didik | UC-05 | Selesai. Batas jumlah jawaban per akun berlaku lewat FR18 |
 | FR9 | Nama peserta didik diisi manual | UC-05 | Selesai |
 | FR10 | OCR jawaban peserta didik | UC-05 | Selesai |
 | FR11 | Status pemrosesan per file dan Coba Lagi manual | UC-06 | Status: Selesai (di daftar tab Soal dan Jawaban, tab Status Pemrosesan dihapus). Coba Lagi: Selesai |
@@ -67,7 +67,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 | FR15 | Edit teks OCR, skor dihitung ulang | UC-08 | Selesai |
 | FR16 | Nilai akhir manual | UC-09 | Selesai |
 | FR17 | Ekspor rekap nilai .xlsx (Pro) | UC-12 | Belum dikerjakan |
-| FR18 | Batas batch aktif, soal, dan jawaban per jenis akun | UC-02, UC-04, UC-05 | Belum dikerjakan |
+| FR18 | Batas batch aktif, soal, dan jawaban per jenis akun | UC-02, UC-04, UC-05 | Selesai |
 | FR19 | Integrasi payment gateway (Midtrans, Sandbox) | UC-10 | Belum dikerjakan |
 | FR20 | Status akun otomatis dari pembayaran, beserta masa berlaku | UC-11 | Belum dikerjakan |
 | FR21 | Dashboard ringkasan Pengajar | UC-13 | Belum dikerjakan |
@@ -81,7 +81,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 
 Konsekuensi status saat ini:
 
-- Tabel `Transaksi_Pembayaran` belum dibuat. Kolom `Pengguna.status_langganan` sudah dikembalikan oleh `GET /api/auth/saya` dan ditampilkan sebagai label di profil (FR2). Kolom `masa_berlaku_pro` sudah ada tetapi belum dipakai; semua Pengajar diperlakukan tanpa batas kuota akun sampai FR18 dikerjakan.
+- Tabel `Transaksi_Pembayaran` belum dibuat. Kolom `Pengguna.status_langganan` dan `masa_berlaku_pro` dipakai lewat helper tunggal `jenis_akun_efektif(pengguna)` (memperlakukan akun Pro yang `masa_berlaku_pro`-nya sudah lewat sebagai Free), dikembalikan oleh `GET /api/auth/saya` sebagai label di profil (FR2), dan dipakai pada semua pemeriksaan batas kuota akun (FR18). Banner "Pro berakhir" (bagian 4) dan kartu ringkasan/sisa kuota di Beranda (FR21) belum dikerjakan, serta tautan ke halaman Langganan pada pesan penolakan menunggu halaman Langganan (FR19/FR20) dikerjakan.
 - Kolom `Pengguna.peran` dan `dinonaktifkan_pada` belum ada. Menambahnya adalah bagian dari tugas FR26 atau login Admin, lewat migrasi Alembic. Kolom `Pengguna.reset_token_hash` dan `reset_dibuat_pada` juga belum ada; ditambah saat reset password (F-RESET) dikerjakan, lewat migrasi Alembic.
 - Kolom `Batch.status` sudah ada; nilai `aktif` dan `selesai` sudah dipakai (FR23 Selesai).
 - Kolom `Hasil_Koreksi.skor_revisi` dan `skor_hitung_ulang` kini terpakai lewat FR15 dan FR16: `skor_revisi` diisi Pengajar lewat aksi "Ubah Nilai Akhir" (FR16), `skor_hitung_ulang` ditandai saat hitung ulang skor via judge gagal (FR15).
@@ -105,7 +105,7 @@ Aturan umum:
 - Batch Selesai bersifat read-only: tidak bisa menambah soal, mengunggah jawaban, Coba Lagi, mengedit teks OCR, atau mengubah nilai akhir. Tetap bisa dilihat, diekspor (Pro), dan dihapus, dan tidak dihitung sebagai batch aktif.
 - Privasi: pada Gemini free tier, konten yang dikirim dapat dipakai Google untuk peningkatan produk dan dibaca reviewer manusia. Cantumkan sebagai catatan di README, jangan di UI.
 
-Batas menurut jenis akun (FR18, Belum dikerjakan):
+Batas menurut jenis akun (FR18):
 
 | Batas | Free | Pro |
 |---|---|---|
@@ -115,14 +115,14 @@ Batas menurut jenis akun (FR18, Belum dikerjakan):
 | File per sekali unggah | 10 | 10 |
 | Ekspor rekap nilai | tidak | ya |
 
-Sampai FR18 dikerjakan, yang berlaku adalah batas prototipe: maksimal 15 soal per batch (soal ke-16 ditolak) dan tanpa batas jumlah jawaban atau batch. Saat FR18 dikerjakan, batas prototipe diganti tabel di atas dan uji batas 15 soal diperbarui.
+Batas pada tabel di atas berlaku lewat satu helper `jenis_akun_efektif(pengguna)` (yang memperlakukan akun Pro dengan `masa_berlaku_pro` sudah lewat sebagai Free) dan satu peta konstanta batas per jenis akun, dengan pemeriksaan atomik (`SELECT ... FOR UPDATE` pada baris induk `Pengguna` atau `Batch`) terhadap permintaan bersamaan.
 
 Akun Pro yang kembali ke Free (masa berlaku habis atau diubah Admin):
 
 - Semua data tetap tersimpan dan tetap dapat dibuka: batch, soal, jawaban, dan hasil koreksi. Tidak ada data yang dihapus atau disembunyikan karena melebihi batas.
 - Batas Free (tabel di atas) berlaku apa adanya untuk aksi baru. Akun dengan lebih dari 1 batch aktif tidak dapat membuat batch baru. Batch yang jumlah soal atau jawabannya sudah melewati batas Free tidak dapat ditambah lagi. Pengajar tetap dapat melihat data batch dan menyelesaikan batch (FR23) sampai batch aktifnya sesuai batas.
 - Ekspor (FR17) tidak tersedia.
-- Sistem HARUS menawarkan upgrade ke Pro lagi: banner di Beranda dan Halaman Batch selama akun Free tersebut punya data di atas batas atau baru turun dari Pro, pesan penolakan aksi yang memuat tautan ke Halaman Langganan (sudah ada di F-BATCH dan F-EKSPOR), dan tombol "Upgrade ke Pro" di Halaman Langganan. Teks banner: "Masa berlaku Pro Anda telah berakhir. Upgrade ke Pro untuk membuat batch baru dan memakai semua fitur." (teks ini usulan, dapat diganti pemilik proyek).
+- Sistem HARUS menawarkan upgrade ke Pro lagi: banner di Beranda dan Halaman Batch selama akun Free tersebut punya data di atas batas atau baru turun dari Pro, pesan penolakan aksi yang memuat tautan ke Halaman Langganan (sudah ada di F-BATCH dan F-EKSPOR), dan tombol "Upgrade ke Pro" di Halaman Langganan. Teks banner: "Masa berlaku Pro Anda telah berakhir. Upgrade ke Pro untuk membuat batch baru dan memakai semua fitur." (teks ini usulan, dapat diganti pemilik proyek). Status saat ini: pemeriksaan batas Free untuk aksi baru pada akun Pro yang kedaluwarsa sudah berlaku lewat FR18, tetapi banner "Pro berakhir" di Beranda/Halaman Batch serta kartu sisa kuota (FR21) belum dikerjakan, dan tautan ke Halaman Langganan pada pesan penolakan menunggu FR19/FR20 dikerjakan (pesan penolakan tampil tanpa tautan).
 
 ## 5. Data
 
@@ -217,7 +217,7 @@ Endpoint (prefix `/api/batch`, semua butuh login Pengajar): `GET /api/batch` (da
 - Nama kosong: tampilkan pesan validasi dari aplikasi ("Nama batch tidak boleh kosong."), tidak menyimpan.
 - Gagal simpan: "Gagal membuat batch, silakan coba lagi", batch tidak dibuat.
 - Belum ada batch: "Belum ada batch. Buat batch pertama untuk mulai mengoreksi."
-- Setelah FR18: akun Free yang sudah punya 1 batch aktif ditolak dengan "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas." disertai tautan ke halaman Langganan.
+- Akun Free yang sudah punya 1 batch aktif (FR18): ditolak dengan "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas." disertai tautan ke halaman Langganan (tampil tanpa tautan selama halaman Langganan FR19/FR20 belum dikerjakan).
 
 ### F-KUNCI (FR4, UC-04, hanya ketik)
 Endpoint (prefix `/api/batch/{id_batch}/soal`, semua butuh login Pengajar): `GET` (daftar soal urut `no_soal`), `POST` (`{kunci_jawaban}` → `SoalResponse`, `no_soal` dibuat sistem berurutan, tidak diterima dari klien).
@@ -226,10 +226,10 @@ Di tab Soal dan Jawaban:
 2. Pengajar mengetik kunci dan menekan "Simpan Kunci Jawaban".
 3. Sistem memvalidasi tidak kosong, menyimpan, dan menampilkan konfirmasi "Kunci jawaban tersimpan." serta menambahkan soal ke daftar. Daftar soal menampilkan nomor dan kunci jawaban (hanya baca).
 - Kunci kosong atau hanya spasi: pesan dari aplikasi "Kunci jawaban tidak boleh kosong" di bawah form, tidak ada permintaan yang terkirim atau soal yang bertambah. Pesan ini tampil untuk kolom benar-benar kosong juga (bukan bubble browser).
-- Soal ke-16 (atau di atas batas akun setelah FR18), atau penambahan setelah ada lembar jawaban: ditolak sesuai bagian 4.
+- Soal di atas batas jenis akun (15 untuk Free, 30 untuk Pro; FR18), atau penambahan setelah ada lembar jawaban: ditolak sesuai bagian 4.
 - Gagal simpan: tampilkan pesan error, soal tidak ditambahkan, Pengajar boleh menekan Simpan lagi.
 - Belum ada soal: "Belum ada soal pada batch ini."
-- Sudah mencapai batas soal: tombol "Tambah Soal" diganti pesan netral "Sudah mencapai jumlah maksimal N soal per batch." (bukan membuka form lalu gagal saat disimpan).
+- Sudah mencapai batas soal: tombol "Tambah Soal" diganti pesan netral "Sudah mencapai jumlah maksimal N soal per batch." (N = 15 untuk Free, 30 untuk Pro; bukan membuka form lalu gagal saat disimpan).
 
 ### F-UNGGAH (FR8, FR9, FR11 bagian tampilan, UC-05, UC-06)
 Endpoint (prefix `/api/batch/{id_batch}/file-jawaban`, semua butuh login Pengajar, isolasi batch sama seperti F-KUNCI): `GET` (daftar file jawaban batch itu urut `diunggah_pada` naik, masing-masing `{id_file, nama_peserta_didik, status_proses, pesan_error}`), `POST` (multipart: `files` (0-10 file) dan `nama_peserta_didik` (daftar nama sejajar urutan file) → daftar `FileJawabanResponse` yang baru dibuat, status 201).
@@ -237,7 +237,7 @@ Prasyarat: batch memiliki minimal satu soal. Tab Soal dan Jawaban dibagi dua sek
 1. Pengajar menekan "Upload Jawaban Peserta Didik" dan memilih satu sampai 10 file.
 2. Sistem menampilkan daftar file terpilih, tiap file dengan kolom nama peserta didik yang masih kosong.
 3. Pengajar mengisi nama untuk tiap file lalu menekan "Upload", atau menekan "Batal" untuk mengosongkan pilihan file dan kembali ke tombol "Upload Jawaban Peserta Didik".
-4. Sistem memvalidasi semua nama terisi dan semua file valid (bagian 4). Jika ada yang tidak valid, tolak seluruh unggahan tanpa menyimpan apa pun dan tampilkan alasannya; daftar file tetap tampil.
+4. Sistem memvalidasi semua nama terisi dan semua file valid (bagian 4). Jika ada yang tidak valid, tolak seluruh unggahan tanpa menyimpan apa pun dan tampilkan alasannya; daftar file tetap tampil. Urutan pemeriksaan di backend: (1) status batch aktif dan ada minimal satu soal, (2) jumlah file (1 sampai 10) dan jumlah nama sama dengan jumlah file, (3) batas jawaban akun per batch (tolak seluruh unggahan jika `jumlah_tersimpan + len(files)` melebihi batas), (4) nama peserta didik (tidak kosong, maksimal 100 karakter), (5) format, ukuran, dan isi file (`baca_dan_validasi_file`), lalu (6) tulis berkas dan baris database.
 5. Sistem menyimpan file dan nama, mengelompokkan, memulai pemrosesan (bagian 8), dan menampilkan status "Diproses".
 Daftar file jawaban yang sudah diunggah (di seksi Jawaban Peserta Didik):
 - Tiap baris: nama peserta didik dan lencana status (Diproses, Selesai, Gagal). Untuk Gagal, tampilkan `pesan_error` di bawah nama.
@@ -245,6 +245,7 @@ Daftar file jawaban yang sudah diunggah (di seksi Jawaban Peserta Didik):
 - Gagal memuat: "Gagal memuat status pemrosesan, coba muat ulang halaman", daftar tidak ditampilkan.
 - Tombol "Coba Lagi" untuk file Gagal (F-RETRY, bagian 9), kolom Aksi, hanya batch Aktif.
 Pesan dan keadaan:
+- Melebihi batas jawaban per batch (FR18): untuk akun Free "Upload ditolak: batas jawaban akun Free adalah 15, tersisa N slot. Kurangi jumlah file atau upgrade ke Pro." (tampil tanpa tautan selama halaman Langganan FR19/FR20 belum dikerjakan), untuk akun Pro "Upload ditolak: batas jawaban akun Pro adalah 50, tersisa N slot. Kurangi jumlah file.".
 - Nama kosong: "Nama peserta didik wajib untuk semua file".
 - Lebih dari 10 file: "Maksimal 10 file per unggahan."
 - Tidak ada file dipilih: "Pilih minimal satu file untuk diunggah."
@@ -338,8 +339,9 @@ Kode error batch dan soal (bagian 4, 9):
 |---|---|---|
 | `BATCH_TIDAK_DITEMUKAN` | 404 | "Batch tidak ditemukan" |
 | `NAMA_BATCH_KOSONG` | 400 | "Nama batch tidak boleh kosong." |
+| `BATAS_BATCH_AKTIF_TERCAPAI` | 400 | "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas." |
 | `KUNCI_KOSONG` | 400 | "Kunci jawaban tidak boleh kosong" |
-| `BATAS_SOAL_TERLAMPAUI` | 400 | "Maksimal 15 soal per batch." (diganti "Sudah mencapai jumlah maksimal N soal per batch." setelah FR18) |
+| `BATAS_SOAL_TERLAMPAUI` | 400 | "Sudah mencapai jumlah maksimal N soal per batch." (N = 15 untuk Free, 30 untuk Pro) |
 | `SOAL_SETELAH_JAWABAN` | 400 | "Soal tidak dapat ditambah setelah jawaban diunggah." |
 | `GAGAL_BUAT_BATCH` | 500 | "Gagal membuat batch, silakan coba lagi" |
 | `GAGAL_TAMBAH_SOAL` | 500 | "Gagal menambah soal, silakan coba lagi." |
@@ -350,6 +352,7 @@ Kode error unggah jawaban (bagian 4, 9):
 |---|---|---|
 | `BELUM_ADA_SOAL` | 400 | "Tambahkan minimal satu soal sebelum mengunggah jawaban." |
 | `MAKS_FILE_TERLAMPAUI` | 400 | "Maksimal 10 file per unggahan." |
+| `BATAS_JAWABAN_TERLAMPAUI` | 400 | Free: "Upload ditolak: batas jawaban akun Free adalah 15, tersisa N slot. Kurangi jumlah file atau upgrade ke Pro." / Pro: "Upload ditolak: batas jawaban akun Pro adalah 50, tersisa N slot. Kurangi jumlah file." |
 | `TIDAK_ADA_FILE` | 400 | "Pilih minimal satu file untuk diunggah." |
 | `NAMA_PESERTA_KOSONG` | 400 | "Nama peserta didik wajib untuk semua file" |
 | `NAMA_PESERTA_TERLALU_PANJANG` | 400 | "Nama peserta didik maksimal 100 karakter." |
@@ -454,7 +457,7 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | U5 | Kolom persis `Transaksi_Pembayaran` | Diputuskan: kolom dari ERD pemilik proyek (bagian 5); `paket` = `pro_1_bulan`, `pro_3_bulan`; `status` = `menunggu`, `berhasil`, `gagal`, `kedaluwarsa`. SDD menyebut status "dibatalkan" dan "menunggu konfirmasi"; SDD perlu disesuaikan |
 | U6 | Pesan saat akun dinonaktifkan mencoba masuk | Login memakai pesan generik. Belum diputuskan apakah akun nonaktif mendapat pesan khusus |
 | U7 | Perilaku data saat akun turun dari Pro ke Free dan datanya melebihi batas Free (batch aktif, soal, jawaban) | Diputuskan 31 Okt 2026: data tetap tersimpan dan dapat dibuka; batas Free berlaku untuk aksi baru; Pengajar dapat melihat dan menyelesaikan batch; sistem menawarkan upgrade lagi (bagian 4). Sisa pertanyaan: apakah edit teks OCR (FR15) dan Nilai Akhir (FR16) pada batch aktif yang melewati batas tetap boleh. Aturan di atas tidak membatasinya |
-| U8 | Cara masa berlaku Pro berakhir diproses | Dihitung saat dibaca atau lewat tugas terjadwal. Keputusan teknis di Plan mode |
+| U8 | Cara masa berlaku Pro berakhir diproses | Diputuskan 8 Nov 2026 (FR18): dihitung saat dibaca lewat helper tunggal `jenis_akun_efektif(pengguna)` yang memperlakukan akun Pro dengan `masa_berlaku_pro` sudah lewat sebagai Free |
 | U9 | Sesi berakhir di halaman terproteksi | Diputuskan 31 Okt 2026: sesi berakhir di halaman terproteksi diarahkan ke Masuk dengan pesan; Keluar (logout) dan membuka alamat utama tanpa sesi menampilkan Halaman Pemasaran (bagian 6) |
 | U10 | Harga paket Pro 1 dan 3 bulan | Diputuskan 31 Okt 2026: 1 bulan Rp 30.000, 3 bulan Rp 80.000. SRS tidak menyebut harga; SRS/SDD perlu disesuaikan bila ingin mencantumkannya |
 | U11 | Pemetaan `skor_revisi` dan `skor_hitung_ulang` | Diputuskan 31 Okt 2026: `skor_revisi` = Nilai Akhir manual dari Pengajar; `skor_hitung_ulang` = penanda boolean gagal hitung ulang (bagian 5) |
@@ -503,3 +506,5 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-11-03 | Perbaikan temuan tes manual FR5-FR7: kalimat bebas model saat berkas kunci tidak berisi teks terbaca (misalnya "Tidak ada teks yang dapat ditemukan di dalam gambar tersebut.") lolos pemeriksaan hasil kosong/spasi dan masuk ke kolom kunci sebagai teks OCR. Tambah penanda eksplisit `gemini.PENANDA_TIDAK_ADA_TEKS` (`"[[TIDAK_ADA_TEKS]]"`), diminta lewat prompt `_prompt_ocr_kunci`, dan `soal.py` `ocr_kunci` memeriksa "mengandung" penanda itu (bukan "sama dengan", supaya tetap tertangkap bila model menambah spasi atau teks di sekitarnya) sebagai `OCR_KUNCI_GAGAL`, sama seperti hasil kosong. F-KUNCI-FILE diperbarui dengan penanda ini dan catatan batas: penanda bergantung pada kepatuhan model, jadi tinjauan Pengajar di kolom teks sebelum "Simpan Kunci Jawaban" tetap jaring pengaman terakhir. Tidak ada perubahan skema atau endpoint; semua test memakai mock Gemini |
 | 2026-11-03 | Turunkan batas sementara prototipe dari 20 menjadi 15 soal per batch, selaras dengan batas Free di tabel FR18 (bagian 4). Batas per jenis akun (Free 15, Pro 30 soal per batch) tetap menunggu FR18 (Belum dikerjakan); perubahan ini hanya menggeser angka flat sementara, bukan menambah logika per akun. Satu sumber nilai per sisi: `backend/app/services/soal.py` (`_MAKS_SOAL_PER_BATCH`, dipakai juga oleh pesan `BATAS_SOAL_TERLAMPAUI`) dan `frontend/src/api/pesan.js` (`BATAS_SOAL_PER_BATCH`, dipakai `HalamanBatch.jsx` dan dua pesan terkait). Tes batas diperbarui (`test_tambah_soal_ke_16_ditolak` di `test_batch.py`, `test_ocr_kunci_batas_soal_tercapai` di `test_soal.py`). Batch yang sudah punya lebih dari 15 soal tidak dimigrasi atau dihapus |
 | 2026-11-08 | Tugas FR2 (status langganan di profil, UC-01, backend dan frontend dalam satu PR): perluas `GET /api/auth/saya` (`SayaResponse` di `backend/app/schemas/auth.py` dan `routers/auth.py`) dengan `status_langganan` (`"free"` atau `"pro"` dari `Pengguna.status_langganan` yang sudah ada, tanpa migrasi baru); simpan `statusLangganan` di `AuthContext.jsx` (dinormalisasi ke `"free"`/`"pro"` atau `null` bila tak terbaca, diisi saat pemulihan sesi dan `tandaiMasuk` di `Masuk.jsx`); `BilahAtas.jsx` membaca `statusLangganan` dari `useAuth()` untuk menampilkan `Lencana` `FREE` atau `PRO` di sebelah nama profil pada desktop dan di dalam laci menu pada mobile; jika setelah sesi terautentikasi `statusLangganan` bernilai `null`, tampilkan pesan galat kotak `"Gagal memuat status langganan, coba muat ulang halaman"` (`PESAN_KODE.GAGAL_MUAT_LANGGANAN`) di bawah sapaan pada `Beranda.jsx`. Hapus anotasi `(nanti, FR2)` di `docs/UI.md`. Status FR2 di bagian 3 menjadi "Selesai": dikonfirmasi pemilik proyek lolos tes manual di localhost (lencana FREE di bilah atas desktop dan di laci menu mobile 375 px, tetap tampil setelah muat ulang, berubah menjadi PRO setelah akun diubah lewat database lalu Beranda dimuat ulang, mengikuti akun yang masuk setelah keluar lalu masuk dengan akun lain, dan halaman Pemasaran tidak menampilkan lencana; kondisi galat "Gagal memuat status langganan" tidak diuji manual, hanya ditinjau lewat kode) |
+| 2026-11-08 | Tugas FR18 (batas batch aktif, soal, dan jawaban per jenis akun, UC-02, UC-04, UC-05, backend dan frontend): tambah `backend/app/services/langganan.py` dengan helper tunggal `jenis_akun_efektif(pengguna)` (memperlakukan Pro yang `masa_berlaku_pro`-nya sudah lewat sebagai Free; dipakai juga oleh `GET /api/auth/saya`, memutuskan U8) dan peta konstanta `BATAS_PER_JENIS_AKUN` (Free: 1 batch aktif, 15 soal/batch, 15 jawaban/batch; Pro: batch aktif tak terbatas, 30 soal/batch, 50 jawaban/batch), menggantikan `_MAKS_SOAL_PER_BATCH` di `soal.py`; tambah kode error `BATAS_BATCH_AKTIF_TERCAPAI` (400) di `services/batch.py`, `BATAS_JAWABAN_TERLAMPAUI` (400, dengan perhitungan sisa slot sebenarnya `max(0, batas - jumlah_tersimpan)`) di `services/file_jawaban.py`, dan perbarui pesan `BATAS_SOAL_TERLAMPAUI` menjadi `"Sudah mencapai jumlah maksimal N soal per batch."` sesuai jenis akun di `services/soal.py`; pemeriksaan batas dibuat atomik terhadap permintaan bersamaan dengan `SELECT ... FOR UPDATE` pada baris induk `Pengguna` (`buat_batch`) dan `Batch` (`tambah_soal`, `unggah_jawaban`); di `unggah_jawaban` (F-UNGGAH), pemeriksaan batas jawaban dilakukan sebelum validasi nama peserta didik dan isi file (`baca_dan_validasi_file`) — sengaja berbeda dari urutan langkah di SRS UC-05 karena alasan efisiensi: unggahan yang pasti ditolak tidak membaca file, dan kunci baris `Batch` ditahan lebih singkat; di frontend, ganti `BATAS_SOAL_PER_BATCH` di `api/pesan.js` dengan `BATAS_PER_AKUN`, `batasSoalUntukAkun(statusLangganan)` (fallback ke batas Free bila `null`/`undefined`), dan `pesanSudahMaksimalSoal(statusLangganan)`, teruskan `data.pesan` dari server di `api/klien.js` untuk `BATAS_SOAL_TERLAMPAUI` dan `BATAS_JAWABAN_TERLAMPAUI`, serta gunakan `statusLangganan` dari `useAuth()` di `HalamanBatch.jsx`. Banner "Pro berakhir" (bagian 4) dan kartu sisa kuota (FR21) belum dikerjakan, serta tautan ke halaman Langganan menunggu FR19/FR20 |
+| 2026-11-09 | Konfirmasi tes manual FR18 oleh pemilik proyek: seluruh 20 butir skenario uji manual lolos di localhost (batas batch aktif, soal, dan jawaban untuk akun Free, akun Pro, akun Pro kedaluwarsa yang kembali ke batas Free dengan data lama tetap utuh, serta pemulihan akun) dan seluruh suite `pytest` hijau. Status FR18 di bagian 3 menjadi "Selesai" (dan batas pada FR3 serta FR8 dinyatakan berlaku lewat FR18) |
