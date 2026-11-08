@@ -69,10 +69,10 @@ async def buat_batch(db: AsyncSession, pengguna: Pengguna, nama_batch: str) -> B
 
     # Kunci baris Pengguna agar dua permintaan pembuatan batch bersamaan dari akun
     # yang sama diserialisasi sebelum menghitung jumlah batch aktif.
-    pengguna_terkunci = await db.scalar(
+    await db.scalar(
         select(Pengguna).where(Pengguna.id_pengguna == pengguna.id_pengguna).with_for_update()
     )
-    batas = batas_untuk_pengguna(pengguna_terkunci or pengguna)
+    batas = batas_untuk_pengguna(pengguna)
     if batas.maks_batch_aktif is not None:
         jumlah_aktif = await db.scalar(
             select(func.count())
