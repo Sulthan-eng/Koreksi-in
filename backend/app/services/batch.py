@@ -2,7 +2,7 @@ import logging
 import shutil
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from app.models.batch import Batch
 from app.models.enums import StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
+from app.services.langganan import batas_untuk_pengguna
 from app.utils.berkas import direktori_batch
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,14 @@ BATCH_TIDAK_DITEMUKAN = AppError(
 )
 NAMA_BATCH_KOSONG = AppError(
     kode="NAMA_BATCH_KOSONG", pesan="Nama batch tidak boleh kosong.", status_code=400
+)
+BATAS_BATCH_AKTIF_TERCAPAI = AppError(
+    kode="BATAS_BATCH_AKTIF_TERCAPAI",
+    pesan=(
+        "Batas batch aktif untuk akun Free telah tercapai. "
+        "Upgrade ke Pro untuk batch tidak terbatas."
+    ),
+    status_code=400,
 )
 GAGAL_BUAT_BATCH = AppError(
     kode="GAGAL_BUAT_BATCH", pesan="Gagal membuat batch, silakan coba lagi", status_code=500
@@ -58,6 +67,24 @@ async def buat_batch(db: AsyncSession, pengguna: Pengguna, nama_batch: str) -> B
     if not nama:
         raise NAMA_BATCH_KOSONG
 
+    # Kunci baris Pengguna agar dua permintaan pembuatan batch bersamaan dari akun
+    # yang sama diserialisasi sebelum menghitung jumlah batch aktif.
+    pengguna_terkunci = await db.scalar(
+        select(Pengguna).where(Pengguna.id_pengguna == pengguna.id_pengguna).with_for_update()
+    )
+    batas = batas_untuk_pengguna(pengguna_terkunci or pengguna)
+    if batas.maks_batch_aktif is not None:
+        jumlah_aktif = await db.scalar(
+            select(func.count())
+            .select_from(Batch)
+            .where(
+                Batch.id_pengguna == pengguna.id_pengguna,
+                Batch.status != StatusBatch.SELESAI,
+            )
+        )
+        if jumlah_aktif >= batas.maks_batch_aktif:
+            raise BATAS_BATCH_AKTIF_TERCAPAI
+
     batch = Batch(id_pengguna=pengguna.id_pengguna, nama_batch=nama)
     db.add(batch)
     try:
@@ -71,6 +98,21 @@ async def buat_batch(db: AsyncSession, pengguna: Pengguna, nama_batch: str) -> B
 async def ambil_batch(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID) -> Batch:
     batch = await db.scalar(
         select(Batch).where(Batch.id_batch == id_batch, Batch.id_pengguna == pengguna.id_pengguna)
+    )
+    if batch is None:
+        raise BATCH_TIDAK_DITEMUKAN
+    return batch
+
+
+async def ambil_batch_untuk_update(
+    db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID
+) -> Batch:
+    """Ambil batch milik pengguna sambil mengunci barisnya (SELECT ... FOR UPDATE)
+    untuk pemeriksaan batas atomik pada soal dan file jawaban."""
+    batch = await db.scalar(
+        select(Batch)
+        .where(Batch.id_batch == id_batch, Batch.id_pengguna == pengguna.id_pengguna)
+        .with_for_update()
     )
     if batch is None:
         raise BATCH_TIDAK_DITEMUKAN

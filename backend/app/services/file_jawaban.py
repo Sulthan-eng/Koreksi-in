@@ -4,17 +4,18 @@ from io import BytesIO
 from pathlib import Path
 
 from fastapi import UploadFile
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.models.enums import StatusBatch, StatusProses
+from app.models.enums import StatusBatch, StatusLangganan, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.models.soal import Soal
-from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch
+from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch, ambil_batch_untuk_update
+from app.services.langganan import BATAS_PER_JENIS_AKUN, jenis_akun_efektif
 from app.utils.berkas import REL_PREFIX, hitung_halaman
 
 BELUM_ADA_SOAL = AppError(
@@ -74,6 +75,21 @@ GAGAL_COBA_LAGI = AppError(
     pesan="Gagal mengirim ulang file, silakan coba lagi.",
     status_code=500,
 )
+
+
+def error_batas_jawaban(jenis_akun: StatusLangganan, batas: int, sisa_slot: int) -> AppError:
+    if jenis_akun == StatusLangganan.PRO:
+        pesan = (
+            f"Upload ditolak: batas jawaban akun Pro adalah {batas}, "
+            f"tersisa {sisa_slot} slot. Kurangi jumlah file."
+        )
+    else:
+        pesan = (
+            f"Upload ditolak: batas jawaban akun Free adalah {batas}, "
+            f"tersisa {sisa_slot} slot. Kurangi jumlah file atau upgrade ke Pro."
+        )
+    return AppError(kode="BATAS_JAWABAN_TERLAMPAUI", pesan=pesan, status_code=400)
+
 
 _MAKS_FILE_PER_UNGGAHAN = 10
 _MAKS_PANJANG_NAMA = 100
@@ -153,7 +169,9 @@ async def unggah_jawaban(
     files: list[UploadFile],
     nama_peserta_didik: list[str],
 ) -> list[FileJawaban]:
-    batch = await ambil_batch(db, pengguna, id_batch)
+    # Kunci baris Batch agar dua permintaan unggah bersamaan pada batch yang sama
+    # diserialisasi sebelum menghitung sisa slot jawaban.
+    batch = await ambil_batch_untuk_update(db, pengguna, id_batch)
 
     if batch.status == StatusBatch.SELESAI:
         raise BATCH_SUDAH_SELESAI
@@ -170,6 +188,15 @@ async def unggah_jawaban(
         raise AppError(
             kode="VALIDASI_GAGAL", pesan="Data yang dikirim tidak valid.", status_code=422
         )
+
+    jenis_akun = jenis_akun_efektif(pengguna)
+    batas_jawaban = BATAS_PER_JENIS_AKUN[jenis_akun].maks_jawaban_per_batch
+    jumlah_tersimpan = await db.scalar(
+        select(func.count()).select_from(FileJawaban).where(FileJawaban.id_batch == batch.id_batch)
+    )
+    if jumlah_tersimpan + len(files) > batas_jawaban:
+        sisa_slot = max(0, batas_jawaban - jumlah_tersimpan)
+        raise error_batas_jawaban(jenis_akun, batas_jawaban, sisa_slot)
 
     nama_tervalidasi: list[str] = []
     for nama in nama_peserta_didik:
