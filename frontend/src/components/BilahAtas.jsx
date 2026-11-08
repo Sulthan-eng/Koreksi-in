@@ -49,12 +49,8 @@ function dapatkanDaftarMenu(varian, pathname) {
   return [];
 }
 
-function BilahAtas({
-  varian = "pengajar",
-  statusLangganan = null,
-  seksiAktif = null,
-}) {
-  const { nama, keluar } = useAuth();
+function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
+  const { nama, statusLangganan, keluar } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [sedangKeluar, setSedangKeluar] = useState(false);

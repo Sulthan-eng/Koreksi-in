@@ -3,6 +3,8 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.enums import StatusLangganan
+
 _POLA_EMAIL = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
 
@@ -54,3 +56,4 @@ class TokenResponse(BaseModel):
 
 class SayaResponse(BaseModel):
     nama: str
+    status_langganan: StatusLangganan

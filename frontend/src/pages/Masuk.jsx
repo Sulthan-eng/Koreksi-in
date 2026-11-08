@@ -56,7 +56,7 @@ function Masuk() {
     try {
       await auth.masuk({ email, password });
       const hasil = await auth.saya();
-      tandaiMasuk(hasil.nama);
+      tandaiMasuk(hasil.nama, hasil.status_langganan);
       navigate("/", { replace: true });
     } catch (error) {
       if (error.kode === "LOGIN_GAGAL") {
