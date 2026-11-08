@@ -53,7 +53,7 @@ async function kirim(
   if (!response.ok) {
     throw {
       kode: data.kode,
-      pesan: pesanUntukKode(data.kode),
+      pesan: pesanUntukKode(data.kode, data.pesan),
       status: response.status,
     };
   }

@@ -1,4 +1,21 @@
-export const BATAS_SOAL_PER_BATCH = 15;
+// Angka batas di bawah harus sama persis dengan tabel batas di docs/SPEC.md bagian 4 (dan backend/app/services/langganan.py).
+export const BATAS_PER_AKUN = {
+  free: { soalPerBatch: 15, jawabanPerBatch: 15 },
+  pro: { soalPerBatch: 30, jawabanPerBatch: 50 },
+};
+
+export function batasSoalUntukAkun(statusLangganan) {
+  return (BATAS_PER_AKUN[statusLangganan] ?? BATAS_PER_AKUN.free).soalPerBatch;
+}
+
+export function pesanSudahMaksimalSoal(statusLangganan) {
+  return `Sudah mencapai jumlah maksimal ${batasSoalUntukAkun(statusLangganan)} soal per batch.`;
+}
+
+const KODE_PESAN_DARI_SERVER = new Set([
+  "BATAS_SOAL_TERLAMPAUI",
+  "BATAS_JAWABAN_TERLAMPAUI",
+]);
 
 export const PESAN_KODE = {
   VALIDASI_GAGAL: "Data yang dikirim tidak valid.",
@@ -9,17 +26,20 @@ export const PESAN_KODE = {
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
   BATCH_TIDAK_DITEMUKAN: "Batch tidak ditemukan",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
+  BATAS_BATCH_AKTIF_TERCAPAI:
+    "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas.",
   BELUM_ADA_BATCH:
     "Belum ada batch. Buat batch pertama untuk mulai mengoreksi.",
   KUNCI_KOSONG: "Kunci jawaban tidak boleh kosong",
-  BATAS_SOAL_TERLAMPAUI: `Maksimal ${BATAS_SOAL_PER_BATCH} soal per batch.`,
+  BATAS_SOAL_TERLAMPAUI: pesanSudahMaksimalSoal("free"),
+  BATAS_JAWABAN_TERLAMPAUI: `Upload ditolak: batas jawaban akun Free adalah ${BATAS_PER_AKUN.free.jawabanPerBatch}, tersisa 0 slot. Kurangi jumlah file atau upgrade ke Pro.`,
   SOAL_SETELAH_JAWABAN: "Soal tidak dapat ditambah setelah jawaban diunggah.",
   GAGAL_BUAT_BATCH: "Gagal membuat batch, silakan coba lagi",
   GAGAL_TAMBAH_SOAL: "Gagal menambah soal, silakan coba lagi.",
   BELUM_ADA_SOAL: "Tambahkan minimal satu soal sebelum mengunggah jawaban.",
   BELUM_ADA_SOAL_BATCH: "Belum ada soal pada batch ini.",
   KUNCI_TERSIMPAN: "Kunci jawaban tersimpan.",
-  SUDAH_MAKSIMAL_SOAL: `Sudah mencapai jumlah maksimal ${BATAS_SOAL_PER_BATCH} soal per batch.`,
+  SUDAH_MAKSIMAL_SOAL: pesanSudahMaksimalSoal("free"),
   PERINGATAN_SEBELUM_UNGGAH:
     "Pastikan semua soal sudah ditambahkan. Setelah jawaban diunggah, soal tidak dapat ditambah lagi.",
   GAGAL_STATUS_PEMROSESAN:
@@ -72,6 +92,13 @@ export const PESAN_KODE = {
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 
-export function pesanUntukKode(kode) {
+export function pesanUntukKode(kode, pesanServer) {
+  if (
+    KODE_PESAN_DARI_SERVER.has(kode) &&
+    typeof pesanServer === "string" &&
+    pesanServer.trim() !== ""
+  ) {
+    return pesanServer;
+  }
   return PESAN_KODE[kode] ?? PESAN_KODE.UMUM;
 }
