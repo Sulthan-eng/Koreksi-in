@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.core.errors import AppError
+from app.models.enums import StatusLangganan
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
 from app.services import auth as auth_service
@@ -286,4 +287,20 @@ async def test_saya_dengan_token_valid(client: AsyncClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {"nama": "Budi Santoso"}
+    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "free"}
+
+
+async def test_saya_mengembalikan_status_langganan_pro(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.status_langganan = StatusLangganan.PRO
+    await db_session.commit()
+
+    response = await client.get(
+        "/api/auth/saya", headers={"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "pro"}

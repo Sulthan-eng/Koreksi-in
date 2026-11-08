@@ -28,7 +28,7 @@ function Beranda() {
   const [kesalahan, setKesalahan] = useState(null);
   const [daftarBatch, setDaftarBatch] = useState([]);
   const navigate = useNavigate();
-  const { nama } = useAuth();
+  const { status: statusAuth, nama, statusLangganan } = useAuth();
   const judulDaftarRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
 
@@ -112,6 +112,14 @@ function Beranda() {
             Kelola batch koreksi esai Anda di sini.
           </p>
         </div>
+
+        {statusAuth === "terautentikasi" && !statusLangganan && (
+          <PesanForm
+            varian="galat"
+            pesan={PESAN_KODE.GAGAL_MUAT_LANGGANAN}
+            kotak
+          />
+        )}
 
         {status === "memuat" && (
           <KeadaanData keadaan="memuat" className="min-h-48" />

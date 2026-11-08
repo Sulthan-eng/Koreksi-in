@@ -67,6 +67,8 @@ export const PESAN_KODE = {
   PESAN_SELESAIKAN_BATCH:
     "Batch yang diselesaikan tidak dapat diubah lagi. Lanjutkan?",
   BATCH_SELESAI_SUKSES: "Batch berhasil diselesaikan.",
+  GAGAL_MUAT_LANGGANAN:
+    "Gagal memuat status langganan, coba muat ulang halaman",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 
