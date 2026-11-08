@@ -605,7 +605,7 @@ async def test_unggah_jawaban_akun_pro_kedaluwarsa_di_atas_batas_free_ditolak_da
     }
 
 
-async def test_unggah_jawaban_format_tidak_didukung_dan_melebihi_batas_prioritaskan_format(
+async def test_unggah_jawaban_format_tidak_didukung_dan_melebihi_batas_prioritaskan_batas(
     client: AsyncClient, db_session: AsyncSession, tmp_path
 ) -> None:
     token = await _token(client)
@@ -620,9 +620,53 @@ async def test_unggah_jawaban_format_tidak_didukung_dan_melebihi_batas_prioritas
     )
     assert response.status_code == 400
     assert response.json() == {
-        "kode": "FORMAT_FILE_TIDAK_DIDUKUNG",
-        "pesan": "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.",
+        "kode": "BATAS_JAWABAN_TERLAMPAUI",
+        "pesan": (
+            "Upload ditolak: batas jawaban akun Free adalah 15, tersisa 0 slot. "
+            "Kurangi jumlah file atau upgrade ke Pro."
+        ),
     }
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_melebihi_batas_ditolak_tanpa_membaca_isi_file(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path
+) -> None:
+    from app.services import file_jawaban as layanan_file_jawaban
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+    await _isi_file_jawaban_awal(db_session, id_batch, 14)
+
+    dipanggil = False
+
+    async def _jangan_baca_file(*_args, **_kwargs):
+        nonlocal dipanggil
+        dipanggil = True
+        raise AssertionError("baca_dan_validasi_file tidak boleh dipanggil saat melebihi batas")
+
+    monkeypatch.setattr(layanan_file_jawaban, "baca_dan_validasi_file", _jangan_baca_file)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files(
+            [
+                ("rusak1.png", b"isi tidak valid 1", "image/png"),
+                ("rusak2.pdf", _pdf_korup(), "application/pdf"),
+            ]
+        ),
+        data=_nama("Peserta 15", "Peserta 16"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "BATAS_JAWABAN_TERLAMPAUI",
+        "pesan": (
+            "Upload ditolak: batas jawaban akun Free adalah 15, tersisa 1 slot. "
+            "Kurangi jumlah file atau upgrade ke Pro."
+        ),
+    }
+    assert dipanggil is False
     assert not any(p.is_file() for p in tmp_path.rglob("*"))
 
 
