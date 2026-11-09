@@ -356,3 +356,91 @@ async def test_ocr_kunci_batas_waktu_total_terjaga_walau_semaphore_penuh(monkeyp
     async with gemini._SEM, gemini._SEM:
         with pytest.raises(gemini.GagalSementara):
             await gemini.ocr_kunci(b"konten", "png")
+
+
+# --- Judge: system_instruction, parameter default, dan format input JSON ---
+
+
+async def test_judge_config_memuat_system_instruction_tanpa_parameter_sampling():
+    konfigs: list = []
+
+    class _ResponsPalsu:
+        text = '{"items": []}'
+
+    class _ModelsPalsu:
+        async def generate_content(self, model, contents, config):
+            konfigs.append(config)
+            return _ResponsPalsu()
+
+    class _AioPalsu:
+        models = _ModelsPalsu()
+
+    class _ClientPalsu:
+        aio = _AioPalsu()
+
+    import app.services.gemini as gemini_module
+
+    gemini_module._client = _ClientPalsu()
+    try:
+        await gemini._panggil_sdk_judge(
+            [gemini.ItemJudgeMasuk(id_item="0:1", kunci_jawaban="kunci", teks_jawaban="jawaban")]
+        )
+    finally:
+        gemini_module._client = None
+
+    assert len(konfigs) == 1
+    config = konfigs[0]
+    assert config.system_instruction is not None
+    assert "sendiri-sendiri" in config.system_instruction
+    assert "sebagian" in config.system_instruction
+    assert "kesetaraan klaim" in config.system_instruction
+    assert config.temperature is None
+    assert config.top_p is None
+    assert config.top_k is None
+    assert config.thinking_config is None
+    assert config.seed is None
+
+
+async def test_judge_input_json_tidak_ambigu_untuk_teks_bergaris_baru():
+    import json as json_module
+
+    konten_terkirim: list = []
+
+    class _ResponsPalsu:
+        text = '{"items": []}'
+
+    class _ModelsPalsu:
+        async def generate_content(self, model, contents, config):
+            konten_terkirim.append(contents)
+            return _ResponsPalsu()
+
+    class _AioPalsu:
+        models = _ModelsPalsu()
+
+    class _ClientPalsu:
+        aio = _AioPalsu()
+
+    import app.services.gemini as gemini_module
+
+    teks_jawaban_asli = "Baris pertama jawaban.\nBaris kedua dengan lanjutan.\nBaris ketiga."
+    kunci_asli = "Kunci\njuga\nbisa\nmultibaris."
+
+    gemini_module._client = _ClientPalsu()
+    try:
+        await gemini._panggil_sdk_judge(
+            [
+                gemini.ItemJudgeMasuk(
+                    id_item="0:1", kunci_jawaban=kunci_asli, teks_jawaban=teks_jawaban_asli
+                )
+            ]
+        )
+    finally:
+        gemini_module._client = None
+
+    assert len(konten_terkirim) == 1
+    (daftar_item_terkirim,) = konten_terkirim[0]
+    items_terparse = json_module.loads(daftar_item_terkirim)
+    assert len(items_terparse) == 1
+    assert items_terparse[0]["id_item"] == "0:1"
+    assert items_terparse[0]["kunci_jawaban"] == kunci_asli
+    assert items_terparse[0]["teks_jawaban"] == teks_jawaban_asli
