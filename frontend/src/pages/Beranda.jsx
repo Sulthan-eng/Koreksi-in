@@ -31,6 +31,7 @@ function Beranda() {
   const { status: statusAuth, nama, statusLangganan } = useAuth();
   const judulDaftarRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
+  const tombolBuatBatchRef = useRef(null);
 
   const aksi = useAksiBatch({
     onSelesaiSukses: (batchSelesai) => {
@@ -81,6 +82,23 @@ function Beranda() {
       dibatalkan = true;
     };
   }, []);
+
+  function kosongkanForm() {
+    setNamaBatch("");
+    setKesalahanForm(null);
+  }
+
+  function tanganiToggleForm() {
+    setFormTerbuka((sebelumnya) => !sebelumnya);
+    kosongkanForm();
+  }
+
+  function tanganiBatal() {
+    if (sedangKirim) return;
+    kosongkanForm();
+    setFormTerbuka(false);
+    tombolBuatBatchRef.current?.focus();
+  }
 
   async function tanganiBuatBatch(peristiwa) {
     peristiwa.preventDefault();
@@ -143,8 +161,9 @@ function Beranda() {
                 Batch Koreksi
               </h2>
               <button
+                ref={tombolBuatBatchRef}
                 type="button"
-                onClick={() => setFormTerbuka((sebelumnya) => !sebelumnya)}
+                onClick={tanganiToggleForm}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan"
               >
                 Buat Batch Baru
@@ -181,7 +200,7 @@ function Beranda() {
                     className="text-sm leading-5"
                   />
                 )}
-                <div>
+                <div className="flex gap-2">
                   <button
                     type="submit"
                     disabled={sedangKirim}
@@ -189,6 +208,14 @@ function Beranda() {
                   >
                     {sedangKirim && <Spinner ukuran="size-4" />}
                     Buat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={tanganiBatal}
+                    aria-disabled={sedangKirim ? "true" : undefined}
+                    className="inline-flex min-h-11 items-center justify-center rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks aria-disabled:opacity-50"
+                  >
+                    Batal
                   </button>
                 </div>
               </form>
