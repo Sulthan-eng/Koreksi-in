@@ -186,8 +186,9 @@ def _system_instruction_judge() -> str:
         "pertukaran gas terbalik dari kunci).\n"
         '- Jawaban: "Fotosintesis tidak melibatkan cahaya matahari sama sekali; tumbuhan '
         'mendapat energi dari tanah." -> skor 0 (bertentangan langsung dengan kunci).\n\n'
-        "Untuk setiap item pada daftar_item yang diberikan, kembalikan id_item apa adanya "
-        "dan skor integer. Jangan menyertakan alasan."
+        "Untuk setiap item pada daftar JSON yang diberikan (array berisi id_item, "
+        "kunci_jawaban, dan teks_jawaban per elemen), kembalikan id_item apa adanya dan "
+        "skor integer. Jangan menyertakan alasan."
     )
 
 
