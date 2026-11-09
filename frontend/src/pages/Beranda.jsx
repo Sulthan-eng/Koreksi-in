@@ -89,6 +89,7 @@ function Beranda() {
   }
 
   function tanganiToggleForm() {
+    if (sedangKirim) return;
     setFormTerbuka((sebelumnya) => !sebelumnya);
     kosongkanForm();
   }
