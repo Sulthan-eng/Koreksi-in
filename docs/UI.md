@@ -193,6 +193,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 - Di aplikasi, titik henti memakai varian viewport Tailwind: `lg:` (mulai 1024 px) dan `max-lg:` (di bawah 1024 px). JANGAN memakai `@container`, `@min-[64rem]`, atau `@max-[63.9375rem]` dari berkas mockup: itu hanya akal agar bingkai pratinjau 375 px bisa tampil di layar 1280 px (di Tailwind v4, `@lg` pada container query berarti 32rem, bukan 1024 px).
 - Status Aktif batch di ponsel sejajar dengan nama batch (`items-start`, `min-w-0` pada judul).
 - Dialog memakai elemen `<dialog>` bawaan.
+- Dialog konfirmasi tampil di tengah layar.
 - Kartu fitur Pemasaran: `rounded-xl p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg`, dengan pelindung gerak `motion-reduce:transition-none motion-reduce:hover:translate-y-0`. Garis aksen dekoratif di tepi atas kartu memakai `merek-hijau` atau `merek-biru` (bergantian), `aria-hidden`.
 - Kartu angka Dashboard Pantauan: `grid-cols-2` di ponsel dan tablet; di desktop tiga atau empat kolom menurut jumlah kartu per kelompok (Akun 3, Aktivitas 4). Kuota API berupa satu kartu lebar penuh dengan bilah pemakaian. Kartu ganjil yang menggantung di ponsel dibuat lebar penuh (`col-span-2`).
 - Pilihan paket di Langganan berupa grup radio. Saat diimplementasi, bungkus dengan `fieldset` dan `legend` (teks "Paket Pro") agar pembaca layar mengenal grupnya.
