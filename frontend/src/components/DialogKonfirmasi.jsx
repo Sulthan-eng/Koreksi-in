@@ -43,11 +43,12 @@ function DialogKonfirmasi({
         ? KELAS_SEKUNDER_MERUSAK
         : KELAS_SEKUNDER;
 
+  // m-auto memulihkan pemusatan bawaan <dialog>: preflight Tailwind v4 menyetel margin semua elemen menjadi 0.
   return (
     <dialog
       ref={dialogRef}
       aria-labelledby={idJudul}
-      className="w-full max-w-md rounded-xl p-0 shadow-lg backdrop:bg-teks/40"
+      className="m-auto w-full max-w-md rounded-xl p-0 shadow-lg backdrop:bg-teks/40"
       onCancel={(peristiwa) => {
         peristiwa.preventDefault();
         if (!prosesBerjalan) onBatal();
