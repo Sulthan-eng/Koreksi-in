@@ -6,6 +6,7 @@ harian in-memory (zona America/Los_Angeles).
 """
 
 import asyncio
+import json
 import logging
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
@@ -146,14 +147,47 @@ def _prompt_ocr_kunci() -> str:
     )
 
 
-def _prompt_judge() -> str:
+def _system_instruction_judge() -> str:
     return (
-        "Nilai kemiripan tiap jawaban peserta didik terhadap kunci jawaban, dengan skala "
-        "0 sampai 100: 0 untuk jawaban salah; 1 sampai 39 untuk sebagian kecil benar; "
-        "40 sampai 79 untuk sebagian benar; 80 sampai 100 untuk benar. "
-        "Nilai HANYA kebenaran isi jawaban, bukan gaya penulisan, ejaan, atau kesalahan baca "
-        "OCR yang kecil. Untuk setiap item, kembalikan id_item apa adanya dan skor integer. "
-        "Jangan menyertakan alasan."
+        "Anda menilai kesetaraan klaim tiap jawaban peserta didik terhadap kunci jawaban, "
+        "dengan skala 0 sampai 100: 0 untuk jawaban salah; 1 sampai 39 untuk sebagian kecil "
+        "benar; 40 sampai 79 untuk sebagian benar; 80 sampai 100 untuk benar.\n\n"
+        "Aturan penilaian:\n"
+        "- Kunci jawaban adalah SATU-SATUNYA acuan isi. Jangan memakai pengetahuan umum Anda "
+        "untuk menilai benar atau salah. Jawaban yang benar secara umum tetapi tidak sesuai "
+        "kunci diberi skor rendah.\n"
+        "- Nilai KESETARAAN KLAIM dengan kunci, bukan kemiripan topik atau kata. Periksa "
+        "apakah fakta, angka, istilah, dan hubungan sebab-akibat spesifik pada kunci "
+        "benar-benar tercakup dalam jawaban.\n"
+        "- Parafrase, sinonim, bahasa santai, urutan kalimat berbeda, ejaan, atau kesalahan "
+        "baca OCR yang kecil TIDAK mengurangi skor, selama klaimnya tetap setara dengan "
+        "kunci.\n"
+        "- Jawaban yang membahas topik yang sama dengan kunci tetapi klaim, angka, atau "
+        "arahnya berbeda atau terbalik dari kunci TIDAK dianggap bermakna sama. Kemiripan "
+        "topik atau kosakata saja BUKAN dasar skor tinggi. Beri skor rendah, atau 0 bila "
+        "bertentangan langsung dengan kunci.\n"
+        "- Jawaban yang memuat sebagian klaim kunci diberi skor sebagian sesuai porsi yang "
+        "tercakup, bukan 0. Skor 0 hanya untuk jawaban yang tidak sesuai kunci sama sekali "
+        "atau bertentangan dengannya.\n"
+        "- Tiap item pada daftar dinilai sendiri-sendiri, terlepas dari item lain dalam "
+        "daftar.\n"
+        "- Kunci jawaban pendek (nama, angka, istilah satu kata) adalah sah dan TIDAK "
+        "dihukum karena pendek.\n\n"
+        "Contoh (topik netral, bukan bagian dari penilaian sungguhan):\n"
+        'Kunci: "Fotosintesis adalah proses tumbuhan mengubah cahaya matahari, air, dan '
+        'karbon dioksida menjadi energi (glukosa) dan oksigen."\n'
+        '- Jawaban: "Tumbuhan memakai sinar matahari, air, dan CO2 untuk membuat glukosa '
+        'serta oksigen lewat fotosintesis." -> skor 92 (parafrase, klaim setara).\n'
+        '- Jawaban: "Fotosintesis adalah proses tumbuhan membuat makanan menggunakan '
+        'cahaya matahari." -> skor 60 (sebagian klaim kunci tercakup, tidak menyebut air, '
+        "CO2, dan oksigen sebagai hasil).\n"
+        '- Jawaban: "Fotosintesis adalah proses tumbuhan menyerap oksigen dan mengeluarkan '
+        'karbon dioksida menggunakan cahaya matahari." -> skor 15 (topik sama, tetapi arah '
+        "pertukaran gas terbalik dari kunci).\n"
+        '- Jawaban: "Fotosintesis tidak melibatkan cahaya matahari sama sekali; tumbuhan '
+        'mendapat energi dari tanah." -> skor 0 (bertentangan langsung dengan kunci).\n\n'
+        "Untuk setiap item pada daftar_item yang diberikan, kembalikan id_item apa adanya "
+        "dan skor integer. Jangan menyertakan alasan."
     )
 
 
@@ -179,16 +213,30 @@ async def _panggil_sdk_ocr(
 
 
 async def _panggil_sdk_judge(items: list[ItemJudgeMasuk]) -> ResponsJudge:
-    """Satu-satunya titik yang memanggil SDK untuk judge grup."""
+    """Satu-satunya titik yang memanggil SDK untuk judge grup.
+
+    daftar_item dikirim sebagai JSON (bukan baris "key=value") karena
+    kunci_jawaban dan teks_jawaban adalah teks OCR bebas yang bisa memuat
+    baris baru; JSON meng-escape baris baru di dalam field sehingga batas
+    antar field dan antar item tidak ambigu bagi model.
+    """
     client = _ambil_client()
-    daftar_item = "\n".join(
-        f"id_item={i.id_item}\nkunci_jawaban={i.kunci_jawaban}\nteks_jawaban={i.teks_jawaban}"
-        for i in items
+    daftar_item = json.dumps(
+        [
+            {
+                "id_item": i.id_item,
+                "kunci_jawaban": i.kunci_jawaban,
+                "teks_jawaban": i.teks_jawaban,
+            }
+            for i in items
+        ],
+        ensure_ascii=False,
     )
     response = await client.aio.models.generate_content(
         model=_MODEL,
-        contents=[_prompt_judge(), daftar_item],
+        contents=[daftar_item],
         config=types.GenerateContentConfig(
+            system_instruction=_system_instruction_judge(),
             response_mime_type="application/json",
             response_schema=ResponsJudge,
         ),
