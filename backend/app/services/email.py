@@ -8,6 +8,7 @@ dicatat di log.
 import asyncio
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 from app.core.config import settings
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _buat_pesan_reset(email_tujuan: str, token: str) -> EmailMessage:
-    tautan = f"{settings.FRONTEND_URL}/atur-ulang-password?token={token}"
+    tautan = f"{settings.FRONTEND_URL.rstrip('/')}/atur-ulang-password?token={token}"
     pesan = EmailMessage()
     pesan["Subject"] = "Atur ulang password Koreksi-in"
     pesan["From"] = f"Koreksi-in <{settings.SMTP_USER}>"
@@ -33,7 +34,7 @@ def _buat_pesan_reset(email_tujuan: str, token: str) -> EmailMessage:
 def _kirim_smtp(pesan: EmailMessage) -> None:
     """Satu-satunya titik panggilan jaringan SMTP; dimock di test."""
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
-        server.starttls()
+        server.starttls(context=ssl.create_default_context())
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.send_message(pesan)
 
