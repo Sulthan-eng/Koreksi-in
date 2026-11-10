@@ -26,3 +26,7 @@ class Pengguna(Base):
     dibuat_pada: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    reset_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    reset_dibuat_pada: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

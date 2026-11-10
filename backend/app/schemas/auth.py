@@ -57,3 +57,29 @@ class TokenResponse(BaseModel):
 class SayaResponse(BaseModel):
     nama: str
     status_langganan: StatusLangganan
+
+
+class LupaPasswordRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def _validasi_email(cls, value: str) -> str:
+        stripped = _strip_dan_tolak_kosong(value)
+        if _POLA_EMAIL.match(stripped) is None:
+            raise ValueError("format email tidak valid")
+        return stripped
+
+
+class LupaPasswordResponse(BaseModel):
+    pesan: str = "Jika email terdaftar, tautan atur ulang password telah dikirim."
+
+
+class AturUlangPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+    password_baru: str = Field(min_length=1)
+
+    @field_validator("token")
+    @classmethod
+    def _validasi_token(cls, value: str) -> str:
+        return _strip_dan_tolak_kosong(value)

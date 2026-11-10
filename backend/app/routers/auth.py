@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -9,13 +9,17 @@ from app.core.errors import SESI_BERAKHIR
 from app.core.security import REFRESH_TOKEN_EXPIRE_DAYS
 from app.models.pengguna import Pengguna
 from app.schemas.auth import (
+    AturUlangPasswordRequest,
     DaftarRequest,
     DaftarResponse,
+    LupaPasswordRequest,
+    LupaPasswordResponse,
     MasukRequest,
     SayaResponse,
     TokenResponse,
 )
 from app.services import auth as auth_service
+from app.services import email as email_service
 from app.services.langganan import jenis_akun_efektif
 
 router = APIRouter(prefix="/auth")
@@ -76,3 +80,25 @@ async def keluar(request: Request, response: Response, db: AsyncSession = Depend
 @router.get("/saya", response_model=SayaResponse)
 async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
     return SayaResponse(nama=pengguna.nama, status_langganan=jenis_akun_efektif(pengguna))
+
+
+@router.post("/lupa-password", response_model=LupaPasswordResponse)
+async def lupa_password(
+    body: LupaPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> LupaPasswordResponse:
+    hasil = await auth_service.minta_reset_password(db, body.email)
+    if hasil is not None:
+        pengguna, token_mentah = hasil
+        background_tasks.add_task(
+            email_service.kirim_email_reset_password, pengguna.email, token_mentah
+        )
+    return LupaPasswordResponse()
+
+
+@router.post("/atur-ulang-password", status_code=204)
+async def atur_ulang_password(
+    body: AturUlangPasswordRequest, db: AsyncSession = Depends(get_db)
+) -> None:
+    await auth_service.atur_ulang_password(db, body.token, body.password_baru)

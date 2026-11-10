@@ -47,3 +47,8 @@ def buat_refresh_token() -> tuple[str, str]:
 
 def hash_refresh_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def buat_reset_token() -> tuple[str, str]:
+    token = secrets.token_urlsafe(32)
+    return token, hash_refresh_token(token)
