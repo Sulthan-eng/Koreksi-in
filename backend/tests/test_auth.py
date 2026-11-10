@@ -363,7 +363,7 @@ async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
     assert response.json() == {"nama": "Budi Santoso", "status_langganan": "free"}
 
 
-_PESAN_LUPA_PASSWORD = {"pesan": "Jika email terdaftar, tautan atur ulang password telah dikirim."}
+_PESAN_LUPA_PASSWORD = {"pesan": "Tautan Atur Ulang Password Telah Dikirim"}
 
 
 async def test_lupa_password_email_terdaftar_dan_tidak_terdaftar_respons_sama(

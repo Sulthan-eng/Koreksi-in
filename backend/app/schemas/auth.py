@@ -72,7 +72,7 @@ class LupaPasswordRequest(BaseModel):
 
 
 class LupaPasswordResponse(BaseModel):
-    pesan: str = "Jika email terdaftar, tautan atur ulang password telah dikirim."
+    pesan: str = "Tautan Atur Ulang Password Telah Dikirim"
 
 
 class AturUlangPasswordRequest(BaseModel):

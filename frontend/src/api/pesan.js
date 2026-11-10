@@ -26,8 +26,7 @@ export const PESAN_KODE = {
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
   TOKEN_RESET_TIDAK_VALID: "Tautan tidak berlaku atau sudah kedaluwarsa.",
   FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid.",
-  TAUTAN_RESET_TERKIRIM:
-    "Jika email terdaftar, tautan atur ulang password telah dikirim.",
+  TAUTAN_RESET_TERKIRIM: "Tautan Atur Ulang Password Telah Dikirim",
   GAGAL_KIRIM_TAUTAN: "Gagal mengirim tautan, silakan coba lagi.",
   KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
   GAGAL_UBAH_PASSWORD: "Gagal mengubah password, silakan coba lagi.",
