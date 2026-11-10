@@ -36,3 +36,13 @@ async def test_kirim_email_smtp_kosong_dianggap_gagal_tanpa_mengirim(
     await email_service.kirim_email_reset_password("budi@contoh.com", "token-apa-saja")
 
     assert dipanggil == []
+
+
+def test_buat_pesan_reset_tautan_tidak_dobel_garis_miring(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "FRONTEND_URL", "http://localhost:5173/")
+
+    pesan = email_service._buat_pesan_reset("budi@contoh.com", "token-apa-saja")
+
+    isi = pesan.get_content()
+    assert "http://localhost:5173/atur-ulang-password?token=token-apa-saja" in isi
+    assert "5173//atur-ulang-password" not in isi
