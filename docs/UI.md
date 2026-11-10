@@ -213,7 +213,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Belum dikerjakan | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Belum dikerjakan | Ada |
 | 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Belum dikerjakan | Ada |
-| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Jika email terdaftar, tautan atur ulang password telah dikirim." | lolos lint dan build, menunggu konfirmasi tes manual pemilik proyek | Ada |
+| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Tautan Atur Ulang Password Telah Dikirim" | lolos lint dan build, menunggu konfirmasi tes manual pemilik proyek | Ada |
 | 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | lolos lint dan build, menunggu konfirmasi tes manual pemilik proyek | Ada |
 
 Halaman 9 dan 10 mengikuti SPEC F-RESET. Halaman Masuk mendapat tautan "Lupa password?". Setelah Keluar, pengguna dialihkan ke Halaman Pemasaran (SPEC bagian 6).
@@ -415,7 +415,7 @@ Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba m
 Kartu di tengah dengan `logo.png`, judul "Lupa Password", tanpa bilah atas. Dibungkus `RouteTamu` sehingga pengguna yang sudah login dialihkan ke Beranda.
 - Kolom Email, tombol "Kirim Tautan" (indikator putar, `aria-disabled` selama mengirim), tautan kembali "Kembali ke Masuk" di bawah form.
 - Format email tidak valid: "Format email tidak valid." di bawah kolom, tanpa permintaan terkirim.
-- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Jika email terdaftar, tautan atur ulang password telah dikirim." (kotak sukses di atas form, `role="status"`). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
+- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Tautan Atur Ulang Password Telah Dikirim" (kotak sukses di atas form, `role="status"`). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
 - Gagal mengirim karena galat server atau koneksi terputus: "Gagal mengirim tautan, silakan coba lagi." (kotak galat di atas form, `role="alert"`). Pesan lama dibersihkan saat submit berikutnya, dan galat serta sukses tidak pernah tampil bersamaan.
 
 ### 10. Atur Ulang Password (`/atur-ulang-password?token=...`, publik)
