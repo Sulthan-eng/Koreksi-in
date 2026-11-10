@@ -49,3 +49,19 @@ export async function keluar() {
 export async function saya() {
   return permintaan("/api/auth/saya");
 }
+
+export async function lupaPassword({ email }) {
+  return permintaan("/api/auth/lupa-password", {
+    method: "POST",
+    body: { email },
+    autentikasi: false,
+  });
+}
+
+export async function aturUlangPassword({ token, password_baru }) {
+  return permintaan("/api/auth/atur-ulang-password", {
+    method: "POST",
+    body: { token, password_baru },
+    autentikasi: false,
+  });
+}

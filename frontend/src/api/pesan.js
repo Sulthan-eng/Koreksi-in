@@ -24,6 +24,14 @@ export const PESAN_KODE = {
   PASSWORD_TERLALU_PANJANG: "Password maksimal 72 karakter",
   LOGIN_GAGAL: "Email atau password salah",
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
+  TOKEN_RESET_TIDAK_VALID: "Tautan tidak berlaku atau sudah kedaluwarsa.",
+  FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid.",
+  TAUTAN_RESET_TERKIRIM:
+    "Jika email terdaftar, tautan atur ulang password telah dikirim.",
+  GAGAL_KIRIM_TAUTAN: "Gagal mengirim tautan, silakan coba lagi.",
+  KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
+  GAGAL_UBAH_PASSWORD: "Gagal mengubah password, silakan coba lagi.",
+  PASSWORD_BERHASIL_DIUBAH: "Password berhasil diubah, silakan masuk.",
   BATCH_TIDAK_DITEMUKAN: "Batch tidak ditemukan",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
   BATAS_BATCH_AKTIF_TERCAPAI:
