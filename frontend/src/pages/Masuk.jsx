@@ -126,6 +126,12 @@ function Masuk() {
                 className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
               />
             </label>
+            <Link
+              to="/lupa-password"
+              className="inline-flex min-h-11 items-center self-end text-sm font-semibold text-biru-utama underline"
+            >
+              Lupa password?
+            </Link>
             <button
               type="submit"
               disabled={sedangKirim}
