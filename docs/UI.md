@@ -213,8 +213,8 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Belum dikerjakan | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Belum dikerjakan | Ada |
 | 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Belum dikerjakan | Ada |
-| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Jika email terdaftar, tautan atur ulang password telah dikirim." | Belum dikerjakan | Ada |
-| 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Belum dikerjakan | Ada |
+| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Tautan Atur Ulang Password Telah Dikirim" | Selesai | Ada |
+| 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Selesai | Ada |
 
 Halaman 9 dan 10 mengikuti SPEC F-RESET. Halaman Masuk mendapat tautan "Lupa password?". Setelah Keluar, pengguna dialihkan ke Halaman Pemasaran (SPEC bagian 6).
 
@@ -302,7 +302,7 @@ Kartu di tengah dengan `logo.png`, judul "Daftar". Pengguna yang sudah login dia
 Kartu di tengah dengan `logo.png`, judul "Masuk". Pengguna yang sudah login dialihkan menurut peran.
 
 - Kolom: Email, Password. Tombol "Masuk" (indikator putar). Tautan "Belum punya akun? Daftar".
-- Tautan "Lupa password?" ke `/lupa-password` (nanti, tampil setelah reset password dikerjakan).
+- Tautan "Lupa password?" ke `/lupa-password`, rata kanan tepat di bawah kolom Password dan di atas tombol "Masuk".
 - Pesan di atas form, satu pesan sekali tampil: sukses "Akun berhasil dibuat, silakan masuk" (gaya sukses), "Password berhasil diubah, silakan masuk." (gaya sukses), "Sesi berakhir, silakan masuk kembali." (gaya netral, bukan galat).
 - Galat: "Email atau password salah" untuk semua kegagalan login, termasuk email tidak terdaftar (SPEC bagian 6).
 - Sukses: Pengajar ke `/beranda`, Admin ke `/admin`.
@@ -410,20 +410,22 @@ Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba m
 - **Keadaan:** kosong "Belum ada akun Pengajar yang terdaftar."; pencarian tanpa hasil "Tidak ada akun yang sesuai dengan pencarian."; gagal "Gagal memuat daftar akun, coba muat ulang halaman."; offline "Koneksi internet terputus, coba muat ulang halaman."
 - Di bawah 1024 px (ponsel dan tablet) tiap baris menjadi kartu dengan aksi di bagian bawah kartu.
 
-### 9. Lupa Password (`/lupa-password`, publik, nanti)
+### 9. Lupa Password (`/lupa-password`, publik)
 
-Kartu di tengah dengan `logo.png`, judul "Lupa Password".
-- Kolom Email, tombol "Kirim Tautan" (indikator putar), tautan kembali "Kembali ke Masuk".
+Kartu di tengah dengan `logo.png`, judul "Lupa Password", tanpa bilah atas. Dibungkus `RouteTamu` sehingga pengguna yang sudah login dialihkan ke Beranda.
+- Kolom Email, tombol "Kirim Tautan" (indikator putar, `aria-disabled` selama mengirim), tautan kembali "Kembali ke Masuk" di bawah form.
 - Format email tidak valid: "Format email tidak valid." di bawah kolom, tanpa permintaan terkirim.
-- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Jika email terdaftar, tautan atur ulang password telah dikirim." (gaya sukses). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
+- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Tautan Atur Ulang Password Telah Dikirim" (kotak sukses di atas form, `role="status"`). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
+- Gagal mengirim karena galat server atau koneksi terputus: "Gagal mengirim tautan, silakan coba lagi." (kotak galat di atas form, `role="alert"`). Pesan lama dibersihkan saat submit berikutnya, dan galat serta sukses tidak pernah tampil bersamaan.
 
-### 10. Atur Ulang Password (`/atur-ulang-password?token=...`, publik, nanti)
+### 10. Atur Ulang Password (`/atur-ulang-password?token=...`, publik)
 
-Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
-- Kolom Password baru dan Konfirmasi password, tombol "Simpan Password".
-- Galat: "Konfirmasi password tidak sama.", "Password minimal 8 karakter", "Password maksimal 72 karakter", "Gagal mengubah password, silakan coba lagi."
-- Token kedaluwarsa, sudah dipakai, atau tidak sah: halaman menampilkan "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan "Lupa Password" untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
-- Sukses: arahkan ke `/masuk` dengan pesan "Password berhasil diubah, silakan masuk."
+Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas. Rute ini TIDAK dibungkus `RouteTamu` supaya tautan dari email tetap bekerja di browser yang masih memiliki sesi login.
+- Token dibaca sekali dari query `?token=...` ke state saat inisialisasi (aman terhadap `StrictMode`) lalu langsung dihapus dari URL lewat `navigate(pathname, { replace: true })` sehingga bilah alamat menjadi `/atur-ulang-password` saja; `<meta name="referrer" content="no-referrer">` dipasang di `index.html`, dan token tidak pernah ditulis ke log, `console`, atau storage. Konsekuensi yang diterima: memuat ulang halaman membuat tautan tampil tidak berlaku.
+- Kolom Password baru dan Konfirmasi password, tombol "Simpan Password" (indikator putar, `aria-disabled` selama mengirim).
+- Galat (kotak galat di atas form, satu galat sekali tampil): "Password minimal 8 karakter" (kosong atau kurang dari 8 byte), "Password maksimal 72 karakter" (lebih dari 72 byte UTF-8), "Konfirmasi password tidak sama.", "Gagal mengubah password, silakan coba lagi."
+- Tanpa token di URL (atau token kosong), atau bila token kedaluwarsa, sudah dipakai, atau tidak sah (`TOKEN_RESET_TIDAK_VALID`): halaman menampilkan kotak galat "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan "Lupa Password" untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
+- Sukses (`204`): jika browser masih memiliki sesi login (`status === "terautentikasi"`), panggil `keluar()` terlebih dahulu (dibungkus `try/catch` yang mengabaikan kegagalan agar tidak menghalangi navigasi), lalu arahkan ke `/masuk` dengan pesan "Password berhasil diubah, silakan masuk."
 
 ### Keputusan pemilik proyek
 
@@ -434,7 +436,7 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password".
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
 6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
 7. Ikon diizinkan, hanya dari Lucide (bagian Ikon).
-8. Tautan di halaman Atur Ulang Password untuk token tidak sah memakai teks "Lupa Password" (pilihan pemilik proyek). Alt teks logo: "Koreksi-in". Tautan "Langganan" di navbar dan "Lupa password?" di Masuk memakai penanda "nanti" sampai fiturnya dikerjakan.
+8. Tautan di halaman Atur Ulang Password untuk token tidak sah memakai teks "Lupa Password" (pilihan pemilik proyek). Alt teks logo: "Koreksi-in". Tautan "Langganan" di navbar memakai penanda "nanti" sampai fiturnya dikerjakan.
 9. Tampilan mendukung tablet: tabel berubah menjadi kartu di bawah 1024 px, dan menu Bilah atas berpindah ke laci di bawah 1024 px, satu titik henti (`lg`) yang sama untuk tabel dan menu (bagian Gaya visual dan Komponen bersama).
 10. Teks tambahan dari desain tahap 3, disetujui sementara (perubahan lewat pemilik proyek):
     - Pemasaran: judul seksi "Cara kerja", "Fitur utama", "Free dan Pro". Deskripsi kartu fitur: "Lembar jawaban foto atau PDF dibaca menjadi teks.", "Skor sebagai rekomendasi, bukan nilai akhir.", "Edit teks hasil baca dan nilai akhir.", "Unduh rekap nilai dalam file .xlsx.". Penutup: "Siap mulai mengoreksi lebih cepat?".

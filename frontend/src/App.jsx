@@ -11,6 +11,8 @@ import KeadaanData from "./components/KeadaanData.jsx";
 import TataLetakTerproteksi from "./components/TataLetakTerproteksi.jsx";
 import Masuk from "./pages/Masuk.jsx";
 import Daftar from "./pages/Daftar.jsx";
+import LupaPassword from "./pages/LupaPassword.jsx";
+import AturUlangPassword from "./pages/AturUlangPassword.jsx";
 import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
@@ -62,6 +64,15 @@ const rute = createRoutesFromElements(
         </RouteTamu>
       }
     />
+    <Route
+      path="/lupa-password"
+      element={
+        <RouteTamu>
+          <LupaPassword />
+        </RouteTamu>
+      }
+    />
+    <Route path="/atur-ulang-password" element={<AturUlangPassword />} />
     <Route element={<RuteUtama />}>
       <Route path="/" element={<Beranda />} />
     </Route>
