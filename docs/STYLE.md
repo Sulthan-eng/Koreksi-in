@@ -20,7 +20,7 @@ Struktur di `backend/app/`:
 - `services/`: logika bisnis dan akses database. Satu file per bidang (auth, batch, soal, file_jawaban, pemrosesan, penilaian; saat fiturnya dikerjakan: langganan, pembayaran, ekspor, ringkasan, admin).
 - `services/gemini.py`: satu-satunya tempat yang mengimpor `google-genai` (lihat SPEC bagian 8).
 - `services/midtrans.py` (saat FR19 dikerjakan): satu-satunya tempat yang memanggil Midtrans dan memvalidasi signature webhook, dengan pola yang sama seperti `gemini.py`.
-- `services/email.py` (saat reset password dikerjakan): satu-satunya tempat yang mengirim email (SMTP Gmail), dengan pola yang sama seperti `gemini.py`. Kredensial hanya dari environment variable dan token tidak boleh ditulis ke log.
+- `services/email.py`: satu-satunya tempat yang mengirim email (SMTP Gmail), dengan pola yang sama seperti `gemini.py`. Kredensial hanya dari environment variable dan token tidak boleh ditulis ke log.
 - `models/`: model SQLAlchemy.
 - `schemas/`: skema Pydantic v2 untuk masukan dan keluaran API.
 - `core/`: konfigurasi (environment variable), keamanan (hash, JWT), dependensi bersama, penanganan error.
