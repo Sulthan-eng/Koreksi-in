@@ -2,7 +2,7 @@
 
 Aplikasi web autograding jawaban esai/jawaban singkat. Pengajar (guru atau dosen) memasukkan kunci jawaban dan mengunggah lembar jawaban peserta didik. Sistem mengekstrak teks dengan OCR, lalu LLM-judge memberi skor kemiripan sebagai rekomendasi. Pengajar memegang nilai akhir.
 
-Status: prototipe UTS sudah berjalan di localhost (autentikasi, batch dan soal, unggah jawaban, pemrosesan OCR dan LLM-judge, tabel Dashboard Hasil Koreksi). Pengembangan sekarang menuju sistem penuh (dua peran Pengajar dan Admin, langganan, ekspor, dan seterusnya) bertahap atas permintaan pemilik proyek. Status tiap fitur ada di `docs/SPEC.md` bagian 3. Saat ini dijalankan di localhost; sistem akan di-deploy (detail belum diputuskan, lihat `docs/SPEC.md` U13).
+Status: prototipe UTS sudah berjalan di localhost dan sebagian besar fitur Pengajar sudah Selesai; FR1 belum Selesai penuh karena login Admin belum ada, dan langganan berbayar, ekspor, ringkasan, serta fitur Admin masih "Belum dikerjakan" (daftar status per fitur ada di `docs/SPEC.md` bagian 3 dan TIDAK diulang di sini — perbarui dokumen itu, bukan paragraf ini). Saat ini dijalankan di localhost; sistem akan di-deploy (detail belum diputuskan, lihat `docs/SPEC.md` U13).
 
 Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 

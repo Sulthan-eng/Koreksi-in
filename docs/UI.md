@@ -205,10 +205,10 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 
 | # | Halaman | Rute | Peran | FR dan UC | Isi utama | Status fitur | Rancangan |
 |---|---|---|---|---|---|---|---|
-| 1 | Pemasaran | `/` | Publik (yang sudah login dialihkan ke Beranda atau Dashboard Pantauan) | FR28 | Penjelasan fitur, cara kerja, perbedaan Free dan Pro, tautan Daftar dan Masuk | Belum dikerjakan | Ada |
+| 1 | Pemasaran | `/` | Publik (yang sudah login dialihkan ke Beranda atau Dashboard Pantauan) | FR28 | Penjelasan fitur, cara kerja, perbedaan Free dan Pro, tautan Daftar dan Masuk | Selesai | Ada |
 | 2 | Daftar | `/daftar` | Publik | FR1 | Form nama, email, password | Selesai | Ada |
 | 3 | Masuk | `/masuk` | Publik | FR1 | Form email dan password; pesan "Akun berhasil dibuat, silakan masuk" dan "Sesi berakhir, silakan masuk kembali." | Selesai | Ada |
-| 4 | Beranda | `/beranda` | Pengajar | FR2, FR3, FR21, FR22, UC-01, UC-02, UC-03, UC-13 | Sapaan, label FREE atau PRO, ringkasan (nanti), daftar batch dengan lencana status dan menu aksi (Selesaikan Batch, Hapus Batch), "Buat Batch Baru" | Sebagian selesai | Ada |
+| 4 | Beranda | `/beranda` | Pengajar | FR2, FR3, FR21, FR22, FR23, UC-01, UC-02, UC-03, UC-13, UC-14 | Sapaan, label FREE atau PRO, ringkasan (nanti), daftar batch dengan lencana status dan menu aksi (Selesaikan Batch, Hapus Batch), "Buat Batch Baru" | Sebagian selesai | Ada |
 | 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Hapus Batch, Ekspor Rekap Nilai (nanti) | Sebagian selesai | Ada |
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Belum dikerjakan | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Belum dikerjakan | Ada |

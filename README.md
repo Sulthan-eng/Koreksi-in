@@ -6,7 +6,7 @@ Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localh
 
 ## Menjalankan di localhost
 
-1. Salin `.env.example` menjadi `.env` di root proyek dan isi semua nilainya (`DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `UPLOAD_DIR`, `COOKIE_SECURE`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). `DATABASE_URL` harus memakai driver `asyncpg`, contoh bentuk: `postgresql+asyncpg://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/<POSTGRES_DB>`.
+1. Salin `.env.example` menjadi `.env` di root proyek dan isi semua nilainya (`DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `UPLOAD_DIR`, `COOKIE_SECURE`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `FRONTEND_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`). Lima variabel terkait SMTP dan `FRONTEND_URL` dipakai untuk reset password (SPEC bagian 11) dan semuanya sudah punya default, sehingga server dan test tetap berjalan tanpa mengisinya; bila `SMTP_USER` atau `SMTP_PASSWORD` kosong, email reset password tidak dikirim. `DATABASE_URL` harus memakai driver `asyncpg`, contoh bentuk: `postgresql+asyncpg://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/<POSTGRES_DB>`.
 2. Jalankan database: `docker compose up -d db`.
 3. Siapkan backend:
    ```
