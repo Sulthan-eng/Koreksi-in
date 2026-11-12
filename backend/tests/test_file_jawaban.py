@@ -212,6 +212,7 @@ async def test_unggah_jawaban_format_tidak_didukung(client: AsyncClient) -> None
     assert response.json() == {
         "kode": "FORMAT_FILE_TIDAK_DIDUKUNG",
         "pesan": "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.",
+        "file_bermasalah": [{"indeks": 0, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}],
     }
 
 
@@ -230,6 +231,7 @@ async def test_unggah_jawaban_file_terlalu_besar(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "FILE_TERLALU_BESAR",
         "pesan": "Ukuran file maksimal 10 MB.",
+        "file_bermasalah": [{"indeks": 0, "kode": "FILE_TERLALU_BESAR"}],
     }
 
 
@@ -247,6 +249,7 @@ async def test_unggah_jawaban_pdf_terlalu_banyak_halaman(client: AsyncClient) ->
     assert response.json() == {
         "kode": "PDF_TERLALU_BANYAK_HALAMAN",
         "pesan": "PDF maksimal 15 halaman.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TERLALU_BANYAK_HALAMAN"}],
     }
 
 
@@ -264,6 +267,7 @@ async def test_unggah_jawaban_pdf_korup(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "PDF_TIDAK_DAPAT_DIBACA",
         "pesan": "File PDF rusak atau tidak dapat dibaca.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TIDAK_DAPAT_DIBACA"}],
     }
 
 
@@ -281,6 +285,7 @@ async def test_unggah_jawaban_pdf_terpotong(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "PDF_TIDAK_DAPAT_DIBACA",
         "pesan": "File PDF rusak atau tidak dapat dibaca.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TIDAK_DAPAT_DIBACA"}],
     }
 
 
@@ -303,6 +308,76 @@ async def test_unggah_jawaban_all_or_nothing(
     )
     assert response.status_code == 400
     assert response.json()["kode"] == "FORMAT_FILE_TIDAK_DIDUKUNG"
+    assert response.json()["file_bermasalah"] == [
+        {"indeks": 1, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}
+    ]
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_beberapa_file_bermasalah(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    konten_besar = _PNG + (b"0" * (10 * 1024 * 1024 + 1))
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files(
+            [
+                ("a.png", _PNG, "image/png"),
+                ("b.png", konten_besar, "image/png"),
+                ("c.png", b"bukan png", "image/png"),
+                ("d.pdf", _pdf_korup(), "application/pdf"),
+            ]
+        ),
+        data=_nama("Budi", "Ani", "Citra", "Dedi"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["kode"] == "FILE_TERLALU_BESAR"
+    assert body["pesan"] == "Ukuran file maksimal 10 MB."
+    assert body["file_bermasalah"] == [
+        {"indeks": 1, "kode": "FILE_TERLALU_BESAR"},
+        {"indeks": 2, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"},
+        {"indeks": 3, "kode": "PDF_TIDAK_DAPAT_DIBACA"},
+    ]
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_satu_bermasalah_di_tengah_file_valid(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files(
+            [
+                ("a.png", _PNG, "image/png"),
+                ("b.png", b"bukan png", "image/png"),
+                ("c.png", _PNG, "image/png"),
+            ]
+        ),
+        data=_nama("Budi", "Ani", "Citra"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["kode"] == "FORMAT_FILE_TIDAK_DIDUKUNG"
+    assert body["file_bermasalah"] == [{"indeks": 1, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}]
 
     jumlah_baris = await db_session.scalar(
         select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
