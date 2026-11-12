@@ -207,9 +207,25 @@ async def unggah_jawaban(
             raise NAMA_PESERTA_TERLALU_PANJANG
         nama_tervalidasi.append(nama_bersih)
 
-    item_tervalidasi: list[tuple[bytes, str]] = []
-    for file in files:
-        item_tervalidasi.append(await baca_dan_validasi_file(file))
+    item_tervalidasi: list[tuple[bytes, str] | None] = []
+    file_bermasalah: list[dict[str, int | str]] = []
+    galat_pertama: AppError | None = None
+    for indeks, file in enumerate(files):
+        try:
+            item_tervalidasi.append(await baca_dan_validasi_file(file))
+        except AppError as e:
+            item_tervalidasi.append(None)
+            file_bermasalah.append({"indeks": indeks, "kode": e.kode})
+            if galat_pertama is None:
+                galat_pertama = e
+
+    if file_bermasalah:
+        raise AppError(
+            kode=galat_pertama.kode,
+            pesan=galat_pertama.pesan,
+            status_code=galat_pertama.status_code,
+            extra={"file_bermasalah": file_bermasalah},
+        )
 
     basis = datetime.now(UTC)
     path_tertulis: list[Path] = []
