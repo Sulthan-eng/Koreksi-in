@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
@@ -18,6 +19,8 @@ from app.models.soal import Soal
 from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch, ambil_batch_untuk_update
 from app.services.langganan import BATAS_PER_JENIS_AKUN, jenis_akun_efektif
 from app.utils.berkas import REL_PREFIX, hitung_halaman
+
+logger = logging.getLogger(__name__)
 
 BELUM_ADA_SOAL = AppError(
     kode="BELUM_ADA_SOAL",
@@ -266,8 +269,8 @@ async def unggah_jawaban(
             path.unlink(missing_ok=True)
         try:
             await db.rollback()
-        except BaseException:
-            pass
+        except BaseException as galat_rollback:
+            logger.warning("unggah_jawaban_rollback_gagal tipe=%s", type(galat_rollback).__name__)
         if isinstance(e, asyncio.CancelledError):
             raise
         raise GAGAL_SIMPAN_JAWABAN from None
