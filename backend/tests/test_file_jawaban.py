@@ -896,3 +896,75 @@ async def test_unggah_jawaban_dibatalkan_saat_menulis_membersihkan_berkas(
     )
     assert jumlah_baris is None
     assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_rollback_gagal_tetap_bersihkan_dan_catat_log(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path, caplog
+) -> None:
+    import logging
+    from pathlib import Path as _Path
+
+    from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSession
+
+    asli_write_bytes = _Path.write_bytes
+    panggilan = {"n": 0}
+
+    def _write_bytes_gagal_kedua(self, data):
+        panggilan["n"] += 1
+        if panggilan["n"] == 2:
+            raise OSError("disk penuh (simulasi)")
+        return asli_write_bytes(self, data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_gagal_kedua)
+
+    asli_rollback = _AsyncSession.rollback
+
+    async def _rollback_gagal(self):
+        # Jalankan rollback asli dulu supaya transaksi database uji benar-benar
+        # ditutup, baru lempar galat tiruan - meniru kegagalan pelaporan tanpa
+        # meninggalkan sesi dalam keadaan transaksi terbuka/aborted.
+        await asli_rollback(self)
+        raise RuntimeError("rollback gagal (simulasi)")
+
+    monkeypatch.setattr(_AsyncSession, "rollback", _rollback_gagal)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    caplog.set_level(logging.WARNING, logger="app.services.file_jawaban")
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("a.png", _PNG, "image/png"), ("b.png", _PNG, "image/png")]),
+        data=_nama("Budi", "Ani"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "GAGAL_SIMPAN_JAWABAN",
+        "pesan": "Gagal menyimpan jawaban, silakan coba lagi.",
+    }
+
+    # db_session adalah objek sesi yang sama dipakai request (lihat fixture
+    # client di conftest.py); aman dipakai di sini karena _rollback_gagal
+    # memanggil rollback asli lebih dulu sehingga sesi tidak dalam keadaan
+    # transaksi terbuka/aborted saat dipakai query di bawah.
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+    rekaman = [
+        r
+        for r in caplog.records
+        if r.name == "app.services.file_jawaban" and r.levelname == "WARNING"
+    ]
+    assert len(rekaman) == 1
+    pesan = rekaman[0].getMessage()
+    assert "unggah_jawaban_rollback_gagal" in pesan
+    assert "RuntimeError" in pesan
+    assert "a.png" not in pesan
+    assert "b.png" not in pesan
+    assert "Budi" not in pesan
+    assert "Ani" not in pesan
