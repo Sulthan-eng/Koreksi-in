@@ -1,6 +1,7 @@
 """Pengelompokan file, pipeline OCR lalu judge per grup, dan penyimpanan
 Hasil_Koreksi (SPEC bagian 8). Dipanggil lewat BackgroundTasks setelah unggah."""
 
+import asyncio
 import logging
 import uuid
 from pathlib import Path
@@ -50,10 +51,15 @@ def _ext_dari_path(path: str) -> str:
     return path.rsplit(".", 1)[-1].lower()
 
 
-def _muat_berkas(row: FileJawaban) -> _Berkas:
-    konten = (Path(settings.UPLOAD_DIR) / row.path).read_bytes()
+def _baca_dan_hitung_halaman(path: str, ext: str) -> tuple[bytes, int]:
+    konten = (Path(settings.UPLOAD_DIR) / path).read_bytes()
+    return konten, hitung_halaman(konten, ext)
+
+
+async def _muat_berkas(row: FileJawaban) -> _Berkas:
     ext = _ext_dari_path(row.path)
-    return _Berkas(row=row, konten=konten, ext=ext, halaman=hitung_halaman(konten, ext))
+    konten, halaman = await asyncio.to_thread(_baca_dan_hitung_halaman, row.path, ext)
+    return _Berkas(row=row, konten=konten, ext=ext, halaman=halaman)
 
 
 def _buat_grup(berkas: list[_Berkas]) -> list[list[_Berkas]]:
@@ -107,7 +113,9 @@ async def _proses_file_jawaban_dengan_sesi(id_file_list: list[uuid.UUID], db: As
         await db.scalars(select(Soal).where(Soal.id_batch == id_batch).order_by(Soal.no_soal))
     )
     try:
-        berkas = [_muat_berkas(f) for f in files]
+        berkas = []
+        for f in files:
+            berkas.append(await _muat_berkas(f))
     except Exception:
         logger.exception("pemrosesan_muat_berkas_gagal")
         await db.rollback()
