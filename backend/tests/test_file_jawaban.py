@@ -797,3 +797,102 @@ async def test_balapan_unggah_jawaban_pada_sisa_slot_hanya_satu_lolos(
         .where(FileJawaban.id_batch == uuid.UUID(id_batch))
     )
     assert total == 15
+
+
+async def test_unggah_jawaban_gagal_tengah_tulis_bersihkan_semua_berkas(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path
+) -> None:
+    from pathlib import Path as _Path
+
+    asli_write_bytes = _Path.write_bytes
+    panggilan = {"n": 0}
+
+    def _write_bytes_gagal_kedua(self, data):
+        panggilan["n"] += 1
+        if panggilan["n"] == 2:
+            raise OSError("disk penuh (simulasi)")
+        return asli_write_bytes(self, data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_gagal_kedua)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("a.png", _PNG, "image/png"), ("b.png", _PNG, "image/png")]),
+        data=_nama("Budi", "Ani"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "GAGAL_SIMPAN_JAWABAN",
+        "pesan": "Gagal menyimpan jawaban, silakan coba lagi.",
+    }
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_dibatalkan_saat_menulis_membersihkan_berkas(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path
+) -> None:
+    import threading
+    from pathlib import Path as _Path
+
+    mulai = threading.Event()
+    lanjut = threading.Event()
+    selesai = threading.Event()
+
+    def _write_bytes_tertahan(self, data):
+        # Tulis dulu (berkas benar-benar ada di disk, meniru penulisan yang
+        # sedang berjalan), baru nyalakan "mulai" lalu tertahan - supaya titik
+        # pembatalan persis di tengah penulisan nyata, bukan sebelum open().
+        with self.open("wb") as f:
+            f.write(data)
+            f.flush()
+            mulai.set()
+            lanjut.wait(timeout=5)
+        selesai.set()
+        return len(data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_tertahan)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    tugas = asyncio.ensure_future(
+        client.post(
+            f"/api/batch/{id_batch}/file-jawaban",
+            files=_files([("a.png", _PNG, "image/png")]),
+            data=_nama("Budi"),
+            headers=_auth(token),
+        )
+    )
+    try:
+        for _ in range(500):  # maks ~5s, bukan penantian tanpa batas
+            if mulai.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert mulai.is_set(), "thread penulisan tidak pernah mulai"
+
+        tugas.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tugas
+    finally:
+        lanjut.set()  # pastikan thread penulisan tidak tertinggal apa pun hasilnya
+
+    for _ in range(500):
+        if selesai.is_set():
+            break
+        await asyncio.sleep(0.01)
+    assert selesai.is_set(), "thread penulisan tidak pernah selesai setelah dilepas"
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
