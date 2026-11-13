@@ -559,12 +559,12 @@ async def test_baris_dan_berkas_hilang_sebelum_dimuat_tidak_error(
     asli_muat_berkas = pemrosesan._muat_berkas
     sudah_dihapus = {"v": False}
 
-    def fake_muat_berkas(row):
+    async def fake_muat_berkas(row):
         if not sudah_dihapus["v"]:
             sudah_dihapus["v"] = True
             _hapus_batch_lewat_sesi_lain(batch.id_batch)
             shutil.rmtree(tmp_path / "uploads" / str(batch.id_batch), ignore_errors=True)
-        return asli_muat_berkas(row)
+        return await asli_muat_berkas(row)
 
     monkeypatch.setattr(pemrosesan, "_muat_berkas", fake_muat_berkas)
 
