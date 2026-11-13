@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
@@ -17,6 +19,8 @@ from app.models.soal import Soal
 from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch, ambil_batch_untuk_update
 from app.services.langganan import BATAS_PER_JENIS_AKUN, jenis_akun_efektif
 from app.utils.berkas import REL_PREFIX, hitung_halaman
+
+logger = logging.getLogger(__name__)
 
 BELUM_ADA_SOAL = AppError(
     kode="BELUM_ADA_SOAL",
@@ -140,7 +144,7 @@ async def baca_dan_validasi_file(file: UploadFile) -> tuple[bytes, str]:
     konten = await _baca_dengan_batas(file)
     ext = _deteksi_format(konten)
     if ext == "pdf":
-        jumlah_halaman = _hitung_halaman_pdf(konten)
+        jumlah_halaman = await asyncio.to_thread(_hitung_halaman_pdf, konten)
         if jumlah_halaman > _MAKS_HALAMAN_PDF:
             raise PDF_TERLALU_BANYAK_HALAMAN
     return konten, ext
@@ -207,9 +211,25 @@ async def unggah_jawaban(
             raise NAMA_PESERTA_TERLALU_PANJANG
         nama_tervalidasi.append(nama_bersih)
 
-    item_tervalidasi: list[tuple[bytes, str]] = []
-    for file in files:
-        item_tervalidasi.append(await baca_dan_validasi_file(file))
+    item_tervalidasi: list[tuple[bytes, str] | None] = []
+    file_bermasalah: list[dict[str, int | str]] = []
+    galat_pertama: AppError | None = None
+    for indeks, file in enumerate(files):
+        try:
+            item_tervalidasi.append(await baca_dan_validasi_file(file))
+        except AppError as e:
+            item_tervalidasi.append(None)
+            file_bermasalah.append({"indeks": indeks, "kode": e.kode})
+            if galat_pertama is None:
+                galat_pertama = e
+
+    if file_bermasalah:
+        raise AppError(
+            kode=galat_pertama.kode,
+            pesan=galat_pertama.pesan,
+            status_code=galat_pertama.status_code,
+            extra={"file_bermasalah": file_bermasalah},
+        )
 
     basis = datetime.now(UTC)
     path_tertulis: list[Path] = []
@@ -222,8 +242,11 @@ async def unggah_jawaban(
             rel_path = _rel_path(batch.id_batch, id_file, ext)
             full_path = Path(settings.UPLOAD_DIR) / rel_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_bytes(konten)
+            # Dicatat SEBELUM menulis: kalau write_bytes gagal di tengah atau
+            # permintaan dibatalkan saat thread penulisannya masih berjalan,
+            # berkas (utuh atau separuh) tetap ikut dibersihkan di except.
             path_tertulis.append(full_path)
+            await asyncio.to_thread(full_path.write_bytes, konten)
 
             baris_baru.append(
                 FileJawaban(
@@ -237,10 +260,19 @@ async def unggah_jawaban(
             )
         db.add_all(baris_baru)
         await db.commit()
-    except (OSError, SQLAlchemyError):
-        await db.rollback()
+    except (OSError, SQLAlchemyError, asyncio.CancelledError) as e:
+        # unlink dulu (sinkron, tidak bisa terhenti oleh pembatalan), baru
+        # rollback — rollback bisa melempar ulang CancelledError (cancel
+        # scope anyio) atau galat lain; itu tidak boleh menggantikan galat
+        # asli maupun membatalkan pembersihan yang sudah selesai di atas.
         for path in path_tertulis:
             path.unlink(missing_ok=True)
+        try:
+            await db.rollback()
+        except BaseException as galat_rollback:
+            logger.warning("unggah_jawaban_rollback_gagal tipe=%s", type(galat_rollback).__name__)
+        if isinstance(e, asyncio.CancelledError):
+            raise
         raise GAGAL_SIMPAN_JAWABAN from None
 
     return baris_baru

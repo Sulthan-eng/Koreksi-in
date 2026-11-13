@@ -212,6 +212,7 @@ async def test_unggah_jawaban_format_tidak_didukung(client: AsyncClient) -> None
     assert response.json() == {
         "kode": "FORMAT_FILE_TIDAK_DIDUKUNG",
         "pesan": "Format file tidak didukung. Gunakan PDF, PNG, atau JPG.",
+        "file_bermasalah": [{"indeks": 0, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}],
     }
 
 
@@ -230,6 +231,7 @@ async def test_unggah_jawaban_file_terlalu_besar(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "FILE_TERLALU_BESAR",
         "pesan": "Ukuran file maksimal 10 MB.",
+        "file_bermasalah": [{"indeks": 0, "kode": "FILE_TERLALU_BESAR"}],
     }
 
 
@@ -247,6 +249,7 @@ async def test_unggah_jawaban_pdf_terlalu_banyak_halaman(client: AsyncClient) ->
     assert response.json() == {
         "kode": "PDF_TERLALU_BANYAK_HALAMAN",
         "pesan": "PDF maksimal 15 halaman.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TERLALU_BANYAK_HALAMAN"}],
     }
 
 
@@ -264,6 +267,7 @@ async def test_unggah_jawaban_pdf_korup(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "PDF_TIDAK_DAPAT_DIBACA",
         "pesan": "File PDF rusak atau tidak dapat dibaca.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TIDAK_DAPAT_DIBACA"}],
     }
 
 
@@ -281,6 +285,7 @@ async def test_unggah_jawaban_pdf_terpotong(client: AsyncClient) -> None:
     assert response.json() == {
         "kode": "PDF_TIDAK_DAPAT_DIBACA",
         "pesan": "File PDF rusak atau tidak dapat dibaca.",
+        "file_bermasalah": [{"indeks": 0, "kode": "PDF_TIDAK_DAPAT_DIBACA"}],
     }
 
 
@@ -303,6 +308,76 @@ async def test_unggah_jawaban_all_or_nothing(
     )
     assert response.status_code == 400
     assert response.json()["kode"] == "FORMAT_FILE_TIDAK_DIDUKUNG"
+    assert response.json()["file_bermasalah"] == [
+        {"indeks": 1, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}
+    ]
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_beberapa_file_bermasalah(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    konten_besar = _PNG + (b"0" * (10 * 1024 * 1024 + 1))
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files(
+            [
+                ("a.png", _PNG, "image/png"),
+                ("b.png", konten_besar, "image/png"),
+                ("c.png", b"bukan png", "image/png"),
+                ("d.pdf", _pdf_korup(), "application/pdf"),
+            ]
+        ),
+        data=_nama("Budi", "Ani", "Citra", "Dedi"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["kode"] == "FILE_TERLALU_BESAR"
+    assert body["pesan"] == "Ukuran file maksimal 10 MB."
+    assert body["file_bermasalah"] == [
+        {"indeks": 1, "kode": "FILE_TERLALU_BESAR"},
+        {"indeks": 2, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"},
+        {"indeks": 3, "kode": "PDF_TIDAK_DAPAT_DIBACA"},
+    ]
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_satu_bermasalah_di_tengah_file_valid(
+    client: AsyncClient, db_session: AsyncSession, tmp_path
+) -> None:
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files(
+            [
+                ("a.png", _PNG, "image/png"),
+                ("b.png", b"bukan png", "image/png"),
+                ("c.png", _PNG, "image/png"),
+            ]
+        ),
+        data=_nama("Budi", "Ani", "Citra"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 400
+    body = response.json()
+    assert body["kode"] == "FORMAT_FILE_TIDAK_DIDUKUNG"
+    assert body["file_bermasalah"] == [{"indeks": 1, "kode": "FORMAT_FILE_TIDAK_DIDUKUNG"}]
 
     jumlah_baris = await db_session.scalar(
         select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
@@ -722,3 +797,174 @@ async def test_balapan_unggah_jawaban_pada_sisa_slot_hanya_satu_lolos(
         .where(FileJawaban.id_batch == uuid.UUID(id_batch))
     )
     assert total == 15
+
+
+async def test_unggah_jawaban_gagal_tengah_tulis_bersihkan_semua_berkas(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path
+) -> None:
+    from pathlib import Path as _Path
+
+    asli_write_bytes = _Path.write_bytes
+    panggilan = {"n": 0}
+
+    def _write_bytes_gagal_kedua(self, data):
+        panggilan["n"] += 1
+        if panggilan["n"] == 2:
+            raise OSError("disk penuh (simulasi)")
+        return asli_write_bytes(self, data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_gagal_kedua)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("a.png", _PNG, "image/png"), ("b.png", _PNG, "image/png")]),
+        data=_nama("Budi", "Ani"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "GAGAL_SIMPAN_JAWABAN",
+        "pesan": "Gagal menyimpan jawaban, silakan coba lagi.",
+    }
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_dibatalkan_saat_menulis_membersihkan_berkas(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path
+) -> None:
+    import threading
+    from pathlib import Path as _Path
+
+    mulai = threading.Event()
+    lanjut = threading.Event()
+    selesai = threading.Event()
+
+    def _write_bytes_tertahan(self, data):
+        # Tulis dulu (berkas benar-benar ada di disk, meniru penulisan yang
+        # sedang berjalan), baru nyalakan "mulai" lalu tertahan - supaya titik
+        # pembatalan persis di tengah penulisan nyata, bukan sebelum open().
+        with self.open("wb") as f:
+            f.write(data)
+            f.flush()
+            mulai.set()
+            lanjut.wait(timeout=5)
+        selesai.set()
+        return len(data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_tertahan)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    tugas = asyncio.ensure_future(
+        client.post(
+            f"/api/batch/{id_batch}/file-jawaban",
+            files=_files([("a.png", _PNG, "image/png")]),
+            data=_nama("Budi"),
+            headers=_auth(token),
+        )
+    )
+    try:
+        for _ in range(500):  # maks ~5s, bukan penantian tanpa batas
+            if mulai.is_set():
+                break
+            await asyncio.sleep(0.01)
+        assert mulai.is_set(), "thread penulisan tidak pernah mulai"
+
+        tugas.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tugas
+    finally:
+        lanjut.set()  # pastikan thread penulisan tidak tertinggal apa pun hasilnya
+
+    for _ in range(500):
+        if selesai.is_set():
+            break
+        await asyncio.sleep(0.01)
+    assert selesai.is_set(), "thread penulisan tidak pernah selesai setelah dilepas"
+
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+
+async def test_unggah_jawaban_rollback_gagal_tetap_bersihkan_dan_catat_log(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch, tmp_path, caplog
+) -> None:
+    import logging
+    from pathlib import Path as _Path
+
+    from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSession
+
+    asli_write_bytes = _Path.write_bytes
+    panggilan = {"n": 0}
+
+    def _write_bytes_gagal_kedua(self, data):
+        panggilan["n"] += 1
+        if panggilan["n"] == 2:
+            raise OSError("disk penuh (simulasi)")
+        return asli_write_bytes(self, data)
+
+    monkeypatch.setattr(_Path, "write_bytes", _write_bytes_gagal_kedua)
+
+    asli_rollback = _AsyncSession.rollback
+
+    async def _rollback_gagal(self):
+        # Jalankan rollback asli dulu supaya transaksi database uji benar-benar
+        # ditutup, baru lempar galat tiruan - meniru kegagalan pelaporan tanpa
+        # meninggalkan sesi dalam keadaan transaksi terbuka/aborted.
+        await asli_rollback(self)
+        raise RuntimeError("rollback gagal (simulasi)")
+
+    monkeypatch.setattr(_AsyncSession, "rollback", _rollback_gagal)
+
+    token = await _token(client)
+    id_batch = await _buat_batch_dengan_soal(client, token)
+
+    caplog.set_level(logging.WARNING, logger="app.services.file_jawaban")
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=_files([("a.png", _PNG, "image/png"), ("b.png", _PNG, "image/png")]),
+        data=_nama("Budi", "Ani"),
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "GAGAL_SIMPAN_JAWABAN",
+        "pesan": "Gagal menyimpan jawaban, silakan coba lagi.",
+    }
+
+    # db_session adalah objek sesi yang sama dipakai request (lihat fixture
+    # client di conftest.py); aman dipakai di sini karena _rollback_gagal
+    # memanggil rollback asli lebih dulu sehingga sesi tidak dalam keadaan
+    # transaksi terbuka/aborted saat dipakai query di bawah.
+    jumlah_baris = await db_session.scalar(
+        select(FileJawaban).where(FileJawaban.id_batch == uuid.UUID(id_batch))
+    )
+    assert jumlah_baris is None
+    assert not any(p.is_file() for p in tmp_path.rglob("*"))
+
+    rekaman = [
+        r
+        for r in caplog.records
+        if r.name == "app.services.file_jawaban" and r.levelname == "WARNING"
+    ]
+    assert len(rekaman) == 1
+    pesan = rekaman[0].getMessage()
+    assert "unggah_jawaban_rollback_gagal" in pesan
+    assert "RuntimeError" in pesan
+    assert "a.png" not in pesan
+    assert "b.png" not in pesan
+    assert "Budi" not in pesan
+    assert "Ani" not in pesan
