@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
@@ -140,7 +141,7 @@ async def baca_dan_validasi_file(file: UploadFile) -> tuple[bytes, str]:
     konten = await _baca_dengan_batas(file)
     ext = _deteksi_format(konten)
     if ext == "pdf":
-        jumlah_halaman = _hitung_halaman_pdf(konten)
+        jumlah_halaman = await asyncio.to_thread(_hitung_halaman_pdf, konten)
         if jumlah_halaman > _MAKS_HALAMAN_PDF:
             raise PDF_TERLALU_BANYAK_HALAMAN
     return konten, ext
@@ -238,7 +239,7 @@ async def unggah_jawaban(
             rel_path = _rel_path(batch.id_batch, id_file, ext)
             full_path = Path(settings.UPLOAD_DIR) / rel_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_bytes(konten)
+            await asyncio.to_thread(full_path.write_bytes, konten)
             path_tertulis.append(full_path)
 
             baris_baru.append(
