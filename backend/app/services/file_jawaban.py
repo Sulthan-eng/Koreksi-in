@@ -239,8 +239,11 @@ async def unggah_jawaban(
             rel_path = _rel_path(batch.id_batch, id_file, ext)
             full_path = Path(settings.UPLOAD_DIR) / rel_path
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            await asyncio.to_thread(full_path.write_bytes, konten)
+            # Dicatat SEBELUM menulis: kalau write_bytes gagal di tengah atau
+            # permintaan dibatalkan saat thread penulisannya masih berjalan,
+            # berkas (utuh atau separuh) tetap ikut dibersihkan di except.
             path_tertulis.append(full_path)
+            await asyncio.to_thread(full_path.write_bytes, konten)
 
             baris_baru.append(
                 FileJawaban(
@@ -254,10 +257,19 @@ async def unggah_jawaban(
             )
         db.add_all(baris_baru)
         await db.commit()
-    except (OSError, SQLAlchemyError):
-        await db.rollback()
+    except (OSError, SQLAlchemyError, asyncio.CancelledError) as e:
+        # unlink dulu (sinkron, tidak bisa terhenti oleh pembatalan), baru
+        # rollback — rollback bisa melempar ulang CancelledError (cancel
+        # scope anyio) atau galat lain; itu tidak boleh menggantikan galat
+        # asli maupun membatalkan pembersihan yang sudah selesai di atas.
         for path in path_tertulis:
             path.unlink(missing_ok=True)
+        try:
+            await db.rollback()
+        except BaseException:
+            pass
+        if isinstance(e, asyncio.CancelledError):
+            raise
         raise GAGAL_SIMPAN_JAWABAN from None
 
     return baris_baru
