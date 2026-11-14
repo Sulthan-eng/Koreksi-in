@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.batch import Batch
-from app.models.enums import StatusBatch, StatusProses
+from app.models.enums import StatusBatch, StatusLangganan, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.services.langganan import BATAS_PER_JENIS_AKUN, jenis_akun_efektif
@@ -34,7 +34,7 @@ async def ambil_ringkasan(db: AsyncSession, pengguna: Pengguna) -> Ringkasan:
 
     jenis = jenis_akun_efektif(pengguna)
     batas = BATAS_PER_JENIS_AKUN[jenis]
-    if batas.maks_batch_aktif is None:
+    if jenis == StatusLangganan.PRO:
         return Ringkasan(
             total_batch=total_batch,
             peserta_didik_dikoreksi=peserta_didik_dikoreksi,
