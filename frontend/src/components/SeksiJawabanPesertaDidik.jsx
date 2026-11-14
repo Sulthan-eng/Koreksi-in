@@ -60,6 +60,7 @@ function SeksiJawabanPesertaDidik({
   const [kesalahanCobaLagi, setKesalahanCobaLagi] = useState({});
 
   const idBarisCounter = useRef(0);
+  const sedangKirimRef = useRef(false);
   const refInputFile = useRef(null);
   const refTombolUploadAwal = useRef(null);
   const refTombolTambahFile = useRef(null);
@@ -163,39 +164,52 @@ function SeksiJawabanPesertaDidik({
   async function tanganiPilihFile(peristiwa) {
     const daftarFileInput = Array.from(peristiwa.target.files);
     peristiwa.target.value = "";
-    if (daftarFileInput.length === 0 || sedangUpload) return;
-
-    if (fileTerpilih.length + daftarFileInput.length > sisaSlot) {
-      setGalatSlot(pesanMelebihiSisaSlot(sisaSlot));
-      fokusTertundaRef.current = { jenis: "galat-slot" };
+    if (
+      daftarFileInput.length === 0 ||
+      sedangKirimRef.current ||
+      sedangUpload
+    ) {
       return;
     }
 
-    setGalatSlot(null);
-    setKesalahanUpload(null);
-    setPesanGagalTengah(null);
+    sedangKirimRef.current = true;
+    try {
+      if (fileTerpilih.length + daftarFileInput.length > sisaSlot) {
+        setGalatSlot(pesanMelebihiSisaSlot(sisaSlot));
+        fokusTertundaRef.current = { jenis: "galat-slot" };
+        return;
+      }
 
-    const barisBaru = await Promise.all(
-      daftarFileInput.map(async (file) => {
-        const kodeGalat = await periksaFileDiBrowser(file);
-        idBarisCounter.current += 1;
-        return {
-          id: idBarisCounter.current,
-          file,
-          nama: "",
-          galatFile: kodeGalat ? pesanUntukKode(kodeGalat) : null,
-          galatNama: null,
-        };
-      }),
-    );
+      setGalatSlot(null);
+      setKesalahanUpload(null);
+      setPesanGagalTengah(null);
 
-    const adaBaruBermasalah = barisBaru.some((item) => Boolean(item.galatFile));
-    if (adaBaruBermasalah) {
-      fokusTertundaRef.current = { jenis: "galat-bermasalah" };
+      const barisBaru = await Promise.all(
+        daftarFileInput.map(async (file) => {
+          const kodeGalat = await periksaFileDiBrowser(file);
+          idBarisCounter.current += 1;
+          return {
+            id: idBarisCounter.current,
+            file,
+            nama: "",
+            galatFile: kodeGalat ? pesanUntukKode(kodeGalat) : null,
+            galatNama: null,
+          };
+        }),
+      );
+
+      const adaBaruBermasalah = barisBaru.some((item) =>
+        Boolean(item.galatFile),
+      );
+      if (adaBaruBermasalah) {
+        fokusTertundaRef.current = { jenis: "galat-bermasalah" };
+      }
+
+      setFileTerpilih((sebelumnya) => [...sebelumnya, ...barisBaru]);
+      onPilihanBelumUnggah?.(true);
+    } finally {
+      sedangKirimRef.current = false;
     }
-
-    setFileTerpilih((sebelumnya) => [...sebelumnya, ...barisBaru]);
-    onPilihanBelumUnggah?.(true);
   }
 
   function ubahNama(idBaris, nilai) {
@@ -244,60 +258,71 @@ function SeksiJawabanPesertaDidik({
 
   async function tanganiUpload(peristiwa) {
     peristiwa.preventDefault();
-    if (sedangUpload || adaBarisBermasalah || fileTerpilih.length === 0) return;
-
-    setGalatSlot(null);
-    setKesalahanUpload(null);
-    setPesanGagalTengah(null);
-
-    const hasilPeriksa = await Promise.all(
-      fileTerpilih.map(async (item) => {
-        const namaBersih = item.nama.trim();
-        let galatNama = null;
-        if (namaBersih === "") {
-          galatNama = PESAN_KODE.NAMA_PESERTA_KOSONG;
-        } else if (namaBersih.length > MAKS_PANJANG_NAMA) {
-          galatNama = PESAN_KODE.NAMA_PESERTA_TERLALU_PANJANG;
-        }
-        const kodeGalatFile = await periksaFileDiBrowser(item.file);
-        const galatFile = kodeGalatFile
-          ? pesanUntukKode(kodeGalatFile)
-          : item.galatFile;
-        return {
-          ...item,
-          galatFile,
-          galatNama,
-        };
-      }),
-    );
-
-    const adaFileGagal = hasilPeriksa.some((item) => Boolean(item.galatFile));
-    const barisPertamaNamaGagal = hasilPeriksa.find((item) =>
-      Boolean(item.galatNama),
-    );
-
-    if (adaFileGagal || barisPertamaNamaGagal) {
-      setFileTerpilih(hasilPeriksa);
-      if (adaFileGagal) {
-        fokusTertundaRef.current = { jenis: "galat-bermasalah" };
-      } else if (barisPertamaNamaGagal) {
-        fokusTertundaRef.current = {
-          jenis: "galat-nama",
-          idBaris: barisPertamaNamaGagal.id,
-        };
-      }
+    if (
+      sedangKirimRef.current ||
+      sedangUpload ||
+      adaBarisBermasalah ||
+      fileTerpilih.length === 0
+    ) {
       return;
     }
 
-    const daftarKiriman = pecahKiriman(hasilPeriksa);
-    const totalFile = hasilPeriksa.length;
-    let jumlahTersimpan = 0;
-    let sisaBaris = [...hasilPeriksa];
-
-    setSedangUpload(true);
-    onUnggahBerjalan?.(true);
+    sedangKirimRef.current = true;
+    let mulaiKirimKeServer = false;
 
     try {
+      setGalatSlot(null);
+      setKesalahanUpload(null);
+      setPesanGagalTengah(null);
+
+      const hasilPeriksa = await Promise.all(
+        fileTerpilih.map(async (item) => {
+          const namaBersih = item.nama.trim();
+          let galatNama = null;
+          if (namaBersih === "") {
+            galatNama = PESAN_KODE.NAMA_PESERTA_KOSONG;
+          } else if (namaBersih.length > MAKS_PANJANG_NAMA) {
+            galatNama = PESAN_KODE.NAMA_PESERTA_TERLALU_PANJANG;
+          }
+          const kodeGalatFile = await periksaFileDiBrowser(item.file);
+          const galatFile = kodeGalatFile
+            ? pesanUntukKode(kodeGalatFile)
+            : item.galatFile;
+          return {
+            ...item,
+            galatFile,
+            galatNama,
+          };
+        }),
+      );
+
+      const adaFileGagal = hasilPeriksa.some((item) => Boolean(item.galatFile));
+      const barisPertamaNamaGagal = hasilPeriksa.find((item) =>
+        Boolean(item.galatNama),
+      );
+
+      if (adaFileGagal || barisPertamaNamaGagal) {
+        setFileTerpilih(hasilPeriksa);
+        if (adaFileGagal) {
+          fokusTertundaRef.current = { jenis: "galat-bermasalah" };
+        } else if (barisPertamaNamaGagal) {
+          fokusTertundaRef.current = {
+            jenis: "galat-nama",
+            idBaris: barisPertamaNamaGagal.id,
+          };
+        }
+        return;
+      }
+
+      const daftarKiriman = pecahKiriman(hasilPeriksa);
+      const totalFile = hasilPeriksa.length;
+      let jumlahTersimpan = 0;
+      let sisaBaris = [...hasilPeriksa];
+
+      mulaiKirimKeServer = true;
+      setSedangUpload(true);
+      onUnggahBerjalan?.(true);
+
       for (const kiriman of daftarKiriman) {
         setKemajuanKirim({
           k: jumlahTersimpan + kiriman.length,
@@ -352,9 +377,12 @@ function SeksiJawabanPesertaDidik({
         fokusTertundaRef.current = { jenis: "upload-awal" };
       }
     } finally {
-      setSedangUpload(false);
-      setKemajuanKirim(null);
-      onUnggahBerjalan?.(false);
+      sedangKirimRef.current = false;
+      if (mulaiKirimKeServer) {
+        setSedangUpload(false);
+        setKemajuanKirim(null);
+        onUnggahBerjalan?.(false);
+      }
     }
   }
 
