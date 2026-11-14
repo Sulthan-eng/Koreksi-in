@@ -55,6 +55,9 @@ async function kirim(
       kode: data.kode,
       pesan: pesanUntukKode(data.kode, data.pesan),
       status: response.status,
+      ...(Array.isArray(data.file_bermasalah)
+        ? { file_bermasalah: data.file_bermasalah }
+        : {}),
     };
   }
 

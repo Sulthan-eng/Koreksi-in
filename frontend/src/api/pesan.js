@@ -8,8 +8,37 @@ export function batasSoalUntukAkun(statusLangganan) {
   return (BATAS_PER_AKUN[statusLangganan] ?? BATAS_PER_AKUN.free).soalPerBatch;
 }
 
+export function batasJawabanUntukAkun(statusLangganan) {
+  return (BATAS_PER_AKUN[statusLangganan] ?? BATAS_PER_AKUN.free)
+    .jawabanPerBatch;
+}
+
 export function pesanSudahMaksimalSoal(statusLangganan) {
   return `Sudah mencapai jumlah maksimal ${batasSoalUntukAkun(statusLangganan)} soal per batch.`;
+}
+
+export function pesanSisaSlotJawaban(sisa) {
+  return `Sisa ${sisa} slot jawaban untuk batch ini.`;
+}
+
+export function pesanDipilihDariSlot(jumlahTerpilih, sisa) {
+  return `Dipilih ${jumlahTerpilih} dari ${sisa} slot tersisa.`;
+}
+
+export function pesanMelebihiSisaSlot(sisa) {
+  return `Tidak bisa menambah file: melebihi sisa slot ${sisa} jawaban untuk batch ini.`;
+}
+
+export function pesanMengirimFile(k, n) {
+  return `Mengirim ${k} dari ${n} file.`;
+}
+
+export function pesanGagalTengahUnggah(tersimpan, belumTerkirim) {
+  return `${tersimpan} file sudah tersimpan. ${belumTerkirim} file belum terkirim, silakan coba lagi.`;
+}
+
+export function pesanLabelHapusFile(namaFile) {
+  return `Hapus ${namaFile} dari daftar`;
 }
 
 const KODE_PESAN_DARI_SERVER = new Set([
@@ -70,6 +99,11 @@ export const PESAN_KODE = {
   PDF_TERLALU_BANYAK_HALAMAN: "PDF maksimal 15 halaman.",
   PDF_TIDAK_DAPAT_DIBACA: "File PDF rusak atau tidak dapat dibaca.",
   GAGAL_SIMPAN_JAWABAN: "Gagal menyimpan jawaban, silakan coba lagi.",
+  HAPUS_FILE_BERMASALAH:
+    "Hapus file yang bermasalah sebelum memulai penilaian.",
+  JUDUL_BATALKAN_PILIHAN_FILE: "Batalkan Pilihan File",
+  PESAN_BATALKAN_PILIHAN_FILE:
+    "Semua file terpilih dan nama peserta didik yang sudah diisi akan dibuang. Lanjutkan?",
   OCR_KUNCI_GAGAL:
     "Gagal membaca file, silakan coba lagi atau masukkan teks secara manual",
   JUDUL_GANTI_KUNCI: "Ganti Kunci Jawaban",

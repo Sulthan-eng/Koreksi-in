@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import {
+  batasJawabanUntukAkun,
   batasSoalUntukAkun,
   PESAN_KODE,
   pesanSudahMaksimalSoal,
@@ -51,6 +52,7 @@ function HalamanBatch() {
   const navigate = useNavigate();
   const { statusLangganan } = useAuth();
   const batasSoal = batasSoalUntukAkun(statusLangganan);
+  const batasJawaban = batasJawabanUntukAkun(statusLangganan);
   const tabRefs = useRef([]);
   const judulRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
@@ -534,6 +536,7 @@ function HalamanBatch() {
               idBatch={id}
               adaSoal={daftarSoal.length > 0}
               bacaSaja={bacaSaja}
+              batasJawaban={batasJawaban}
               daftarFileJawaban={daftarFileJawaban}
               kesalahanStatus={kesalahanPolling}
               bolehLewatRef={bolehLewatRef}
