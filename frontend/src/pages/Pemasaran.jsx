@@ -37,7 +37,6 @@ const BARIS_PERBANDINGAN = [
   { fitur: "Batch aktif", free: "1", pro: "Tidak dibatasi" },
   { fitur: "Soal per batch", free: "15", pro: "30" },
   { fitur: "Jawaban peserta didik per batch", free: "15", pro: "50" },
-  { fitur: "File per sekali unggah", free: "10", pro: "10" },
 ];
 
 const KELAS_KARTU_FITUR =
