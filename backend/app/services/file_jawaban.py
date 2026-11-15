@@ -3,14 +3,12 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
-from pathlib import Path
 
 from fastapi import UploadFile
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.errors import AppError
 from app.models.enums import StatusBatch, StatusLangganan, StatusProses
 from app.models.file_jawaban import FileJawaban
@@ -18,6 +16,7 @@ from app.models.pengguna import Pengguna
 from app.models.soal import Soal
 from app.services.batch import BATCH_SUDAH_SELESAI, ambil_batch, ambil_batch_untuk_update
 from app.services.langganan import BATAS_PER_JENIS_AKUN, jenis_akun_efektif
+from app.storage import PenyimpananBerkas, dapatkan_storage
 from app.utils.berkas import REL_PREFIX, hitung_halaman
 
 logger = logging.getLogger(__name__)
@@ -231,8 +230,9 @@ async def unggah_jawaban(
             extra={"file_bermasalah": file_bermasalah},
         )
 
+    storage = dapatkan_storage()
     basis = datetime.now(UTC)
-    path_tertulis: list[Path] = []
+    kunci_tersimpan: list[str] = []
     baris_baru: list[FileJawaban] = []
     try:
         for i, ((konten, ext), nama_bersih) in enumerate(
@@ -240,13 +240,11 @@ async def unggah_jawaban(
         ):
             id_file = uuid.uuid4()
             rel_path = _rel_path(batch.id_batch, id_file, ext)
-            full_path = Path(settings.UPLOAD_DIR) / rel_path
-            full_path.parent.mkdir(parents=True, exist_ok=True)
-            # Dicatat SEBELUM menulis: kalau write_bytes gagal di tengah atau
-            # permintaan dibatalkan saat thread penulisannya masih berjalan,
-            # berkas (utuh atau separuh) tetap ikut dibersihkan di except.
-            path_tertulis.append(full_path)
-            await asyncio.to_thread(full_path.write_bytes, konten)
+            # Dicatat SEBELUM menulis: kalau simpan gagal di tengah atau
+            # permintaan dibatalkan saat berjalan, berkas (utuh atau separuh)
+            # tetap ikut dibersihkan di except.
+            kunci_tersimpan.append(rel_path)
+            await storage.simpan(rel_path, konten)
 
             baris_baru.append(
                 FileJawaban(
@@ -260,13 +258,20 @@ async def unggah_jawaban(
             )
         db.add_all(baris_baru)
         await db.commit()
-    except (OSError, SQLAlchemyError, asyncio.CancelledError) as e:
-        # unlink dulu (sinkron, tidak bisa terhenti oleh pembatalan), baru
-        # rollback — rollback bisa melempar ulang CancelledError (cancel
-        # scope anyio) atau galat lain; itu tidak boleh menggantikan galat
-        # asli maupun membatalkan pembersihan yang sudah selesai di atas.
-        for path in path_tertulis:
-            path.unlink(missing_ok=True)
+    except (AppError, SQLAlchemyError, asyncio.CancelledError) as e:
+        # Pembersihan dibungkus satu asyncio.shield: kalau pembatalan datang
+        # LAGI selagi _bersihkan berjalan, shield melindungi task itu dari
+        # ikut dibatalkan (hanya await di titik ini yang melempar
+        # CancelledError ke pemanggil), jadi hapus kunci yang belum sempat
+        # diproses tetap tuntas di background — tidak disinkronkan ulang,
+        # tapi tidak bocor permanen. Lalu rollback — bisa melempar ulang
+        # CancelledError (cancel scope anyio) atau galat lain; itu tidak
+        # boleh menggantikan galat asli maupun membatalkan pembersihan yang
+        # sudah selesai di atas.
+        try:
+            await asyncio.shield(_bersihkan(storage, kunci_tersimpan))
+        except asyncio.CancelledError:
+            logger.warning("unggah_jawaban_pembersihan_terputus_oleh_pembatalan_kedua")
         try:
             await db.rollback()
         except BaseException as galat_rollback:
@@ -276,6 +281,14 @@ async def unggah_jawaban(
         raise GAGAL_SIMPAN_JAWABAN from None
 
     return baris_baru
+
+
+async def _bersihkan(storage: PenyimpananBerkas, kunci_list: list[str]) -> None:
+    for kunci in kunci_list:
+        try:
+            await storage.hapus(kunci)
+        except Exception as galat_hapus:
+            logger.warning("unggah_jawaban_hapus_gagal tipe=%s", type(galat_hapus).__name__)
 
 
 async def coba_lagi_file_jawaban(
