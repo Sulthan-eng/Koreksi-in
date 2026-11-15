@@ -10,7 +10,7 @@ from app.core.errors import AppError, app_error_handler, validation_error_handle
 from app.core.startup import sapu_proses_tergantung
 from app.routers import auth, batch, health, ringkasan
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
