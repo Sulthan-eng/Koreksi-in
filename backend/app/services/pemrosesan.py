@@ -4,20 +4,19 @@ Hasil_Koreksi (SPEC bagian 8). Dipanggil lewat BackgroundTasks setelah unggah.""
 import asyncio
 import logging
 import uuid
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import ObjectDeletedError, StaleDataError
 
-from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.enums import Kategori, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.hasil_koreksi import HasilKoreksi
 from app.models.soal import Soal
 from app.services import gemini
+from app.storage import dapatkan_storage
 from app.utils.berkas import hitung_halaman
 
 logger = logging.getLogger(__name__)
@@ -51,14 +50,10 @@ def _ext_dari_path(path: str) -> str:
     return path.rsplit(".", 1)[-1].lower()
 
 
-def _baca_dan_hitung_halaman(path: str, ext: str) -> tuple[bytes, int]:
-    konten = (Path(settings.UPLOAD_DIR) / path).read_bytes()
-    return konten, hitung_halaman(konten, ext)
-
-
 async def _muat_berkas(row: FileJawaban) -> _Berkas:
     ext = _ext_dari_path(row.path)
-    konten, halaman = await asyncio.to_thread(_baca_dan_hitung_halaman, row.path, ext)
+    konten = await dapatkan_storage().baca(row.path)
+    halaman = await asyncio.to_thread(hitung_halaman, konten, ext)
     return _Berkas(row=row, konten=konten, ext=ext, halaman=halaman)
 
 
