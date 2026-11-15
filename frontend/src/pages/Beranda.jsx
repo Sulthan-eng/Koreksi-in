@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import * as ringkasanApi from "../api/ringkasan.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
+import { kartuRingkasan } from "../lib/ringkasan.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
+import KartuAngka from "../components/KartuAngka.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
 import MenuAksi from "../components/MenuAksi.jsx";
@@ -27,11 +30,31 @@ function Beranda() {
   const [status, setStatus] = useState("memuat");
   const [kesalahan, setKesalahan] = useState(null);
   const [daftarBatch, setDaftarBatch] = useState([]);
+  const [statusRingkasan, setStatusRingkasan] = useState("memuat");
+  const [ringkasan, setRingkasan] = useState(null);
   const navigate = useNavigate();
   const { status: statusAuth, nama, statusLangganan } = useAuth();
   const judulDaftarRef = useRef(null);
   const fokusJudulTertunda = useRef(false);
   const tombolBuatBatchRef = useRef(null);
+  const idPermintaanRingkasanRef = useRef(0);
+
+  const muatRingkasan = useCallback(() => {
+    const id = (idPermintaanRingkasanRef.current += 1);
+    ringkasanApi
+      .ambilRingkasan()
+      .then((hasil) => {
+        if (id === idPermintaanRingkasanRef.current) {
+          setRingkasan(hasil);
+          setStatusRingkasan("siap");
+        }
+      })
+      .catch(() => {
+        if (id === idPermintaanRingkasanRef.current) {
+          setStatusRingkasan("gagal");
+        }
+      });
+  }, []);
 
   const aksi = useAksiBatch({
     onSelesaiSukses: (batchSelesai) => {
@@ -40,18 +63,21 @@ function Beranda() {
           item.id_batch === batchSelesai.id_batch ? batchSelesai : item,
         ),
       );
+      muatRingkasan();
     },
     onHapusSukses: (batchHapus) => {
       setDaftarBatch((daftar) =>
         daftar.filter((item) => item.id_batch !== batchHapus.id_batch),
       );
       fokusJudulTertunda.current = true;
+      muatRingkasan();
     },
     onBatchSudahSelesai: async (batchSelesai) => {
       const hasil = await batchApi.ambilBatch(batchSelesai.id_batch);
       setDaftarBatch((daftar) =>
         daftar.map((item) => (item.id_batch === hasil.id_batch ? hasil : item)),
       );
+      muatRingkasan();
     },
   });
 
@@ -82,6 +108,10 @@ function Beranda() {
       dibatalkan = true;
     };
   }, []);
+
+  useEffect(() => {
+    muatRingkasan();
+  }, [muatRingkasan]);
 
   function kosongkanForm() {
     setNamaBatch("");
@@ -149,6 +179,32 @@ function Beranda() {
             keadaan="gagal"
             pesan={kesalahan || PESAN_KODE.KONEKSI_TERPUTUS}
           />
+        )}
+
+        {status === "siap" && (
+          <>
+            {statusRingkasan === "memuat" && (
+              <KeadaanData keadaan="memuat" className="min-h-24" />
+            )}
+            {statusRingkasan === "siap" && (
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {kartuRingkasan(ringkasan).map((kartu) => (
+                  <KartuAngka
+                    key={kartu.label}
+                    label={kartu.label}
+                    nilai={kartu.nilai}
+                  />
+                ))}
+              </div>
+            )}
+            {statusRingkasan === "gagal" && (
+              <PesanForm
+                varian="galat"
+                pesan={PESAN_KODE.GAGAL_MUAT_RINGKASAN}
+                kotak
+              />
+            )}
+          </>
         )}
 
         {status !== "memuat" && (
