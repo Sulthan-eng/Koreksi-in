@@ -1,5 +1,4 @@
 import logging
-import shutil
 import uuid
 
 from sqlalchemy import func, select
@@ -12,7 +11,8 @@ from app.models.enums import StatusBatch, StatusProses
 from app.models.file_jawaban import FileJawaban
 from app.models.pengguna import Pengguna
 from app.services.langganan import batas_untuk_pengguna
-from app.utils.berkas import direktori_batch
+from app.storage import dapatkan_storage
+from app.utils.berkas import REL_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -159,9 +159,7 @@ async def hapus_batch(db: AsyncSession, pengguna: Pengguna, id_batch: uuid.UUID)
         await db.rollback()
         raise GAGAL_HAPUS_BATCH from None
 
-    direktori = direktori_batch(id_batch_val)
     try:
-        if direktori.exists():
-            shutil.rmtree(direktori)
-    except OSError:
+        await dapatkan_storage().hapus_prefix(f"{REL_PREFIX}/{id_batch_val}/")
+    except Exception:
         logger.error("hapus_batch_berkas_gagal id_batch=%s", id_batch_val, exc_info=True)

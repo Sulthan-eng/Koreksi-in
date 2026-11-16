@@ -1,16 +1,21 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.errors import AppError, app_error_handler, validation_error_handler
 from app.core.startup import sapu_proses_tergantung
 from app.routers import auth, batch, health, ringkasan
 
+logger = logging.getLogger("uvicorn.error")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("storage_backend_aktif backend=%s", settings.STORAGE_BACKEND)
     async with AsyncSessionLocal() as db:
         await sapu_proses_tergantung(db)
     yield
