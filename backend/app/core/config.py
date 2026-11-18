@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     S3_BUCKET: str = ""
     S3_ACCESS_KEY_ID: str = ""
     S3_SECRET_ACCESS_KEY: str = ""
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 5
+    DB_POOL_RECYCLE_SECONDS: int = 300
     COOKIE_SECURE: bool = False
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
