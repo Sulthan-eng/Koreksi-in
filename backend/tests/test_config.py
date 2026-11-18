@@ -45,3 +45,24 @@ def test_storage_s3_tidak_lengkap_ditolak():
             S3_ACCESS_KEY_ID="kunci",
             S3_SECRET_ACCESS_KEY="rahasia",
         )
+
+
+def test_db_pool_default():
+    pengaturan = Settings(**_DASAR, STORAGE_BACKEND="lokal", UPLOAD_DIR="/tmp/unggahan")
+    assert pengaturan.DB_POOL_SIZE == 5
+    assert pengaturan.DB_MAX_OVERFLOW == 5
+    assert pengaturan.DB_POOL_RECYCLE_SECONDS == 300
+
+
+def test_db_pool_override():
+    pengaturan = Settings(
+        **_DASAR,
+        STORAGE_BACKEND="lokal",
+        UPLOAD_DIR="/tmp/unggahan",
+        DB_POOL_SIZE=10,
+        DB_MAX_OVERFLOW=0,
+        DB_POOL_RECYCLE_SECONDS=60,
+    )
+    assert pengaturan.DB_POOL_SIZE == 10
+    assert pengaturan.DB_MAX_OVERFLOW == 0
+    assert pengaturan.DB_POOL_RECYCLE_SECONDS == 60
