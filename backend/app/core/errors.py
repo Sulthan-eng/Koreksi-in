@@ -1,8 +1,12 @@
+import logging
 from typing import Any
 
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
+
+logger = logging.getLogger(__name__)
 
 
 class AppError(Exception):
@@ -33,4 +37,44 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
     return JSONResponse(
         status_code=422,
         content={"kode": "VALIDASI_GAGAL", "pesan": "Data yang dikirim tidak valid."},
+    )
+
+
+async def db_error_handler(request: Request, exc: DBAPIError) -> JSONResponse:
+    # Catat metadata aman saja (tanpa str(exc)/params SQL agar teks jawaban,
+    # kunci jawaban, atau hash kredensial tidak pernah bocor ke log).
+    orig_tipe = type(exc.orig).__name__ if exc.orig is not None else "none"
+    logger.error(
+        "db_error method=%s path=%s tipe=%s orig=%s connection_invalidated=%s",
+        request.method,
+        request.url.path,
+        type(exc).__name__,
+        orig_tipe,
+        exc.connection_invalidated,
+    )
+    if exc.connection_invalidated or isinstance(exc, OperationalError | InterfaceError):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "kode": "GANGGUAN_DATABASE",
+                "pesan": "Layanan sedang mengalami gangguan, silakan coba lagi.",
+            },
+        )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "kode": "KESALAHAN_SERVER",
+            "pesan": "Terjadi kesalahan, silakan coba lagi.",
+        },
+    )
+
+
+async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.exception("unexpected_error method=%s path=%s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "kode": "KESALAHAN_SERVER",
+            "pesan": "Terjadi kesalahan, silakan coba lagi.",
+        },
     )
