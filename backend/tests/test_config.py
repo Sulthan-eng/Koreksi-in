@@ -66,3 +66,40 @@ def test_db_pool_override():
     assert pengaturan.DB_POOL_SIZE == 10
     assert pengaturan.DB_MAX_OVERFLOW == 0
     assert pengaturan.DB_POOL_RECYCLE_SECONDS == 60
+
+
+def test_env_default_produksi_gagal_aman():
+    pengaturan = Settings(**_DASAR, STORAGE_BACKEND="lokal", UPLOAD_DIR="/tmp/unggahan")
+    assert pengaturan.ENV == "produksi"
+
+
+def test_cookie_samesite_default_lax():
+    pengaturan = Settings(**_DASAR, STORAGE_BACKEND="lokal", UPLOAD_DIR="/tmp/unggahan")
+    assert pengaturan.COOKIE_SAMESITE == "lax"
+
+
+def test_cookie_samesite_none_wajib_secure():
+    with pytest.raises(ValidationError):
+        Settings(
+            **_DASAR,
+            STORAGE_BACKEND="lokal",
+            UPLOAD_DIR="/tmp/unggahan",
+            COOKIE_SAMESITE="none",
+            COOKIE_SECURE=False,
+        )
+
+
+def test_cookie_samesite_none_dengan_secure_sukses():
+    pengaturan = Settings(
+        **_DASAR,
+        STORAGE_BACKEND="lokal",
+        UPLOAD_DIR="/tmp/unggahan",
+        COOKIE_SAMESITE="none",
+        COOKIE_SECURE=True,
+    )
+    assert pengaturan.COOKIE_SAMESITE == "none"
+
+
+def test_max_request_size_default():
+    pengaturan = Settings(**_DASAR, STORAGE_BACKEND="lokal", UPLOAD_DIR="/tmp/unggahan")
+    assert pengaturan.MAX_REQUEST_SIZE_MB == 105

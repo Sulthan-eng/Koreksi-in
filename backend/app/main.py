@@ -3,9 +3,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import DBAPIError
 
 from app.core.config import settings
+from app.core.cors import asal_diizinkan
 from app.core.database import AsyncSessionLocal
 from app.core.errors import (
     AppError,
@@ -14,10 +16,17 @@ from app.core.errors import (
     unexpected_error_handler,
     validation_error_handler,
 )
+from app.core.middleware import BatasUkuranRequest
 from app.core.startup import sapu_proses_tergantung
 from app.routers import auth, batch, health, ringkasan
 
 logger = logging.getLogger("uvicorn.error")
+
+# Method dan header diizinkan secara eksplisit (tanpa wildcard). Daftarnya persis
+# apa yang dipakai aplikasi: method dari router di app/routers/, header dari
+# frontend/src/api/klien.js yang hanya menyetel Authorization dan Content-Type.
+METHOD_DIIZINKAN = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
+HEADER_DIIZINKAN = ["Authorization", "Content-Type"]
 
 
 @asynccontextmanager
@@ -28,14 +37,35 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Koreksi-in", lifespan=lifespan)
+def buat_app() -> FastAPI:
+    """Bangun aplikasi. Dibuat sebagai factory karena daftar origin dan batas ukuran
+    dibaca saat konstruksi, sehingga test bisa membangun varian (ENV=produksi, batas
+    kecil) tanpa mengandalkan urutan import."""
+    app = FastAPI(title="Koreksi-in", lifespan=lifespan)
 
-app.add_exception_handler(AppError, app_error_handler)
-app.add_exception_handler(RequestValidationError, validation_error_handler)
-app.add_exception_handler(DBAPIError, db_error_handler)
-app.add_exception_handler(Exception, unexpected_error_handler)
+    app.add_exception_handler(AppError, app_error_handler)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(DBAPIError, db_error_handler)
+    app.add_exception_handler(Exception, unexpected_error_handler)
 
-app.include_router(health.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
-app.include_router(batch.router, prefix="/api")
-app.include_router(ringkasan.router, prefix="/api")
+    # Urutan penting: add_middleware menaruh yang terakhir ditambahkan di posisi
+    # paling luar, jadi CORSMiddleware membungkus BatasUkuranRequest dan respons 413
+    # dari batas ukuran ikut membawa header CORS.
+    app.add_middleware(BatasUkuranRequest, maks_byte=settings.MAX_REQUEST_SIZE_MB * 1024 * 1024)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=asal_diizinkan(),
+        allow_credentials=True,
+        allow_methods=METHOD_DIIZINKAN,
+        allow_headers=HEADER_DIIZINKAN,
+        max_age=600,
+    )
+
+    app.include_router(health.router, prefix="/api")
+    app.include_router(auth.router, prefix="/api")
+    app.include_router(batch.router, prefix="/api")
+    app.include_router(ringkasan.router, prefix="/api")
+    return app
+
+
+app = buat_app()

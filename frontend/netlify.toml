@@ -1,0 +1,18 @@
+# Konfigurasi deploy frontend ke Netlify (SPEC bagian 11 dan U13).
+# VITE_API_URL diisi sebagai environment variable di dashboard Netlify, bukan di
+# sini, agar alamat API tidak tertanam di repositori.
+#
+# Tidak ada proxy /api: timeout fungsi Netlify terlalu pendek untuk ocr-kunci,
+# jadi API dipanggil langsung lewat origin lain (lihat CORS di backend).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
