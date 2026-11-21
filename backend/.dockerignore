@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Rahasia tidak boleh ikut ke image.
+.env
+.env.*
+
+tests/
+
+# Direktori unggahan lokal.
+uploads/
+upload/
+
+# Berkas yang tidak dipakai di dalam image.
+Dockerfile
+.dockerignore
+fly.toml
