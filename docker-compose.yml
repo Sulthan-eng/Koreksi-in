@@ -10,6 +10,37 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Untuk pengembangan dan menguji image backend di localhost. Produksi memakai
+  # Fly.io + Supabase (backend/fly.toml), bukan service ini.
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Override nilai .env yang menunjuk localhost: di dalam compose database
+      # dijangkau lewat nama service db, dan penyimpanan selalu lokal, sehingga
+      # Supabase atau S3 tidak pernah tersentuh dari sini.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      STORAGE_BACKEND: lokal
+      UPLOAD_DIR: /data/uploads
+      SECRET_KEY: ${SECRET_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_RPD_LIMIT: ${GEMINI_RPD_LIMIT}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - uploads_data:/data/uploads
 
 volumes:
   db_data:
+  uploads_data:
