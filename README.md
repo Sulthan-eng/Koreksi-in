@@ -2,7 +2,7 @@
 
 Web app autograding jawaban esai/jawaban singkat. OCR mengekstrak teks jawaban peserta didik, lalu LLM-judge (Gemini) memberi skor kemiripan sebagai rekomendasi bagi Pengajar. Dilengkapi sistem langganan berbayar.
 
-Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localhost; sistem akan di-deploy (detail deploy belum diputuskan). Lihat `docs/SPEC.md` untuk kebutuhan dan status tiap fitur (bagian 3), dan `CLAUDE.md` untuk aturan kerja.
+Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localhost; sistem akan di-deploy ke Fly.io (backend), Supabase (Postgres dan penyimpanan berkas), dan Netlify (frontend) — sisa detail deploy (domain, HTTPS di domain sendiri, backup) belum diputuskan, lihat `docs/SPEC.md` U13. Lihat `docs/SPEC.md` untuk kebutuhan dan status tiap fitur (bagian 3), dan `CLAUDE.md` untuk aturan kerja.
 
 ## Menjalankan di localhost
 
@@ -28,6 +28,38 @@ Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localh
 9. Buka `http://localhost:5173`.
 
 Fitur yang sudah berjalan dan yang belum dikerjakan tercantum di `docs/SPEC.md` bagian 3.
+
+## Menjalankan backend lewat Docker (opsional)
+
+Berguna untuk menguji image yang sama dengan yang dipakai di produksi. Alur pengembangan sehari-hari tetap memakai `uvicorn --reload` seperti di atas. Semua perintah dari root proyek, dan port 8000 harus bebas lebih dulu.
+
+Compose meng-override `DATABASE_URL` ke host `db` (bukan `localhost`) dan memaksa `STORAGE_BACKEND=lokal` dengan volume untuk `UPLOAD_DIR`, jadi Supabase dan S3 tidak tersentuh. `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, dan ketiga variabel `POSTGRES_*` tetap dibaca dari `.env` di root.
+
+1. Bangun image: `docker compose build backend`.
+2. Jalankan database: `docker compose up -d db` (tunggu `docker compose ps` menunjukkan `db` `healthy`).
+3. Terapkan migrasi: `docker compose run --rm backend alembic upgrade head`. Langkah ini terpisah dan harus dijalankan sebelum backend start, karena saat boot backend menyapu file yang berstatus `diproses` dan membutuhkan tabelnya sudah ada.
+4. Jalankan backend: `docker compose up -d backend`.
+5. Cek: `curl http://localhost:8000/api/health` harus mengembalikan `{"status":"ok"}`.
+6. Hentikan: `docker compose down` (tanpa `-v`, agar data database dan unggahan dev tidak terhapus).
+
+## Deploy backend ke Fly.io
+
+Semua perintah dari folder `backend/` (di situlah `fly.toml` berada, sehingga build context Fly sama dengan build context Compose).
+
+1. `fly launch --no-deploy --copy-config` — **tolak** tawaran Postgres, Redis, dan Tigris; database dan penyimpanan berkas dipakai dari Supabase.
+2. `fly config validate` — periksa `fly.toml` sebelum deploy.
+3. Isi variabel dengan `fly secrets set <NAMA>=<nilai>`. Nama yang perlu diisi: `DATABASE_URL` (harus berawalan `postgresql+asyncpg://` dan memakai connection string **Session pooler** Supabase), `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `STORAGE_BACKEND` (bernilai `s3`), `S3_ENDPOINT_URL`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `COOKIE_SECURE` (bernilai `true`), `FRONTEND_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`.
+4. `fly deploy --ha=false` — **`--ha=false` wajib**: tanpa itu deploy pertama membuat dua mesin, dan itu merusak asumsi satu instance/satu worker (penghitung kuota Gemini ada di memori dan pemrosesan memakai `BackgroundTasks`). Migrasi dijalankan lebih dulu oleh `release_command` (`alembic upgrade head`).
+5. `fly status` — pastikan hanya ada satu mesin. Bila ternyata lebih dari satu, perbaiki dengan `fly scale count 1`.
+6. Cek: `curl https://<nama-app>.fly.dev/api/health` harus mengembalikan `{"status":"ok"}`. `fly logs` memuat satu baris `storage_backend_aktif backend=s3`.
+
+Catatan penting:
+
+- **Jangan mengisi variabel dengan nilai kosong.** `fly secrets set NAMA=` tetap mengirim variabel itu ke proses dan menimpa default di `Settings`. String kosong pada variabel bertipe angka (`GEMINI_RPD_LIMIT`, `SMTP_PORT`) atau pilihan terbatas (`STORAGE_BACKEND`, `COOKIE_SECURE`) menggagalkan validasi saat import, sehingga aplikasi dan `release_command` langsung mati. Variabel opsional cukup tidak di-set.
+- **`UPLOAD_DIR` tidak diisi di produksi.** `STORAGE_BACKEND=s3` tidak memakainya, dan container stateless (tanpa Fly Volume).
+- `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_RECYCLE_SECONDS` opsional; defaultnya sudah sesuai untuk satu instance.
+- Mesin tidak boleh tidur (`auto_stop_machines = "off"`, `min_machines_running = 1`) karena pemrosesan berjalan di dalam proses aplikasi.
+- Deploy mematikan satu-satunya mesin, jadi file yang sedang `diproses` akan ditandai `Gagal` dengan pesan "server dimulai ulang". Hindari deploy saat ada pemrosesan berjalan.
 
 ## Lint, format, test (backend)
 

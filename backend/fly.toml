@@ -1,0 +1,47 @@
+# Konfigurasi deploy backend ke Fly.io (SPEC bagian 11 dan U13).
+# Berkas ini ada di backend/ agar build context Fly sama dengan build context
+# Docker Compose (./backend), sehingga backend/.dockerignore berlaku di keduanya.
+# Semua perintah fly dijalankan dari folder backend/.
+#
+# Tidak ada blok [env]: seluruh variabel diisi lewat `fly secrets set` agar hanya
+# ada satu sumber konfigurasi (daftar namanya ada di README).
+# Tidak ada [mounts]: container stateless, berkas jawaban disimpan di Supabase
+# Storage lewat STORAGE_BACKEND=s3.
+
+app = "koreksi-in-backend"
+primary_region = "sin"
+
+[build]
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Tidak boleh tidur: pemrosesan berjalan sebagai BackgroundTasks di dalam proses
+  # aplikasi, jadi mesin harus tetap hidup selama ada file berstatus diproses.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "15s"
+
+[deploy]
+  # Dijalankan di mesin sementara sebelum mesin aplikasi baru start, memakai
+  # fly secrets yang sama (termasuk DATABASE_URL Session pooler Supabase).
+  # Mesin itu tidak menjalankan uvicorn, jadi lifespan aplikasi tidak ikut jalan.
+  release_command = "alembic upgrade head"
+  # Hanya ada satu mesin, jadi tidak ada rolling update. Konsekuensi: deploy
+  # memutus pemrosesan yang sedang jalan; saat boot berikutnya file tersebut
+  # ditandai Gagal (SPEC bagian 8).
+  strategy = "immediate"
+
+[[vm]]
+  # 1 GB: pipeline memuat seluruh berkas satu batch ke memori sekaligus
+  # (Pro sampai 50 berkas x 10 MB), jadi 512 MB berisiko OOM saat batch besar.
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
