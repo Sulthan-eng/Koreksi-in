@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 from io import BytesIO
 
 import pytest
+from google.genai import errors as genai_errors
 from httpx import AsyncClient
 from pypdf import PdfWriter
 from sqlalchemy import select
@@ -415,3 +416,54 @@ async def test_ocr_kunci_batch_tidak_ada(client: AsyncClient, monkeypatch) -> No
     )
     assert response.status_code == 404
     assert response.json()["kode"] == "BATCH_TIDAK_DITEMUKAN"
+
+
+async def test_ocr_kunci_melepaskan_transaksi_db_sebelum_panggil_gemini(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    """Pastikan transaksi baca sudah diakhiri (koneksi kembali ke pool) sebelum
+    gemini.ocr_kunci dipanggil."""
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    in_tx_saat_gemini: list[bool] = []
+
+    async def fake_ocr_kunci(konten, ext):
+        in_tx_saat_gemini.append(db_session.in_transaction())
+        return "Teks kunci hasil OCR"
+
+    monkeypatch.setattr(gemini, "ocr_kunci", fake_ocr_kunci)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 200
+    assert response.json() == {"teks": "Teks kunci hasil OCR"}
+    assert in_tx_saat_gemini == [False]
+
+
+async def test_ocr_kunci_timeout_total_saat_menunggu_retry_jadi_ocr_kunci_gagal(
+    client: AsyncClient, monkeypatch
+) -> None:
+    """End-to-end: timeout total habis saat menunggu retry di gemini.ocr_kunci
+    (asyncio.sleep asli) terpetakan ke HTTP 500 OCR_KUNCI_GAGAL."""
+    token = await _token(client)
+    id_batch = await _buat_batch(client, token)
+    monkeypatch.setattr(gemini, "_BATAS_WAKTU_TOTAL_KUNCI", 0.05)
+
+    async def fake_sdk_ocr_kunci(konten, ext):
+        raise genai_errors.ServerError(503, {"error": {"message": "unavailable"}})
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr_kunci", fake_sdk_ocr_kunci)
+
+    response = await client.post(
+        f"/api/batch/{id_batch}/soal/ocr-kunci",
+        files={"file": ("kunci.png", _PNG, "image/png")},
+        headers=_auth(token),
+    )
+    assert response.status_code == 500
+    assert response.json() == {
+        "kode": "OCR_KUNCI_GAGAL",
+        "pesan": "Gagal membaca file, silakan coba lagi atau masukkan teks secara manual",
+    }

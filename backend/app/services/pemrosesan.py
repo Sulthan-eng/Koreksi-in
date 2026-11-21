@@ -1,14 +1,27 @@
 """Pengelompokan file, pipeline OCR lalu judge per grup, dan penyimpanan
-Hasil_Koreksi (SPEC bagian 8). Dipanggil lewat BackgroundTasks setelah unggah."""
+Hasil_Koreksi (SPEC bagian 8). Dipanggil lewat BackgroundTasks setelah unggah.
+
+Pipeline memakai sesi database pendek per fase agar koneksi pool tidak pernah
+ditahan selama pembacaan berkas (storage) atau panggilan Gemini:
+1. Sesi baca pendek: muat metadata File_Jawaban & Soal, salin ke dataclass
+   polos, lalu tutup sesi.
+2. Fase storage & Gemini: muat berkas, kelompokkan, lalu jalankan OCR dan judge
+   per grup tanpa sesi DB terbuka.
+3. Sesi simpan baru per grup: cek baris masih ada (FR22), upsert Hasil_Koreksi,
+   perbarui status File_Jawaban, commit, lalu tutup sesi.
+"""
 
 import asyncio
 import logging
 import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.exc import ObjectDeletedError, StaleDataError
 
 from app.core.database import AsyncSessionLocal
 from app.models.enums import Kategori, StatusProses
@@ -37,24 +50,56 @@ def kategori_dari_skor(skor: int) -> Kategori:
     return Kategori.KURANG_MIRIP
 
 
+@dataclass(frozen=True)
+class _DataFile:
+    id_file: uuid.UUID
+    id_batch: uuid.UUID
+    path: str
+
+
+@dataclass(frozen=True)
+class _DataSoal:
+    id_soal: uuid.UUID
+    no_soal: int
+    kunci_jawaban: str
+
+
+@dataclass(frozen=True)
 class _Berkas:
-    def __init__(self, row: FileJawaban, konten: bytes, ext: str, halaman: int) -> None:
-        self.row = row
-        self.konten = konten
-        self.ext = ext
-        self.ukuran = len(konten)
-        self.halaman = halaman
+    id_file: uuid.UUID
+    konten: bytes
+    ext: str
+    halaman: int
+
+    @property
+    def ukuran(self) -> int:
+        return len(self.konten)
+
+
+@dataclass(frozen=True)
+class _BarisHasil:
+    id_file: uuid.UUID
+    id_soal: uuid.UUID
+    teks_ocr: str
+    skor_sistem: int | None
+    kategori: Kategori | None
+
+
+@dataclass(frozen=True)
+class _HasilGrup:
+    baris: list[_BarisHasil]
+    pesan_gagal: str | None
 
 
 def _ext_dari_path(path: str) -> str:
     return path.rsplit(".", 1)[-1].lower()
 
 
-async def _muat_berkas(row: FileJawaban) -> _Berkas:
-    ext = _ext_dari_path(row.path)
-    konten = await dapatkan_storage().baca(row.path)
+async def _muat_berkas(data_file: _DataFile) -> _Berkas:
+    ext = _ext_dari_path(data_file.path)
+    konten = await dapatkan_storage().baca(data_file.path)
     halaman = await asyncio.to_thread(hitung_halaman, konten, ext)
-    return _Berkas(row=row, konten=konten, ext=ext, halaman=halaman)
+    return _Berkas(id_file=data_file.id_file, konten=konten, ext=ext, halaman=halaman)
 
 
 def _buat_grup(berkas: list[_Berkas]) -> list[list[_Berkas]]:
@@ -81,49 +126,74 @@ def _buat_grup(berkas: list[_Berkas]) -> list[list[_Berkas]]:
     return grup
 
 
+@asynccontextmanager
+async def _buka_sesi(db: AsyncSession | None) -> AsyncGenerator[AsyncSession, None]:
+    """Buka sesi DB pendek untuk satu fase. Di produksi (`db is None`), setiap
+    fase membuka dan menutup sesi sendiri dari AsyncSessionLocal. Bila `db`
+    disuntikkan oleh test, sesi itu dipakai ulang tanpa rollback setelah baca
+    agar objek ORM milik test tidak kedaluwarsa."""
+    if db is None:
+        async with AsyncSessionLocal() as sesi:
+            yield sesi
+        return
+    try:
+        yield db
+    except Exception:
+        try:
+            await db.rollback()
+        except Exception as exc_rb:
+            logger.error("pemrosesan_rollback_gagal tipe=%s", type(exc_rb).__name__)
+        raise
+
+
+async def _baca_data_awal(
+    id_file_list: list[uuid.UUID], db: AsyncSession | None
+) -> tuple[list[_DataFile], list[_DataSoal]] | None:
+    """Fase 1: baca metadata File_Jawaban dan Soal pada sesi pendek lalu salin
+    ke dataclass polos sebelum sesi ditutup."""
+    async with _buka_sesi(db) as sesi:
+        files = list(
+            await sesi.scalars(
+                select(FileJawaban)
+                .where(FileJawaban.id_file.in_(id_file_list))
+                .order_by(FileJawaban.diunggah_pada)
+            )
+        )
+        if not files:
+            return None
+        data_files = [_DataFile(id_file=f.id_file, id_batch=f.id_batch, path=f.path) for f in files]
+        id_batch = data_files[0].id_batch
+        soal_rows = list(
+            await sesi.scalars(select(Soal).where(Soal.id_batch == id_batch).order_by(Soal.no_soal))
+        )
+        data_soal = [
+            _DataSoal(id_soal=s.id_soal, no_soal=s.no_soal, kunci_jawaban=s.kunci_jawaban)
+            for s in soal_rows
+        ]
+    return data_files, data_soal
+
+
 async def proses_file_jawaban(
     id_file_list: list[uuid.UUID], db: AsyncSession | None = None
 ) -> None:
-    """Entry point BackgroundTasks. Membuka session sendiri (tidak memakai session request)
-    kecuali `db` disediakan (dipakai test agar tidak menyentuh database pengembangan)."""
-    if db is None:
-        async with AsyncSessionLocal() as sesi_baru:
-            await _proses_file_jawaban_dengan_sesi(id_file_list, sesi_baru)
+    """Entry point BackgroundTasks. Membuka sesi DB pendek per fase sendiri
+    (tidak memakai session request) kecuali `db` disediakan oleh test."""
+    data_awal = await _baca_data_awal(id_file_list, db)
+    if data_awal is None:
         return
-    await _proses_file_jawaban_dengan_sesi(id_file_list, db)
+    data_files, data_soal = data_awal
 
-
-async def _proses_file_jawaban_dengan_sesi(id_file_list: list[uuid.UUID], db: AsyncSession) -> None:
-    files = list(
-        await db.scalars(
-            select(FileJawaban)
-            .where(FileJawaban.id_file.in_(id_file_list))
-            .order_by(FileJawaban.diunggah_pada)
-        )
-    )
-    if not files:
-        return
-    id_batch = files[0].id_batch
-    soal_list = list(
-        await db.scalars(select(Soal).where(Soal.id_batch == id_batch).order_by(Soal.no_soal))
-    )
     try:
         berkas = []
-        for f in files:
+        for f in data_files:
             berkas.append(await _muat_berkas(f))
     except Exception:
         logger.exception("pemrosesan_muat_berkas_gagal")
-        await db.rollback()
-        await _tandai_baris_gagal(db, files, PESAN_GAGAL_UMUM)
+        await _tandai_id_gagal_aman([f.id_file for f in data_files], PESAN_GAGAL_UMUM, db)
         return
 
     for grup in _buat_grup(berkas):
-        try:
-            await _proses_satu_grup(db, grup, soal_list)
-        except Exception:
-            logger.exception("pemrosesan_grup_gagal_tak_terduga")
-            await db.rollback()
-            await _tandai_gagal(db, grup, PESAN_GAGAL_UMUM)
+        await _proses_satu_grup(grup, data_soal, db)
 
 
 def _pesan_untuk(exc: Exception) -> str:
@@ -132,28 +202,40 @@ def _pesan_untuk(exc: Exception) -> str:
     return PESAN_GAGAL_UMUM
 
 
-async def _proses_satu_grup(db: AsyncSession, grup: list[_Berkas], soal_list: list[Soal]) -> None:
-    """Jaring pengaman terluar: kegagalan tak terduga di sini ditandai gagal
-    dengan pesan umum, tanpa memengaruhi grup lain."""
+async def _proses_satu_grup(
+    grup: list[_Berkas], soal_list: list[_DataSoal], db: AsyncSession | None
+) -> None:
+    """Jalankan fase Gemini (tanpa sesi DB) lalu fase simpan (sesi baru).
+    Kegagalan tak terduga di sini ditandai gagal dengan pesan umum, tanpa
+    memengaruhi grup lain."""
+    id_files = [b.id_file for b in grup]
     try:
-        await _proses_satu_grup_inner(db, grup, soal_list)
+        hasil = await _jalankan_gemini_grup(grup, soal_list)
+        await _simpan_hasil_grup(id_files, hasil, db)
+    except DBAPIError as exc:
+        orig_tipe = type(exc.orig).__name__ if exc.orig is not None else "none"
+        logger.error(
+            "pemrosesan_grup_gagal_db jumlah=%d tipe=%s orig=%s connection_invalidated=%s",
+            len(id_files),
+            type(exc).__name__,
+            orig_tipe,
+            exc.connection_invalidated,
+        )
+        await _tandai_id_gagal_aman(id_files, PESAN_GAGAL_UMUM, db)
     except Exception:
         logger.exception("pemrosesan_grup_gagal_tak_terduga")
-        await db.rollback()
-        await _tandai_gagal(db, grup, PESAN_GAGAL_UMUM)
+        await _tandai_id_gagal_aman(id_files, PESAN_GAGAL_UMUM, db)
 
 
-async def _proses_satu_grup_inner(
-    db: AsyncSession, grup: list[_Berkas], soal_list: list[Soal]
-) -> None:
+async def _jalankan_gemini_grup(grup: list[_Berkas], soal_list: list[_DataSoal]) -> _HasilGrup:
+    """Fase 2: jalankan OCR dan judge untuk satu grup tanpa menyentuh DB."""
     no_soal_list = [s.no_soal for s in soal_list]
     try:
         hasil_ocr = await gemini.ocr_grup(
             [(b.konten, b.ext, i) for i, b in enumerate(grup)], no_soal_list
         )
     except (gemini.KuotaHarianHabis, gemini.GagalSementara, gemini.GagalPermanen) as exc:
-        await _tandai_gagal(db, grup, _pesan_untuk(exc))
-        return
+        return _HasilGrup(baris=[], pesan_gagal=_pesan_untuk(exc))
 
     no_soal_valid = {s.no_soal for s in soal_list}
     teks_per_item: dict[str, str] = {}
@@ -199,6 +281,7 @@ async def _proses_satu_grup_inner(
                 skor_per_item[it.id_item] = it.skor
 
     lengkap = True
+    baris_list: list[_BarisHasil] = []
     for i, b in enumerate(grup):
         for s in soal_list:
             key = f"{i}:{s.no_soal}"
@@ -211,19 +294,58 @@ async def _proses_satu_grup_inner(
             else:
                 teks_disimpan, skor, kategori = teks, None, None
                 lengkap = False
-            await _upsert_hasil(db, b.row.id_file, s.id_soal, teks_disimpan, skor, kategori)
+            baris_list.append(
+                _BarisHasil(
+                    id_file=b.id_file,
+                    id_soal=s.id_soal,
+                    teks_ocr=teks_disimpan,
+                    skor_sistem=skor,
+                    kategori=kategori,
+                )
+            )
 
     if judge_exc is not None:
-        await _tandai_gagal(db, grup, _pesan_untuk(judge_exc))
-        return
+        return _HasilGrup(baris=baris_list, pesan_gagal=_pesan_untuk(judge_exc))
     if not lengkap:
-        await _tandai_gagal(db, grup, PESAN_GAGAL_UMUM)
-        return
+        return _HasilGrup(baris=baris_list, pesan_gagal=PESAN_GAGAL_UMUM)
+    return _HasilGrup(baris=baris_list, pesan_gagal=None)
 
-    for b in grup:
-        b.row.status_proses = StatusProses.SELESAI
-        b.row.pesan_error = None
-    await db.commit()
+
+async def _simpan_hasil_grup(
+    id_files: list[uuid.UUID], hasil: _HasilGrup, db: AsyncSession | None
+) -> None:
+    """Fase 3: buka sesi baru untuk menyimpan Hasil_Koreksi dan status grup."""
+    async with _buka_sesi(db) as sesi:
+        ada_files = set(
+            await sesi.scalars(select(FileJawaban.id_file).where(FileJawaban.id_file.in_(id_files)))
+        )
+        if not ada_files:
+            logger.warning("pemrosesan_simpan_baris_hilang jumlah=%d", len(id_files))
+            if sesi.in_transaction():
+                await sesi.rollback()
+            return
+
+        for baris in hasil.baris:
+            await _upsert_hasil(
+                sesi,
+                baris.id_file,
+                baris.id_soal,
+                baris.teks_ocr,
+                baris.skor_sistem,
+                baris.kategori,
+            )
+
+        if hasil.pesan_gagal is not None:
+            status_baru, pesan_error = StatusProses.GAGAL, hasil.pesan_gagal
+        else:
+            status_baru, pesan_error = StatusProses.SELESAI, None
+
+        await sesi.execute(
+            update(FileJawaban)
+            .where(FileJawaban.id_file.in_(id_files))
+            .values(status_proses=status_baru, pesan_error=pesan_error)
+        )
+        await sesi.commit()
 
 
 async def _upsert_hasil(
@@ -251,21 +373,28 @@ async def _upsert_hasil(
     await db.execute(stmt)
 
 
-async def _tandai_gagal(db: AsyncSession, grup: list[_Berkas], pesan: str) -> None:
-    await _tandai_baris_gagal(db, [b.row for b in grup], pesan)
-
-
-async def _tandai_baris_gagal(db: AsyncSession, baris: list[FileJawaban], pesan: str) -> None:
-    """Tandai baris gagal. Baris bisa saja sudah hilang (batch dihapus lewat
-    request lain sementara tugas latar ini berjalan) — SQLAlchemy melempar
-    StaleDataError/ObjectDeletedError saat commit karena baris tidak lagi ada
-    untuk di-UPDATE. Itu bukan kegagalan nyata di sini: tidak ada lagi yang
-    perlu ditandai, jadi ditelan tanpa menjalar ke pemanggil."""
-    for row in baris:
-        row.status_proses = StatusProses.GAGAL
-        row.pesan_error = pesan
+async def _tandai_id_gagal_aman(
+    id_files: list[uuid.UUID], pesan: str, db: AsyncSession | None
+) -> None:
+    """Tandai daftar id_file sebagai gagal di sesi baru. Tidak pernah melempar:
+    bila baris sudah hilang (batch dihapus lewat request lain, FR22), UPDATE
+    memengaruhi 0 baris tanpa error; bila DB tidak terjangkau, catat log aman
+    tanpa parameter SQL lalu lanjut ke grup berikutnya (baris yang tertinggal
+    'diproses' akan disapu sapu_proses_tergantung saat server dimulai ulang)."""
     try:
-        await db.commit()
-    except (StaleDataError, ObjectDeletedError):
-        logger.warning("pemrosesan_tandai_gagal_baris_hilang", exc_info=True)
-        await db.rollback()
+        async with _buka_sesi(db) as sesi:
+            await sesi.execute(
+                update(FileJawaban)
+                .where(FileJawaban.id_file.in_(id_files))
+                .values(status_proses=StatusProses.GAGAL, pesan_error=pesan)
+            )
+            await sesi.commit()
+    except Exception as exc:
+        orig = getattr(exc, "orig", None)
+        orig_tipe = type(orig).__name__ if orig is not None else "none"
+        logger.error(
+            "pemrosesan_tandai_gagal_error jumlah=%d tipe=%s orig=%s",
+            len(id_files),
+            type(exc).__name__,
+            orig_tipe,
+        )

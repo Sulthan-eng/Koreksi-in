@@ -358,6 +358,24 @@ async def test_ocr_kunci_batas_waktu_total_terjaga_walau_semaphore_penuh(monkeyp
             await gemini.ocr_kunci(b"konten", "png")
 
 
+async def test_ocr_kunci_timeout_total_saat_menunggu_retry_jadi_gagal_sementara(monkeypatch):
+    """Batas waktu total (_BATAS_WAKTU_TOTAL_KUNCI) juga membungkus jeda retry
+    (asyncio.sleep asli, tanpa mock): jika timeout habis saat menunggu retry,
+    hasilnya GagalSementara (bukan CancelledError)."""
+    monkeypatch.setattr(gemini, "_BATAS_WAKTU_TOTAL_KUNCI", 0.05)
+    calls: list[int] = []
+
+    async def fake_ocr_kunci(konten, ext):
+        calls.append(1)
+        raise genai_errors.ServerError(503, {"error": {"message": "unavailable"}})
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr_kunci", fake_ocr_kunci)
+
+    with pytest.raises(gemini.GagalSementara):
+        await gemini.ocr_kunci(b"konten", "png")
+    assert len(calls) == 1
+
+
 # --- Judge: system_instruction, parameter default, dan format input JSON ---
 
 

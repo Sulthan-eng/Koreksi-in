@@ -8,7 +8,8 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
@@ -71,7 +72,9 @@ async def _buat_file_jawaban(db: AsyncSession, tmp_path: Path, batch: Batch) -> 
 
 
 def _fake_berkas(ukuran_byte: int, halaman: int = 1) -> pemrosesan._Berkas:
-    return pemrosesan._Berkas(row=None, konten=b"0" * ukuran_byte, ext="png", halaman=halaman)
+    return pemrosesan._Berkas(
+        id_file=uuid.uuid4(), konten=b"0" * ukuran_byte, ext="png", halaman=halaman
+    )
 
 
 def _url_test():
@@ -571,3 +574,270 @@ async def test_baris_dan_berkas_hilang_sebelum_dimuat_tidak_error(
     await pemrosesan.proses_file_jawaban([fj1.id_file, fj2.id_file], db=db_session)
 
     assert await db_session.scalar(select(HasilKoreksi)) is None
+
+
+def _pasang_session_factory_pelacak(monkeypatch, engine, on_sesi=None) -> dict:
+    """Patch pemrosesan.AsyncSessionLocal memakai _engine DB uji agar jalur
+    produksi (db=None) dapat diuji tanpa pernah menyentuh DB pengembangan."""
+    base_factory = async_sessionmaker(engine, expire_on_commit=False)
+    pelacak = {"aktif": 0, "total": 0, "sesi_ids": []}
+
+    class _KonteksSesiPelacak:
+        def __init__(self) -> None:
+            self._cm = base_factory()
+            self._sesi: AsyncSession | None = None
+
+        async def __aenter__(self) -> AsyncSession:
+            pelacak["total"] += 1
+            urutan = pelacak["total"]
+            self._sesi = await self._cm.__aenter__()
+            pelacak["aktif"] += 1
+            pelacak["sesi_ids"].append(id(self._sesi))
+            if on_sesi is not None:
+                on_sesi(urutan, self._sesi)
+            return self._sesi
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            try:
+                return await self._cm.__aexit__(exc_type, exc_val, exc_tb)
+            finally:
+                pelacak["aktif"] -= 1
+
+    monkeypatch.setattr(pemrosesan, "AsyncSessionLocal", _KonteksSesiPelacak)
+    return pelacak
+
+
+async def test_sesi_pendek_tidak_ada_sesi_aktif_selama_muat_berkas_dan_gemini(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch
+) -> None:
+    """Jalur produksi (db=None): sesi baca ditutup sebelum muat berkas dan
+    panggilan Gemini; setiap grup membuka dan menutup sesi simpan sendiri."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    files = [await _buat_file_jawaban(db_session, tmp_path, batch) for _ in range(6)]
+    id_files = [f.id_file for f in files]
+
+    pelacak = _pasang_session_factory_pelacak(monkeypatch, _engine)
+    aktif_saat_muat: list[int] = []
+    aktif_saat_ocr: list[int] = []
+    aktif_saat_judge: list[int] = []
+
+    asli_muat = pemrosesan._muat_berkas
+
+    async def pantau_muat(data_file):
+        aktif_saat_muat.append(pelacak["aktif"])
+        return await asli_muat(data_file)
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        aktif_saat_ocr.append(pelacak["aktif"])
+        return gemini.ResponsOcr(
+            items=[
+                gemini.HasilOcrItem(id_item=f"{i}:1", teks=f"Jawaban {i}")
+                for i in range(len(bagian_file))
+            ]
+        )
+
+    async def fake_judge(items):
+        aktif_saat_judge.append(pelacak["aktif"])
+        return gemini.ResponsJudge(
+            items=[gemini.HasilJudgeItem(id_item=it.id_item, skor=85) for it in items]
+        )
+
+    monkeypatch.setattr(pemrosesan, "_muat_berkas", pantau_muat)
+    monkeypatch.setattr(gemini, "ocr_grup", fake_ocr)
+    monkeypatch.setattr(gemini, "judge_grup", fake_judge)
+
+    await pemrosesan.proses_file_jawaban(id_files)
+
+    assert aktif_saat_muat == [0, 0, 0, 0, 0, 0]
+    assert aktif_saat_ocr == [0, 0]
+    assert aktif_saat_judge == [0, 0]
+    assert pelacak["aktif"] == 0
+    # 1 sesi baca awal + 2 sesi simpan (grup 1: 5 file, grup 2: 1 file).
+    assert pelacak["total"] == 3
+    assert len(set(pelacak["sesi_ids"])) == 3
+
+    for f in files:
+        await db_session.refresh(f)
+        assert f.status_proses == StatusProses.SELESAI
+        assert f.pesan_error is None
+    hasil = list(
+        await db_session.scalars(select(HasilKoreksi).where(HasilKoreksi.id_file.in_(id_files)))
+    )
+    assert len(hasil) == 6
+    assert all(h.skor_sistem == 85 and h.kategori == Kategori.SANGAT_MIRIP for h in hasil)
+
+
+async def test_sesi_pendek_saat_ocr_gagal_dan_judge_gagal(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch
+) -> None:
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj_ocr = await _buat_file_jawaban(db_session, tmp_path, batch)
+    fj_judge = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    pelacak = _pasang_session_factory_pelacak(monkeypatch, _engine)
+    aktif_saat_ocr: list[int] = []
+
+    async def fake_ocr_sibuk(bagian_file, no_soal_list):
+        aktif_saat_ocr.append(pelacak["aktif"])
+        raise gemini.GagalSementara()
+
+    monkeypatch.setattr(gemini, "ocr_grup", fake_ocr_sibuk)
+    await pemrosesan.proses_file_jawaban([fj_ocr.id_file])
+
+    assert aktif_saat_ocr == [0]
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 2
+    await db_session.refresh(fj_ocr)
+    assert fj_ocr.status_proses == StatusProses.GAGAL
+    assert fj_ocr.pesan_error == pemrosesan.PESAN_SIBUK_KUOTA
+
+    aktif_saat_judge: list[int] = []
+
+    async def fake_ocr_ok(bagian_file, no_soal_list):
+        aktif_saat_ocr.append(pelacak["aktif"])
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Teks OCR")])
+
+    async def fake_judge_gagal(items):
+        aktif_saat_judge.append(pelacak["aktif"])
+        raise gemini.GagalPermanen()
+
+    monkeypatch.setattr(gemini, "ocr_grup", fake_ocr_ok)
+    monkeypatch.setattr(gemini, "judge_grup", fake_judge_gagal)
+    await pemrosesan.proses_file_jawaban([fj_judge.id_file])
+
+    assert aktif_saat_ocr == [0, 0]
+    assert aktif_saat_judge == [0]
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 4
+    await db_session.refresh(fj_judge)
+    assert fj_judge.status_proses == StatusProses.GAGAL
+    assert fj_judge.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+    hasil_judge = await db_session.scalar(
+        select(HasilKoreksi).where(HasilKoreksi.id_file == fj_judge.id_file)
+    )
+    assert hasil_judge.teks_ocr == "Teks OCR"
+    assert hasil_judge.skor_sistem is None
+
+
+async def test_sesi_pendek_batch_terhapus_saat_ocr_berjalan_tanpa_error(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch
+) -> None:
+    """Skenario FR22 pada jalur produksi (db=None): tidak ada DetachedInstanceError
+    atau Hasil_Koreksi yatim saat batch dihapus di tengah fase Gemini."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj = await _buat_file_jawaban(db_session, tmp_path, batch)
+    id_batch, id_file = batch.id_batch, fj.id_file
+
+    pelacak = _pasang_session_factory_pelacak(monkeypatch, _engine)
+    aktif_saat_ocr: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        aktif_saat_ocr.append(pelacak["aktif"])
+        _hapus_batch_lewat_sesi_lain(id_batch)
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban")])
+
+    monkeypatch.setattr(gemini, "ocr_grup", fake_ocr)
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=90)])
+        ),
+    )
+
+    await pemrosesan.proses_file_jawaban([id_file])
+
+    assert aktif_saat_ocr == [0]
+    assert pelacak["aktif"] == 0
+    assert (
+        await db_session.scalar(select(HasilKoreksi).where(HasilKoreksi.id_file == id_file)) is None
+    )
+
+
+async def test_sesi_pendek_error_db_grup_satu_tidak_hentikan_grup_dua(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch, caplog
+) -> None:
+    """Bila sesi simpan grup 1 gagal karena DBAPIError, sesi baru menandai grup 1
+    gagal (tanpa membocorkan parameter SQL ke log) dan grup 2 tetap selesai."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    files = [await _buat_file_jawaban(db_session, tmp_path, batch) for _ in range(6)]
+
+    def gagalkan_simpan_grup_satu(urutan: int, sesi: AsyncSession) -> None:
+        # Urutan sesi: 1 = baca awal, 2 = simpan grup 1, 3 = tandai gagal grup 1, 4 = simpan grup 2.
+        if urutan == 2:
+
+            async def commit_gagal():
+                raise OperationalError(
+                    'INSERT INTO "Hasil_Koreksi" VALUES (:teks)',
+                    {"teks": "RAHASIA_TEKS_JAWABAN_GRUP1"},
+                    ConnectionResetError("connection lost"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "commit", commit_gagal)
+
+    pelacak = _pasang_session_factory_pelacak(
+        monkeypatch, _engine, on_sesi=gagalkan_simpan_grup_satu
+    )
+    monkeypatch.setattr(gemini, "ocr_grup", AsyncMock(return_value=gemini.ResponsOcr(items=[])))
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([f.id_file for f in files])
+
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 4
+    assert "pemrosesan_grup_gagal_db" in caplog.text
+    assert "RAHASIA_TEKS_JAWABAN_GRUP1" not in caplog.text
+
+    for f in files[:5]:
+        await db_session.refresh(f)
+        assert f.status_proses == StatusProses.GAGAL
+        assert f.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+    await db_session.refresh(files[5])
+    assert files[5].status_proses == StatusProses.SELESAI
+
+
+async def test_tandai_gagal_juga_gagal_tidak_melempar_dan_lanjut_grup_berikutnya(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch, caplog
+) -> None:
+    """Bila penandaan gagal untuk grup 1 juga gagal karena DB tidak terjangkau,
+    _tandai_id_gagal_aman tidak boleh melempar, mencatat logger.error tanpa
+    parameter SQL, dan tetap melanjutkan pemrosesan ke grup 2."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    files = [await _buat_file_jawaban(db_session, tmp_path, batch) for _ in range(6)]
+
+    def gagalkan_simpan_dan_tandai_grup_satu(urutan: int, sesi: AsyncSession) -> None:
+        # Urutan sesi: 1 = baca awal, 2 = simpan grup 1 (gagal),
+        # 3 = tandai gagal grup 1 (juga gagal), 4 = simpan grup 2 (berhasil).
+        if urutan in (2, 3):
+
+            async def commit_gagal():
+                raise OperationalError(
+                    'UPDATE "File_Jawaban" SET pesan_error = :pesan',
+                    {"pesan": "RAHASIA_PARAM_TANDAI_GAGAL"},
+                    ConnectionResetError("db unreachable"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "commit", commit_gagal)
+
+    pelacak = _pasang_session_factory_pelacak(
+        monkeypatch, _engine, on_sesi=gagalkan_simpan_dan_tandai_grup_satu
+    )
+    monkeypatch.setattr(gemini, "ocr_grup", AsyncMock(return_value=gemini.ResponsOcr(items=[])))
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([f.id_file for f in files])
+
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 4
+    assert "pemrosesan_tandai_gagal_error" in caplog.text
+    assert "RAHASIA_PARAM_TANDAI_GAGAL" not in caplog.text
+
+    # Grup 1 tertinggal 'diproses' (akan disapu sapu_proses_tergantung saat startup),
+    # sementara grup 2 tetap berjalan dan selesai normal.
+    for f in files[:5]:
+        await db_session.refresh(f)
+        assert f.status_proses == StatusProses.DIPROSES
+    await db_session.refresh(files[5])
+    assert files[5].status_proses == StatusProses.SELESAI

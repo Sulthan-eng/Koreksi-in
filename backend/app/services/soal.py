@@ -114,6 +114,9 @@ async def ocr_kunci(
     menyentuh tabel Soal."""
     batch = await ambil_batch(db, pengguna, id_batch)
     await pastikan_bisa_tambah_soal(db, batch, pengguna)
+    # Akhiri transaksi baca agar koneksi DB kembali ke pool sebelum validasi
+    # berkas dan panggilan Gemini (yang dapat berlangsung hingga ~115 detik).
+    await db.rollback()
 
     if file is None:
         raise TIDAK_ADA_FILE
