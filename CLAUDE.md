@@ -2,7 +2,7 @@
 
 Aplikasi web autograding jawaban esai/jawaban singkat. Pengajar (guru atau dosen) memasukkan kunci jawaban dan mengunggah lembar jawaban peserta didik. Sistem mengekstrak teks dengan OCR, lalu LLM-judge memberi skor kemiripan sebagai rekomendasi. Pengajar memegang nilai akhir.
 
-Status: prototipe UTS sudah berjalan di localhost dan sebagian besar fitur Pengajar sudah Selesai; FR1 belum Selesai penuh karena login Admin belum ada, dan langganan berbayar, ekspor, ringkasan, serta fitur Admin masih "Belum dikerjakan" (daftar status per fitur ada di `docs/SPEC.md` bagian 3 dan TIDAK diulang di sini — perbarui dokumen itu, bukan paragraf ini). Saat ini dijalankan di localhost; sistem akan di-deploy (detail belum diputuskan, lihat `docs/SPEC.md` U13).
+Status: prototipe UTS sudah berjalan di localhost dan sebagian besar fitur Pengajar sudah Selesai; FR1 belum Selesai penuh karena login Admin belum ada, dan langganan berbayar, ekspor, ringkasan, serta fitur Admin masih "Belum dikerjakan" (daftar status per fitur ada di `docs/SPEC.md` bagian 3 dan TIDAK diulang di sini — perbarui dokumen itu, bukan paragraf ini). Saat ini dijalankan di localhost; penyedia hosting sudah diputuskan (Fly.io, Supabase, Netlify) sedangkan domain, HTTPS, dan backup belum — lihat `docs/SPEC.md` U13.
 
 Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 
@@ -11,7 +11,8 @@ Kata HARUS dan TIDAK BOLEH yang ditulis huruf besar berarti aturan wajib.
 - Backend: Python 3.12, FastAPI (async), PostgreSQL 15+, SQLAlchemy 2.0 async + Alembic + asyncpg
 - Frontend: React + Vite (JavaScript) + Tailwind CSS (v4, plugin Vite)
 - AI: Google Gemini lewat SDK resmi `google-genai`, model `gemini-3.5-flash-lite` untuk OCR dan judge
-- Container: Docker Compose hanya untuk database. Backend dan frontend dijalankan langsung di mesin pengembang.
+- Container: Docker Compose memuat database (`db`) dan backend (`backend`, opsional untuk menguji image). Alur pengembangan sehari-hari tetap menjalankan backend dan frontend langsung di mesin pengembang.
+- Deploy: backend di Fly.io (`backend/Dockerfile`, `backend/fly.toml`), database dan penyimpanan berkas di Supabase, frontend di Netlify.
 
 ## Struktur folder
 
