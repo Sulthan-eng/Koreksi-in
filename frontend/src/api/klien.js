@@ -1,3 +1,4 @@
+import { gabungUrl } from "../lib/urlApi.js";
 import { pesanUntukKode } from "./pesan.js";
 
 let accessToken = null;
@@ -23,17 +24,22 @@ async function kirim(
   const isFormData = body instanceof FormData;
   let response;
   try {
-    response = await fetch(path, {
-      method,
-      headers: {
-        ...(body && !isFormData ? { "Content-Type": "application/json" } : {}),
-        ...(autentikasi && accessToken
-          ? { Authorization: `Bearer ${accessToken}` }
-          : {}),
+    response = await fetch(
+      gabungUrl(import.meta.env.VITE_API_URL ?? "", path),
+      {
+        method,
+        headers: {
+          ...(body && !isFormData
+            ? { "Content-Type": "application/json" }
+            : {}),
+          ...(autentikasi && accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {}),
+        },
+        credentials: sertakanKredensial ? "include" : "same-origin",
+        ...(body ? { body: isFormData ? body : JSON.stringify(body) } : {}),
       },
-      credentials: sertakanKredensial ? "include" : "same-origin",
-      ...(body ? { body: isFormData ? body : JSON.stringify(body) } : {}),
-    });
+    );
   } catch {
     lemparKesalahan("UMUM");
   }

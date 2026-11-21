@@ -90,6 +90,8 @@ export const PESAN_KODE = {
   GAGAL_SIMPAN_NILAI_AKHIR:
     "Nilai gagal disimpan, silakan mencoba menyimpan kembali.",
   MAKS_FILE_TERLAMPAUI: "Maksimal 10 file per unggahan.",
+  UKURAN_REQUEST_TERLALU_BESAR:
+    "Total ukuran file yang dikirim terlalu besar. Kurangi jumlah file lalu coba lagi.",
   TIDAK_ADA_FILE: "Pilih minimal satu file untuk diunggah.",
   NAMA_PESERTA_KOSONG: "Nama peserta didik wajib untuk semua file",
   NAMA_PESERTA_TERLALU_PANJANG: "Nama peserta didik maksimal 100 karakter.",
