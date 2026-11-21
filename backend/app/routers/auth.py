@@ -28,12 +28,17 @@ _COOKIE_NAME = "refresh_token"
 _COOKIE_PATH = "/api/auth"
 
 
+# Tanpa atribut Domain: cookie host-only di host API saja. Di produksi frontend dan
+# API berada di dua subdomain dari satu registrable domain (lihat SPEC bagian 11),
+# jadi keduanya same-site dan SameSite=Lax tetap mengirim cookie pada POST /refresh.
+# Domain=.<registrable domain> hanya akan memperluas cookie ke seluruh subdomain
+# tanpa manfaat, jadi sengaja tidak dipakai.
 def _set_refresh_cookie(response: Response, token: str, secure: bool) -> None:
     response.set_cookie(
         key=_COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite=settings.COOKIE_SAMESITE,
         path=_COOKIE_PATH,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         secure=secure,
@@ -74,7 +79,16 @@ async def refresh(
 async def keluar(request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> None:
     refresh_token = request.cookies.get(_COOKIE_NAME)
     await auth_service.keluar(db, refresh_token)
-    response.delete_cookie(key=_COOKIE_NAME, path=_COOKIE_PATH)
+    # Atribut harus sama dengan _set_refresh_cookie: browser hanya menimpa cookie
+    # yang atributnya cocok, jadi default delete_cookie (httponly dan secure False)
+    # bisa gagal menghapus cookie Secure di produksi.
+    response.delete_cookie(
+        key=_COOKIE_NAME,
+        path=_COOKIE_PATH,
+        httponly=True,
+        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.COOKIE_SECURE,
+    )
 
 
 @router.get("/saya", response_model=SayaResponse)
