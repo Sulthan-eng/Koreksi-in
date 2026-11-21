@@ -8,6 +8,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.errors import AppError
 from app.main import app
@@ -173,6 +174,45 @@ async def test_masuk_sukses(client: AsyncClient, db_session: AsyncSession) -> No
     assert sesi is not None
 
 
+async def test_masuk_cookie_secure_mengikuti_setting(client: AsyncClient, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "COOKIE_SECURE", True)
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+
+    response = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "secure" in set_cookie
+
+
+async def test_masuk_cookie_secure_tidak_ada_saat_nonaktif(
+    client: AsyncClient, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "COOKIE_SECURE", False)
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+
+    response = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "secure" not in set_cookie
+
+
+async def test_masuk_cookie_samesite_mengikuti_setting(client: AsyncClient, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "COOKIE_SECURE", True)
+    monkeypatch.setattr(settings, "COOKIE_SAMESITE", "none")
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+
+    response = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "samesite=none" in set_cookie
+
+
 async def test_masuk_gagal_email_tidak_ada(client: AsyncClient) -> None:
     response = await client.post(
         "/api/auth/masuk", json={"email": "tidak-ada@contoh.com", "password": "rahasia123"}
@@ -252,9 +292,27 @@ async def test_keluar_mencabut_sesi(client: AsyncClient, db_session: AsyncSessio
     set_cookie = response.headers.get("set-cookie", "")
     assert "refresh_token=" in set_cookie
     assert "max-age=0" in set_cookie.lower() or "expires=" in set_cookie.lower()
+    # Harus memakai atribut yang sama dengan _set_refresh_cookie, bukan default
+    # delete_cookie (HttpOnly/Secure False), supaya Set-Cookie penghapus benar
+    # menimpa cookie aslinya di browser.
+    assert "httponly" in set_cookie.lower()
+    assert "samesite=lax" in set_cookie.lower()
+    assert "path=/api/auth" in set_cookie.lower()
 
     sesi = await db_session.scalar(select(Sesi))
     assert sesi.dicabut_pada is not None
+
+
+async def test_keluar_cookie_penghapus_secure_mengikuti_setting(
+    client: AsyncClient, monkeypatch
+) -> None:
+    monkeypatch.setattr(settings, "COOKIE_SECURE", True)
+    await _daftar_dan_masuk(client)
+
+    response = await client.post("/api/auth/keluar")
+
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "secure" in set_cookie
 
 
 async def test_saya_tanpa_token_ditolak(client: AsyncClient) -> None:
