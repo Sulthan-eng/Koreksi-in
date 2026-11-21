@@ -6,6 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
 
+from app.core.cors import header_cors
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,10 +73,15 @@ async def db_error_handler(request: Request, exc: DBAPIError) -> JSONResponse:
 
 async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("unexpected_error method=%s path=%s", request.method, request.url.path)
+    # Handler Exception dipasang Starlette di ServerErrorMiddleware, di luar
+    # CORSMiddleware, jadi respons ini tidak pernah melewatinya. Tanpa header di
+    # bawah, galat 500 tampil di browser sebagai "network error" alih-alih pesan
+    # aplikasi. Daftar origin diambil dari app.core.cors agar tetap satu sumber.
     return JSONResponse(
         status_code=500,
         content={
             "kode": "KESALAHAN_SERVER",
             "pesan": "Terjadi kesalahan, silakan coba lagi.",
         },
+        headers=header_cors(request.headers.get("origin")),
     )
