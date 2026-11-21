@@ -21,12 +21,27 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 5
     DB_POOL_RECYCLE_SECONDS: int = 300
+    # Default "produksi" dipilih agar gagal-aman: origin dev hanya terbuka kalau
+    # diminta eksplisit (ENV=dev). Dev sehari-hari tidak terpengaruh karena proxy
+    # Vite membuat browser melihat satu origin, jadi CORS tidak terlibat.
+    ENV: Literal["dev", "produksi"] = "produksi"
     COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: Literal["lax", "none", "strict"] = "lax"
+    # 10 file x 10 MB (batas per file) + ~5 MB untuk boundary multipart dan field
+    # nama_peserta_didik. Tidak menolak unggahan yang sah, hanya memotong request
+    # abusif sebelum body dibaca.
+    MAX_REQUEST_SIZE_MB: int = 105
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
+
+    @model_validator(mode="after")
+    def _validasi_cookie(self) -> "Settings":
+        if self.COOKIE_SAMESITE == "none" and not self.COOKIE_SECURE:
+            raise ValueError("COOKIE_SAMESITE=none wajib disertai COOKIE_SECURE=true")
+        return self
 
     @model_validator(mode="after")
     def _validasi_storage(self) -> "Settings":
