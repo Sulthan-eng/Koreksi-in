@@ -841,3 +841,217 @@ async def test_tandai_gagal_juga_gagal_tidak_melempar_dan_lanjut_grup_berikutnya
         assert f.status_proses == StatusProses.DIPROSES
     await db_session.refresh(files[5])
     assert files[5].status_proses == StatusProses.SELESAI
+
+
+async def test_baca_awal_gagal_dbapi_tandai_gagal_tanpa_bocor_param(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch, caplog
+) -> None:
+    """Bila fase 1 (_baca_data_awal) gagal karena DBAPIError, semua baris
+    ditandai gagal lewat helper aman tanpa membocorkan parameter SQL ke log,
+    dan storage/Gemini tidak dipanggil."""
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj1 = await _buat_file_jawaban(db_session, tmp_path, batch)
+    fj2 = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    def gagalkan_baca_awal(urutan: int, sesi: AsyncSession) -> None:
+        # Urutan sesi: 1 = baca awal (gagal), 2 = tandai gagal aman (berhasil).
+        if urutan == 1:
+
+            async def scalars_gagal(*args, **kwargs):
+                raise OperationalError(
+                    'SELECT * FROM "File_Jawaban" WHERE id_file = :id',
+                    {"id": "RAHASIA_PARAM_FASE1"},
+                    ConnectionResetError("connection lost"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "scalars", scalars_gagal)
+
+    pelacak = _pasang_session_factory_pelacak(monkeypatch, _engine, on_sesi=gagalkan_baca_awal)
+    muat_mock = AsyncMock()
+    ocr_mock = AsyncMock()
+    monkeypatch.setattr(pemrosesan, "_muat_berkas", muat_mock)
+    monkeypatch.setattr(gemini, "ocr_grup", ocr_mock)
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([fj1.id_file, fj2.id_file])
+
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 2
+    muat_mock.assert_not_called()
+    ocr_mock.assert_not_called()
+    assert "pemrosesan_baca_awal_gagal_db" in caplog.text
+    assert "RAHASIA_PARAM_FASE1" not in caplog.text
+
+    for f in (fj1, fj2):
+        await db_session.refresh(f)
+        assert f.status_proses == StatusProses.GAGAL
+        assert f.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+
+
+async def test_baca_awal_gagal_tak_terduga_tandai_gagal(
+    db_session: AsyncSession, tmp_path, monkeypatch, caplog
+) -> None:
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    async def baca_meledak(id_file_list, db):
+        raise RuntimeError("galat fase 1 tak terduga")
+
+    monkeypatch.setattr(pemrosesan, "_baca_data_awal", baca_meledak)
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([fj.id_file], db=db_session)
+
+    assert "pemrosesan_baca_awal_gagal_tak_terduga" in caplog.text
+    await db_session.refresh(fj)
+    assert fj.status_proses == StatusProses.GAGAL
+    assert fj.pesan_error == pemrosesan.PESAN_GAGAL_UMUM
+
+
+async def test_baca_awal_gagal_dan_tandai_gagal_juga_gagal_tidak_melempar(
+    _engine, db_session: AsyncSession, tmp_path, monkeypatch, caplog
+) -> None:
+    batch, _soal_list = await _buat_batch(db_session, [1])
+    fj = await _buat_file_jawaban(db_session, tmp_path, batch)
+
+    def gagalkan_semua_sesi(urutan: int, sesi: AsyncSession) -> None:
+        if urutan == 1:
+
+            async def scalars_gagal(*args, **kwargs):
+                raise OperationalError(
+                    'SELECT * FROM "File_Jawaban"',
+                    {"rahasia": "RAHASIA_FASE1_MATI"},
+                    ConnectionResetError("db unreachable"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "scalars", scalars_gagal)
+        elif urutan == 2:
+
+            async def execute_gagal(*args, **kwargs):
+                raise OperationalError(
+                    'UPDATE "File_Jawaban" SET pesan_error = :pesan',
+                    {"pesan": "RAHASIA_TANDAI_MATI"},
+                    ConnectionResetError("db unreachable"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "execute", execute_gagal)
+
+    pelacak = _pasang_session_factory_pelacak(monkeypatch, _engine, on_sesi=gagalkan_semua_sesi)
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([fj.id_file])
+
+    assert pelacak["aktif"] == 0
+    assert pelacak["total"] == 2
+    assert "pemrosesan_baca_awal_gagal_db" in caplog.text
+    assert "pemrosesan_tandai_gagal_error" in caplog.text
+    assert "RAHASIA_FASE1_MATI" not in caplog.text
+    assert "RAHASIA_TANDAI_MATI" not in caplog.text
+
+
+async def test_baca_awal_gagal_lalu_coba_lagi_sukses_sampai_selesai(
+    client,
+    _engine,
+    db_session: AsyncSession,
+    tmp_path,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    """Alur ujung ke ujung: fase 1 gagal menandai file 'gagal', sehingga pengguna
+    langsung dapat menekan 'Coba Lagi' dan pemrosesan berikutnya berakhir 'selesai'."""
+    await client.post(
+        "/api/auth/daftar",
+        json={"nama": "Budi", "email": "budi-fase1@contoh.com", "password": "rahasia123"},
+    )
+    masuk = await client.post(
+        "/api/auth/masuk",
+        json={"email": "budi-fase1@contoh.com", "password": "rahasia123"},
+    )
+    headers = {"Authorization": f"Bearer {masuk.json()['access_token']}"}
+
+    id_batch = (
+        await client.post("/api/batch", json={"nama_batch": "UTS Fase 1"}, headers=headers)
+    ).json()["id_batch"]
+    await client.post(
+        f"/api/batch/{id_batch}/soal", json={"kunci_jawaban": "Kunci jawaban"}, headers=headers
+    )
+
+    unggah = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban",
+        files=[("files", ("lembar.png", b"\x89PNG\r\n\x1a\n" + b"isi", "image/png"))],
+        data={"nama_peserta_didik": "Ani"},
+        headers=headers,
+    )
+    assert unggah.status_code == 201
+    id_file = unggah.json()[0]["id_file"]
+
+    # Jalankan tugas latar unggahan dengan fase 1 gagal (DBAPIError) pada sesi 1.
+    def gagalkan_baca_awal(urutan: int, sesi: AsyncSession) -> None:
+        if urutan == 1:
+
+            async def scalars_gagal(*args, **kwargs):
+                raise OperationalError(
+                    'SELECT * FROM "File_Jawaban"',
+                    {},
+                    ConnectionResetError("pooler reset"),
+                    connection_invalidated=True,
+                )
+
+            monkeypatch.setattr(sesi, "scalars", scalars_gagal)
+
+    _pasang_session_factory_pelacak(monkeypatch, _engine, on_sesi=gagalkan_baca_awal)
+    func, args, kwargs = _background_tasks_tidak_dijalankan[-1]
+    assert func is pemrosesan.proses_file_jawaban
+    await func(*args, **kwargs)
+    # Fixture client memakai satu db_session bersama, sementara tugas latar commit di sesi terpisah.
+    db_session.expire_all()
+
+    daftar = (await client.get(f"/api/batch/{id_batch}/file-jawaban", headers=headers)).json()
+    assert daftar[0]["status_proses"] == "gagal"
+    assert daftar[0]["pesan_error"] == pemrosesan.PESAN_GAGAL_UMUM
+
+    # Pengguna menekan "Coba Lagi".
+    coba_lagi = await client.post(
+        f"/api/batch/{id_batch}/file-jawaban/{id_file}/coba-lagi", headers=headers
+    )
+    assert coba_lagi.status_code == 200
+    assert coba_lagi.json()["status_proses"] == "diproses"
+    assert coba_lagi.json()["pesan_error"] is None
+
+    baris = await db_session.get(FileJawaban, uuid.UUID(id_file), populate_existing=True)
+    assert baris.jumlah_retry == 1
+
+    # Pemrosesan ulang berjalan normal sampai selesai.
+    _pasang_session_factory_pelacak(monkeypatch, _engine)
+    monkeypatch.setattr(
+        gemini,
+        "ocr_grup",
+        AsyncMock(
+            return_value=gemini.ResponsOcr(
+                items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban Ani")]
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        gemini,
+        "judge_grup",
+        AsyncMock(
+            return_value=gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=88)])
+        ),
+    )
+    func_ulang, args_ulang, kwargs_ulang = _background_tasks_tidak_dijalankan[-1]
+    assert func_ulang is pemrosesan.proses_file_jawaban
+    await func_ulang(*args_ulang, **kwargs_ulang)
+    db_session.expire_all()
+
+    daftar_akhir = (await client.get(f"/api/batch/{id_batch}/file-jawaban", headers=headers)).json()
+    assert daftar_akhir[0]["status_proses"] == "selesai"
+    assert daftar_akhir[0]["pesan_error"] is None
+
+    hasil = (await client.get(f"/api/batch/{id_batch}/hasil", headers=headers)).json()
+    assert len(hasil) == 1
+    assert hasil[0]["skor_sistem"] == 88
+    assert hasil[0]["kategori"] == "sangat_mirip"
