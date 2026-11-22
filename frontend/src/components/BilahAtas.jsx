@@ -19,12 +19,16 @@ const TAUTAN_JANGKAR_PEMASARAN = [
 
 function dapatkanDaftarMenu(varian, pathname) {
   if (varian === "admin") {
-    // "Akun Pengajar" disembunyikan sampai FR24 (menu ada di UI.md tapi halaman belum dibuat)
     return [
       {
         label: "Dashboard Pantauan",
         to: "/admin",
         aktif: pathname === "/admin",
+      },
+      {
+        label: "Akun Pengajar",
+        to: "/admin/akun-pengajar",
+        aktif: pathname === "/admin/akun-pengajar",
       },
     ];
   }

@@ -18,6 +18,7 @@ import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
 import DashboardPantauan from "./pages/DashboardPantauan.jsx";
+import AkunPengajar from "./pages/AkunPengajar.jsx";
 
 function RouteTamu({ children }) {
   const { status, peran } = useAuth();
@@ -86,6 +87,7 @@ const rute = createRoutesFromElements(
     </Route>
     <Route element={<TataLetakTerproteksi peran="admin" />}>
       <Route path="/admin" element={<DashboardPantauan />} />
+      <Route path="/admin/akun-pengajar" element={<AkunPengajar />} />
     </Route>
   </Route>,
 );
