@@ -16,11 +16,17 @@ primary_region = "sin"
 [http_service]
   internal_port = 8000
   force_https = true
-  # Tidak boleh tidur: pemrosesan berjalan sebagai BackgroundTasks di dalam proses
-  # aplikasi, jadi mesin harus tetap hidup selama ada file berstatus diproses.
-  auto_stop_machines = "off"
+  # Mesin tidur saat idle (tidak ada request) dan bangun otomatis saat request
+  # berikutnya — mode hemat selama tidak ada demo. Konsekuensi: pemrosesan
+  # berjalan sebagai BackgroundTasks di dalam proses aplikasi, jadi bila tidak
+  # ada lalu lintas (misalnya tab ditutup saat proses berjalan) mesin bisa
+  # berhenti dan pemrosesan terputus. File yang terputus ditandai Gagal saat
+  # boot berikutnya dan dapat dicoba lagi lewat "Coba Lagi" (SPEC bagian 8).
+  # Sebelum demo atau penilaian, kembalikan ke auto_stop_machines = "off" dan
+  # min_machines_running = 1.
+  auto_stop_machines = "stop"
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
 
   [[http_service.checks]]
     method = "GET"

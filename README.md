@@ -60,7 +60,7 @@ Catatan penting:
 - **Jangan mengisi variabel dengan nilai kosong.** `fly secrets set NAMA=` tetap mengirim variabel itu ke proses dan menimpa default di `Settings`. String kosong pada variabel bertipe angka (`GEMINI_RPD_LIMIT`, `SMTP_PORT`) atau pilihan terbatas (`STORAGE_BACKEND`, `COOKIE_SECURE`) menggagalkan validasi saat import, sehingga aplikasi dan `release_command` langsung mati. Variabel opsional cukup tidak di-set.
 - **`UPLOAD_DIR` tidak diisi di produksi.** `STORAGE_BACKEND=s3` tidak memakainya, dan container stateless (tanpa Fly Volume).
 - `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_RECYCLE_SECONDS` opsional; defaultnya sudah sesuai untuk satu instance.
-- Mesin tidak boleh tidur (`auto_stop_machines = "off"`, `min_machines_running = 1`) karena pemrosesan berjalan di dalam proses aplikasi.
+- Mesin tidur saat idle dan bangun otomatis saat ada request (`auto_stop_machines = "stop"`, `min_machines_running = 0`) untuk menghemat biaya selama tidak ada demo. Konsekuensinya, pemrosesan berjalan sebagai `BackgroundTasks` di dalam proses aplikasi: bila tidak ada lalu lintas (misalnya tab ditutup saat proses berjalan), mesin bisa berhenti dan pemrosesan terputus. File yang terputus ditandai `Gagal` saat boot berikutnya dan bisa dikirim ulang lewat "Coba Lagi" (SPEC bagian 8). Sebelum demo atau penilaian, kembalikan ke `auto_stop_machines = "off"` dan `min_machines_running = 1`.
 - Deploy mematikan satu-satunya mesin, jadi file yang sedang `diproses` akan ditandai `Gagal` dengan pesan "server dimulai ulang". Hindari deploy saat ada pemrosesan berjalan.
 
 ## Deploy frontend ke Netlify
