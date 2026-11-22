@@ -16,9 +16,7 @@ from app.core.config import settings
 # Gunakan database terpisah untuk migrasi
 _BASE_URL = make_url(settings.DATABASE_URL)
 _MIGRASI_DB_NAME = f"{_BASE_URL.database}_migrasi_test"
-_MIGRASI_URL = _BASE_URL.set(
-    database=_MIGRASI_DB_NAME, drivername="postgresql+asyncpg"
-)
+_MIGRASI_URL = _BASE_URL.set(database=_MIGRASI_DB_NAME, drivername="postgresql+asyncpg")
 _MAINTENANCE_URL = _BASE_URL.set(database="postgres", drivername="postgresql")
 _UUID_OLD_USER = "550e8400-e29b-41d4-a716-446655440000"
 
@@ -93,7 +91,7 @@ async def test_migrasi_upgrade_downgrade(_engine_migrasi) -> None:
         # Verifikasi baris ada sebelum migrasi
         where_clause = f"id_pengguna = '{_UUID_OLD_USER}'"
         row_before = await conn.scalar(
-            text(f"SELECT COUNT(*) FROM \"Pengguna\" WHERE {where_clause}")
+            text(f'SELECT COUNT(*) FROM "Pengguna" WHERE {where_clause}')
         )
         assert row_before == 1
 
@@ -112,20 +110,16 @@ async def test_migrasi_upgrade_downgrade(_engine_migrasi) -> None:
         where_clause = f"id_pengguna = '{_UUID_OLD_USER}'"
 
         # Baris tetap ada
-        row_after = await conn.scalar(
-            text(f"SELECT COUNT(*) FROM \"Pengguna\" WHERE {where_clause}")
-        )
+        row_after = await conn.scalar(text(f'SELECT COUNT(*) FROM "Pengguna" WHERE {where_clause}'))
         assert row_after == 1
 
         # peran = 'pengajar'
-        peran = await conn.scalar(
-            text(f"SELECT peran FROM \"Pengguna\" WHERE {where_clause}")
-        )
+        peran = await conn.scalar(text(f'SELECT peran FROM "Pengguna" WHERE {where_clause}'))
         assert peran == "pengajar"
 
         # dinonaktifkan_pada = NULL
         dinonaktifkan = await conn.scalar(
-            text(f"SELECT dinonaktifkan_pada FROM \"Pengguna\" WHERE {where_clause}")
+            text(f'SELECT dinonaktifkan_pada FROM "Pengguna" WHERE {where_clause}')
         )
         assert dinonaktifkan is None
 
@@ -145,7 +139,7 @@ async def test_migrasi_upgrade_downgrade(_engine_migrasi) -> None:
 
         # Baris tetap ada
         row_after_down = await conn.scalar(
-            text(f"SELECT COUNT(*) FROM \"Pengguna\" WHERE {where_clause}")
+            text(f'SELECT COUNT(*) FROM "Pengguna" WHERE {where_clause}')
         )
         assert row_after_down == 1
 

@@ -135,9 +135,7 @@ async def test_buat_admin_password_tidak_cocok(capsys) -> None:
     assert "tidak cocok" in captured.err
 
 
-async def test_buat_admin_password_tidak_pernah_dicetak(
-    db_session: AsyncSession, capsys
-) -> None:
+async def test_buat_admin_password_tidak_pernah_dicetak(db_session: AsyncSession, capsys) -> None:
     """Password tidak pernah muncul di output."""
     from scripts.buat_admin import buat_admin_interaktif
 
