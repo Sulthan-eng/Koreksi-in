@@ -17,6 +17,7 @@ Status: dikembangkan bertahap menuju sistem penuh. Saat ini dijalankan di localh
    ```
 4. Terapkan migrasi: `alembic upgrade head`.
 5. Jalankan backend: `uvicorn app.main:app --reload --port 8000`.
+   Catatan: `ENV` ber-default `produksi` (gagal-aman), sehingga `/docs`, `/redoc`, dan `/openapi.json` nonaktif secara default. Jika memerlukan Swagger/OpenAPI di localhost, jalankan `ENV=dev uvicorn app.main:app --reload --port 8000` atau tambahkan `ENV=dev` di `.env` lokal (`ENV` sengaja tidak dimasukkan ke `.env.example`).
 6. Cek: `curl http://localhost:8000/api/health` harus mengembalikan `{"status":"ok"}`.
 
 7. Siapkan frontend (butuh Node 20.19+ atau 22.12+):
@@ -49,10 +50,10 @@ Semua perintah dari folder `backend/` (di situlah `fly.toml` berada, sehingga bu
 
 1. `fly launch --no-deploy --copy-config` — **tolak** tawaran Postgres, Redis, dan Tigris; database dan penyimpanan berkas dipakai dari Supabase.
 2. `fly config validate` — periksa `fly.toml` sebelum deploy.
-3. Isi variabel dengan `fly secrets set <NAMA>=<nilai>`. Nama yang perlu diisi: `DATABASE_URL` (harus berawalan `postgresql+asyncpg://` dan memakai connection string **Session pooler** Supabase), `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `STORAGE_BACKEND` (bernilai `s3`), `S3_ENDPOINT_URL`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `COOKIE_SECURE` (bernilai `true`), `FRONTEND_URL` (bernilai `https://app.sulthanfarizan.my.id`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`. Opsional, dengan default aman (lihat `docs/SPEC.md` bagian 11): `ENV` (isi `produksi` untuk kejelasan meski itu defaultnya — default gagal-aman dipilih justru supaya lupa mengisinya tidak membuka origin dev), `COOKIE_SAMESITE`, `MAX_REQUEST_SIZE_MB`. Siapkan custom domain `api.sulthanfarizan.my.id` lewat `fly certs add api.sulthanfarizan.my.id` dan arahkan DNS sesuai instruksi `fly certs show`.
+3. Isi variabel dengan `fly secrets set <NAMA>=<nilai>`. Nama yang perlu diisi: `DATABASE_URL` (harus berawalan `postgresql+asyncpg://` dan memakai connection string **Session pooler** Supabase), `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `STORAGE_BACKEND` (bernilai `s3`), `S3_ENDPOINT_URL`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `COOKIE_SECURE` (bernilai `true`), `FRONTEND_URL` (bernilai `https://app.sulthanfarizan.my.id`), `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`. Opsional, dengan default aman (lihat `docs/SPEC.md` bagian 11): `ENV` (isi `produksi` untuk kejelasan meski itu defaultnya — default gagal-aman dipilih justru supaya lupa mengisinya tidak membuka origin dev maupun `/docs`/`/redoc`/`/openapi.json`), `COOKIE_SAMESITE`, `MAX_REQUEST_SIZE_MB`. Siapkan custom domain `api.sulthanfarizan.my.id` lewat `fly certs add api.sulthanfarizan.my.id` dan arahkan DNS sesuai instruksi `fly certs show`.
 4. `fly deploy --ha=false` — **`--ha=false` wajib**: tanpa itu deploy pertama membuat dua mesin, dan itu merusak asumsi satu instance/satu worker (penghitung kuota Gemini ada di memori dan pemrosesan memakai `BackgroundTasks`). Migrasi dijalankan lebih dulu oleh `release_command` (`alembic upgrade head`).
 5. `fly status` — pastikan hanya ada satu mesin. Bila ternyata lebih dari satu, perbaiki dengan `fly scale count 1`.
-6. Cek: `curl https://<nama-app>.fly.dev/api/health` harus mengembalikan `{"status":"ok"}`. `fly logs` memuat satu baris `storage_backend_aktif backend=s3`.
+6. Cek: `curl https://<nama-app>.fly.dev/api/health` harus mengembalikan `{"status":"ok"}`, dan `/docs` mengembalikan `404`. `fly logs` memuat log aplikasi `app.*` mulai level `INFO` (termasuk `storage_backend_aktif backend=s3` dan `gemini_call`).
 
 Catatan penting:
 
