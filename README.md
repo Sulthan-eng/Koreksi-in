@@ -65,7 +65,7 @@ fly console
 # Di dalam console (mesin sementara dengan TTY):
 cd /app
 python -m scripts.buat_admin
-# Lalu masukkan nama, email, dan password (min 12 karakter, via getpass)
+# Lalu masukkan nama, email, dan password (min 8 karakter, via getpass)
 exit
 ```
 

@@ -29,14 +29,14 @@ async def buat_admin_interaktif() -> None:
         print("Error: format email tidak valid", file=sys.stderr)
         sys.exit(1)
 
-    password = getpass.getpass("Password Admin (min 12 karakter): ")
+    password = getpass.getpass("Password Admin (min 8 karakter): ")
     if not password:
         print("Error: password tidak boleh kosong", file=sys.stderr)
         sys.exit(1)
 
     panjang_password = len(password.encode("utf-8"))
-    if panjang_password < 12:
-        print("Error: password minimal 12 karakter", file=sys.stderr)
+    if panjang_password < 8:
+        print("Error: password minimal 8 karakter", file=sys.stderr)
         sys.exit(1)
     if panjang_password > 72:
         print("Error: password maksimal 72 karakter", file=sys.stderr)

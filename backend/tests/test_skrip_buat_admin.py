@@ -77,7 +77,7 @@ async def test_buat_admin_email_sudah_ada(db_session: AsyncSession) -> None:
 
 
 async def test_buat_admin_password_terlalu_pendek(capsys) -> None:
-    """Skrip menolak password < 12 karakter."""
+    """Skrip menolak password < 8 karakter."""
     from scripts.buat_admin import buat_admin_interaktif
 
     with (
@@ -92,7 +92,7 @@ async def test_buat_admin_password_terlalu_pendek(capsys) -> None:
 
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
-    assert "minimal 12 karakter" in captured.err
+    assert "minimal 8 karakter" in captured.err
 
 
 async def test_buat_admin_password_terlalu_panjang(capsys) -> None:
