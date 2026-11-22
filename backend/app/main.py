@@ -39,11 +39,18 @@ async def lifespan(app: FastAPI):
 
 
 def buat_app() -> FastAPI:
-    """Bangun aplikasi. Dibuat sebagai factory karena daftar origin dan batas ukuran
-    dibaca saat konstruksi, sehingga test bisa membangun varian (ENV=produksi, batas
-    kecil) tanpa mengandalkan urutan import."""
+    """Bangun aplikasi. Dibuat sebagai factory karena daftar origin, batas ukuran,
+    dan visibilitas dokumentasi API dibaca saat konstruksi, sehingga test bisa
+    membangun varian (ENV=produksi/dev, batas kecil) tanpa mengandalkan urutan import."""
     atur_logging()
-    app = FastAPI(title="Koreksi-in", lifespan=lifespan)
+    tampilkan_docs = settings.ENV != "produksi"
+    app = FastAPI(
+        title="Koreksi-in",
+        lifespan=lifespan,
+        docs_url="/docs" if tampilkan_docs else None,
+        redoc_url="/redoc" if tampilkan_docs else None,
+        openapi_url="/openapi.json" if tampilkan_docs else None,
+    )
 
     app.add_exception_handler(AppError, app_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
