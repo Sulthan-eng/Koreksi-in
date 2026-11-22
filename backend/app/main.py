@@ -16,11 +16,12 @@ from app.core.errors import (
     unexpected_error_handler,
     validation_error_handler,
 )
+from app.core.logging import atur_logging
 from app.core.middleware import BatasUkuranRequest
 from app.core.startup import sapu_proses_tergantung
 from app.routers import auth, batch, health, ringkasan
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 # Method dan header diizinkan secara eksplisit (tanpa wildcard). Daftarnya persis
 # apa yang dipakai aplikasi: method dari router di app/routers/, header dari
@@ -41,6 +42,7 @@ def buat_app() -> FastAPI:
     """Bangun aplikasi. Dibuat sebagai factory karena daftar origin dan batas ukuran
     dibaca saat konstruksi, sehingga test bisa membangun varian (ENV=produksi, batas
     kecil) tanpa mengandalkan urutan import."""
+    atur_logging()
     app = FastAPI(title="Koreksi-in", lifespan=lifespan)
 
     app.add_exception_handler(AppError, app_error_handler)
