@@ -42,7 +42,7 @@ async def pengguna_saat_ini(
         raise SESI_BERAKHIR
 
     pengguna = await db.scalar(select(Pengguna).where(Pengguna.id_pengguna == id_pengguna))
-    if pengguna is None:
+    if pengguna is None or pengguna.dinonaktifkan_pada is not None:
         raise SESI_BERAKHIR
 
     return pengguna
