@@ -7,6 +7,7 @@ import {
   createRoutesFromElements,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { berandaUntukPeran } from "./lib/peran.js";
 import KeadaanData from "./components/KeadaanData.jsx";
 import TataLetakTerproteksi from "./components/TataLetakTerproteksi.jsx";
 import Masuk from "./pages/Masuk.jsx";
@@ -16,19 +17,23 @@ import AturUlangPassword from "./pages/AturUlangPassword.jsx";
 import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
+import DashboardPantauan from "./pages/DashboardPantauan.jsx";
 
 function RouteTamu({ children }) {
-  const { status } = useAuth();
+  const { status, peran } = useAuth();
   if (status === "terautentikasi") {
-    return <Navigate to="/" replace />;
+    return <Navigate to={berandaUntukPeran(peran)} replace />;
   }
   return children;
 }
 
 function RuteUtama() {
-  const { status, pesanSesi } = useAuth();
+  const { status, peran, pesanSesi } = useAuth();
   if (status === "terautentikasi") {
-    return <TataLetakTerproteksi />;
+    if (peran === "admin") {
+      return <Navigate to="/admin" replace />;
+    }
+    return <TataLetakTerproteksi peran="pengajar" />;
   }
   if (pesanSesi) {
     return <Navigate to="/masuk" replace />;
@@ -76,8 +81,11 @@ const rute = createRoutesFromElements(
     <Route element={<RuteUtama />}>
       <Route path="/" element={<Beranda />} />
     </Route>
-    <Route element={<TataLetakTerproteksi />}>
+    <Route element={<TataLetakTerproteksi peran="pengajar" />}>
       <Route path="/batch/:id" element={<HalamanBatch />} />
+    </Route>
+    <Route element={<TataLetakTerproteksi peran="admin" />}>
+      <Route path="/admin" element={<DashboardPantauan />} />
     </Route>
   </Route>,
 );

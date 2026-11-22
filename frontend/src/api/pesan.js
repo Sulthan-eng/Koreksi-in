@@ -60,6 +60,7 @@ export const PESAN_KODE = {
   KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
   GAGAL_UBAH_PASSWORD: "Gagal mengubah password, silakan coba lagi.",
   PASSWORD_BERHASIL_DIUBAH: "Password berhasil diubah, silakan masuk.",
+  AKSES_DITOLAK: "Anda tidak memiliki akses ke fitur ini.",
   BATCH_TIDAK_DITEMUKAN: "Batch tidak ditemukan",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
   BATAS_BATCH_AKTIF_TERCAPAI:

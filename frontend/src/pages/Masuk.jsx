@@ -4,6 +4,7 @@ import * as auth from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { PESAN_KODE } from "../api/pesan.js";
 import { REGEX_EMAIL } from "../lib/validasi.js";
+import { berandaUntukPeran } from "../lib/peran.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 
@@ -56,8 +57,8 @@ function Masuk() {
     try {
       await auth.masuk({ email, password });
       const hasil = await auth.saya();
-      tandaiMasuk(hasil.nama, hasil.status_langganan);
-      navigate("/", { replace: true });
+      tandaiMasuk(hasil.nama, hasil.status_langganan, hasil.peran);
+      navigate(berandaUntukPeran(hasil.peran), { replace: true });
     } catch (error) {
       if (error.kode === "LOGIN_GAGAL") {
         setKolomTidakValid(new Set(["email", "password"]));

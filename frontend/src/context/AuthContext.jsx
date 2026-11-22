@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import * as auth from "../api/auth.js";
 import { setPenangananSesiBerakhir } from "../api/klien.js";
 import { pesanUntukKode } from "../api/pesan.js";
+import { normalisasiPeran } from "../lib/peran.js";
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,7 @@ export function AuthProvider({ children }) {
   const [status, setStatus] = useState("memuat");
   const [nama, setNama] = useState(null);
   const [statusLangganan, setStatusLangganan] = useState(null);
+  const [peran, setPeran] = useState("pengajar");
   const [pesanSesi, setPesanSesi] = useState(null);
   const [keluarSengaja, setKeluarSengaja] = useState(false);
   const sudahJalanRef = useRef(false);
@@ -25,6 +27,7 @@ export function AuthProvider({ children }) {
       setPesanSesi(pesanUntukKode("SESI_BERAKHIR"));
       setNama(null);
       setStatusLangganan(null);
+      setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     });
   }, []);
@@ -43,6 +46,7 @@ export function AuthProvider({ children }) {
         const hasil = await auth.saya();
         setNama(hasil.nama);
         setStatusLangganan(normalisasiStatusLangganan(hasil.status_langganan));
+        setPeran(normalisasiPeran(hasil.peran));
         setStatus("terautentikasi");
       } catch {
         setStatus("tidak-terautentikasi");
@@ -50,10 +54,11 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  function tandaiMasuk(namaPengguna, statusLanggananPengguna) {
+  function tandaiMasuk(namaPengguna, statusLanggananPengguna, peranPengguna) {
     setKeluarSengaja(false);
     setNama(namaPengguna);
     setStatusLangganan(normalisasiStatusLangganan(statusLanggananPengguna));
+    setPeran(normalisasiPeran(peranPengguna));
     setStatus("terautentikasi");
   }
 
@@ -64,6 +69,7 @@ export function AuthProvider({ children }) {
       setKeluarSengaja(true);
       setNama(null);
       setStatusLangganan(null);
+      setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     }
   }
@@ -74,6 +80,7 @@ export function AuthProvider({ children }) {
         status,
         nama,
         statusLangganan,
+        peran,
         pesanSesi,
         keluarSengaja,
         bersihkanPesanSesi,

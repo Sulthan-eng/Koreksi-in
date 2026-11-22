@@ -19,16 +19,12 @@ const TAUTAN_JANGKAR_PEMASARAN = [
 
 function dapatkanDaftarMenu(varian, pathname) {
   if (varian === "admin") {
+    // "Akun Pengajar" disembunyikan sampai FR24 (menu ada di UI.md tapi halaman belum dibuat)
     return [
       {
         label: "Dashboard Pantauan",
         to: "/admin",
         aktif: pathname === "/admin",
-      },
-      {
-        label: "Akun Pengajar",
-        to: "/admin/akun-pengajar",
-        aktif: pathname.startsWith("/admin/akun-pengajar"),
       },
     ];
   }
@@ -197,7 +193,7 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
           {varian === "pengajar" && statusLangganan && (
             <Lencana varian={statusLangganan} />
           )}
-          {nama && <span>{nama}</span>}
+          {varian !== "admin" && nama && <span>{nama}</span>}
           <button
             type="button"
             onClick={tanganiKeluar}
@@ -267,12 +263,12 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
           </nav>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-garis pt-4">
-            {((varian === "pengajar" && statusLangganan) || nama) && (
+            {((varian === "pengajar" && statusLangganan) || (varian !== "admin" && nama)) && (
               <div className="flex items-center gap-2">
                 {varian === "pengajar" && statusLangganan && (
                   <Lencana varian={statusLangganan} />
                 )}
-                {nama && <span>{nama}</span>}
+                {varian !== "admin" && nama && <span>{nama}</span>}
               </div>
             )}
             <button
