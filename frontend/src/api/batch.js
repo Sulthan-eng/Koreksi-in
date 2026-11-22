@@ -75,3 +75,7 @@ export async function cobaLagiFileJawaban(idBatch, idFile) {
     method: "POST",
   });
 }
+
+export async function eksporRekapNilai(idBatch) {
+  return permintaan(`/api/batch/${idBatch}/ekspor`, { respons: "blob" });
+}
