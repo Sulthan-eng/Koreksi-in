@@ -263,7 +263,8 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
           </nav>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-garis pt-4">
-            {((varian === "pengajar" && statusLangganan) || (varian !== "admin" && nama)) && (
+            {((varian === "pengajar" && statusLangganan) ||
+              (varian !== "admin" && nama)) && (
               <div className="flex items-center gap-2">
                 {varian === "pengajar" && statusLangganan && (
                   <Lencana varian={statusLangganan} />

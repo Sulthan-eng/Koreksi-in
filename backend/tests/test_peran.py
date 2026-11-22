@@ -51,14 +51,18 @@ RUTE_PENGAJAR = {
 
 
 def _rute_dari_app() -> set[tuple[str, str]]:
-    """Ekstrak daftar (method, path) dari app.routes, abaikan Starlette builtins."""
+    """Ekstrak daftar (method, path) dari OpenAPI spec."""
     rute_set = set()
-    for route in app.routes:
-        if not hasattr(route, "path") or not hasattr(route, "methods"):
-            continue
-        # Abaikan HEAD dan OPTIONS (otomatis Starlette)
-        for method in route.methods - {"HEAD", "OPTIONS"}:
-            rute_set.add((method, route.path))
+    openapi = app.openapi()
+    if not openapi:
+        return rute_set
+
+    paths = openapi.get("paths", {})
+    for path, path_item in paths.items():
+        # path_item adalah dict dengan keys seperti "get", "post", "patch", "delete"
+        for method in path_item.keys():
+            if method.upper() not in {"HEAD", "OPTIONS"}:
+                rute_set.add((method.upper(), path))
     return rute_set
 
 
@@ -80,9 +84,19 @@ def test_rute_pengajar_memakai_dependensi_pengajar() -> None:
     """Telusuri dependensi rute Pengajar dan pastikan pengajar_saat_ini dipakai tingkat pertama."""
     for method, path in sorted(RUTE_PENGAJAR):
         rute = None
-        for r in app.routes:
-            if hasattr(r, "path") and r.path == path and method in getattr(r, "methods", set()):
-                rute = r
+        # Traverse _IncludedRouter → original_router → routes
+        for included_route in app.routes:
+            if hasattr(included_route, "original_router") and hasattr(
+                included_route, "include_context"
+            ):
+                prefix = included_route.include_context.prefix or ""
+                for r in included_route.original_router.routes:
+                    if hasattr(r, "path") and hasattr(r, "methods"):
+                        full_path = prefix + r.path
+                        if full_path == path and method in r.methods:
+                            rute = r
+                            break
+            if rute:
                 break
 
         assert rute is not None, f"Rute {method} {path} tidak ditemukan di app"
@@ -92,15 +106,19 @@ def test_rute_pengajar_memakai_dependensi_pengajar() -> None:
             dependensi_names = set()
 
             def kumpulkan_dependensi(dep):
-                if dep.dependency:
-                    dependensi_names.add(dep.dependency.__name__)
+                # Dependant punya dependencies (list of Dependant)
                 if hasattr(dep, "dependencies") and dep.dependencies:
                     for sub_dep in dep.dependencies:
+                        # Dapatkan nama dari Dependant.call (callable function)
+                        if hasattr(sub_dep, "call") and sub_dep.call:
+                            try:
+                                dependensi_names.add(sub_dep.call.__name__)
+                            except AttributeError:
+                                # Untuk class instances, gunakan class name
+                                dependensi_names.add(sub_dep.call.__class__.__name__)
                         kumpulkan_dependensi(sub_dep)
 
-            if hasattr(rute.dependant, "dependencies"):
-                for dep in rute.dependant.dependencies:
-                    kumpulkan_dependensi(dep)
+            kumpulkan_dependensi(rute.dependant)
 
             # pengajar_saat_ini HARUS ada di dependensi (bisa di tingkat mana pun)
             assert "pengajar_saat_ini" in dependensi_names, (
@@ -112,8 +130,8 @@ def test_rute_pengajar_memakai_dependensi_pengajar() -> None:
             first_level_deps = set()
             if hasattr(rute.dependant, "dependencies"):
                 for dep in rute.dependant.dependencies:
-                    if dep.dependency:
-                        first_level_deps.add(dep.dependency.__name__)
+                    if hasattr(dep, "call") and dep.call:
+                        first_level_deps.add(dep.call.__name__)
 
             assert "pengguna_saat_ini" not in first_level_deps, (
                 f"{method} {path} memakai pengguna_saat_ini langsung (harus via pengajar_saat_ini)"

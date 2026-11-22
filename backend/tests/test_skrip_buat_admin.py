@@ -1,7 +1,9 @@
 """Test skrip buat_admin."""
 
-from unittest.mock import patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,23 +11,29 @@ from app.models.enums import Peran
 from app.models.pengguna import Pengguna
 
 
+@asynccontextmanager
+async def _mock_sessionlocal(session: AsyncSession):
+    """Context manager yang mengembalikan session dari fixture."""
+    yield session
+
+
 async def test_buat_admin_sukses(db_session: AsyncSession) -> None:
     """Skrip berhasil membuat akun Admin dengan kredensial valid."""
     from scripts.buat_admin import buat_admin_interaktif
 
+    mock_sessionlocal = MagicMock()
+    mock_sessionlocal.return_value.__aenter__ = AsyncMock(return_value=db_session)
+    mock_sessionlocal.return_value.__aexit__ = AsyncMock(return_value=None)
+
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
-        patch("app.core.database.AsyncSessionLocal", return_value=db_session),
+        patch("scripts.buat_admin.AsyncSessionLocal", mock_sessionlocal),
     ):
         mock_input.side_effect = ["Admin Test", "admin@example.com"]
         mock_getpass.side_effect = ["password_123456", "password_123456"]
 
         await buat_admin_interaktif()
-
-        # Jangan panggil sys.exit (error)
-        mock_exit.assert_not_called()
 
     # Verifikasi akun di database
     admin = await db_session.scalar(select(Pengguna).where(Pengguna.email == "admin@example.com"))
@@ -49,19 +57,23 @@ async def test_buat_admin_email_sudah_ada(db_session: AsyncSession) -> None:
     db_session.add(pengajar)
     await db_session.commit()
 
+    mock_sessionlocal = MagicMock()
+    mock_sessionlocal.return_value.__aenter__ = AsyncMock(return_value=db_session)
+    mock_sessionlocal.return_value.__aexit__ = AsyncMock(return_value=None)
+
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
-        patch("app.core.database.AsyncSessionLocal", return_value=db_session),
+        patch("scripts.buat_admin.AsyncSessionLocal", mock_sessionlocal),
+        pytest.raises(SystemExit) as exc_info,
     ):
         mock_input.side_effect = ["Admin Test", "existing@example.com"]
         mock_getpass.side_effect = ["password_123456", "password_123456"]
 
         await buat_admin_interaktif()
 
-        # Harus exit(1)
-        mock_exit.assert_called_once_with(1)
+    # Harus exit(1)
+    assert exc_info.value.code == 1
 
 
 async def test_buat_admin_password_terlalu_pendek(capsys) -> None:
@@ -71,16 +83,16 @@ async def test_buat_admin_password_terlalu_pendek(capsys) -> None:
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
+        pytest.raises(SystemExit) as exc_info,
     ):
         mock_input.side_effect = ["Admin Test", "admin@example.com"]
         mock_getpass.side_effect = ["short", "short"]
 
         await buat_admin_interaktif()
 
-        mock_exit.assert_called_once_with(1)
-        captured = capsys.readouterr()
-        assert "minimal 12 karakter" in captured.err
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "minimal 12 karakter" in captured.err
 
 
 async def test_buat_admin_password_terlalu_panjang(capsys) -> None:
@@ -92,16 +104,16 @@ async def test_buat_admin_password_terlalu_panjang(capsys) -> None:
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
+        pytest.raises(SystemExit) as exc_info,
     ):
         mock_input.side_effect = ["Admin Test", "admin@example.com"]
         mock_getpass.side_effect = [long_password, long_password]
 
         await buat_admin_interaktif()
 
-        mock_exit.assert_called_once_with(1)
-        captured = capsys.readouterr()
-        assert "maksimal 72 karakter" in captured.err
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "maksimal 72 karakter" in captured.err
 
 
 async def test_buat_admin_password_tidak_cocok(capsys) -> None:
@@ -111,39 +123,41 @@ async def test_buat_admin_password_tidak_cocok(capsys) -> None:
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
+        pytest.raises(SystemExit) as exc_info,
     ):
         mock_input.side_effect = ["Admin Test", "admin@example.com"]
         mock_getpass.side_effect = ["password_123456", "password_berbeda"]
 
         await buat_admin_interaktif()
 
-        mock_exit.assert_called_once_with(1)
-        captured = capsys.readouterr()
-        assert "tidak cocok" in captured.err
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "tidak cocok" in captured.err
 
 
-async def test_buat_admin_password_tidak_pernah_dicetak(capsys) -> None:
+async def test_buat_admin_password_tidak_pernah_dicetak(
+    db_session: AsyncSession, capsys
+) -> None:
     """Password tidak pernah muncul di output."""
     from scripts.buat_admin import buat_admin_interaktif
 
     password = "my_secret_password_123456"
 
+    mock_sessionlocal = MagicMock()
+    mock_sessionlocal.return_value.__aenter__ = AsyncMock(return_value=db_session)
+    mock_sessionlocal.return_value.__aexit__ = AsyncMock(return_value=None)
+
     with (
         patch("builtins.input") as mock_input,
         patch("getpass.getpass") as mock_getpass,
-        patch("sys.exit") as mock_exit,
-        patch("app.core.database.AsyncSessionLocal"),
+        patch("scripts.buat_admin.AsyncSessionLocal", mock_sessionlocal),
     ):
         mock_input.side_effect = ["Admin Test", "admin@example.com"]
         mock_getpass.side_effect = [password, password]
 
-        try:
-            await buat_admin_interaktif()
-        except Exception:
-            pass
+        await buat_admin_interaktif()
 
-        # Periksa stdout dan stderr
-        captured = capsys.readouterr()
-        assert password not in captured.out, "Password muncul di stdout"
-        assert password not in captured.err, "Password muncul di stderr"
+    # Periksa stdout dan stderr
+    captured = capsys.readouterr()
+    assert password not in captured.out, "Password muncul di stdout"
+    assert password not in captured.err, "Password muncul di stderr"

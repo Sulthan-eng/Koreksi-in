@@ -349,7 +349,11 @@ async def test_saya_dengan_token_valid(client: AsyncClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "free"}
+    assert response.json() == {
+        "nama": "Budi Santoso",
+        "status_langganan": "free",
+        "peran": "pengajar",
+    }
 
 
 async def test_saya_mengembalikan_status_langganan_pro(
@@ -365,7 +369,11 @@ async def test_saya_mengembalikan_status_langganan_pro(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "pro"}
+    assert response.json() == {
+        "nama": "Budi Santoso",
+        "status_langganan": "pro",
+        "peran": "pengajar",
+    }
 
 
 def test_jenis_akun_efektif_free_pro_dan_kedaluwarsa() -> None:
@@ -418,7 +426,11 @@ async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"nama": "Budi Santoso", "status_langganan": "free"}
+    assert response.json() == {
+        "nama": "Budi Santoso",
+        "status_langganan": "free",
+        "peran": "pengajar",
+    }
 
 
 _PESAN_LUPA_PASSWORD = {"pesan": "Tautan Atur Ulang Password Telah Dikirim"}
