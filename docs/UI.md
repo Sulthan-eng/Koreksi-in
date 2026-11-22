@@ -187,6 +187,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Kuota API | `gauge` | `size-4` | Judul kelompok Dashboard Pantauan |
 | Ya (tersedia) | `check` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Ya" |
 | Tidak (tidak tersedia) | `x` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Tidak" (`x` juga dipakai untuk "Tutup menu", maknanya ditentukan teks di sampingnya atau `aria-label`) |
+| Cari | `search` | `size-4` | Kolom pencarian Akun Pengajar |
 
 ### Catatan
 
@@ -212,7 +213,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Ekspor Rekap Nilai, Hapus Batch | Selesai | Ada |
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Belum dikerjakan | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Penampung (rute dan bilah atas ada, kartu angka menunggu FR27) | Ada |
-| 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Belum dikerjakan | Ada |
+| 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Selesai | Ada |
 | 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Tautan Atur Ulang Password Telah Dikirim" | Selesai | Ada |
 | 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Selesai | Ada |
 
@@ -229,9 +230,9 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 
 | Komponen | Dipakai di | Aturan |
 |---|---|---|
-| Bilah atas | Semua halaman, kecuali halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) yang tampil tanpa bilah atas | Tiga varian. Publik: logo, "Masuk", "Daftar" (di Pemasaran ditambah tiga tautan jangkar, lihat rancangan Pemasaran). Pengajar: logo, menu "Beranda" dan "Langganan" ("Langganan" baru dirender setelah halaman Langganan dikerjakan), label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" saja ("Akun Pengajar" sementara disembunyikan sampai halaman itu dikerjakan di FR24), "Keluar" (tanpa nama pengguna). Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
+| Bilah atas | Semua halaman, kecuali halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) yang tampil tanpa bilah atas | Tiga varian. Publik: logo, "Masuk", "Daftar" (di Pemasaran ditambah tiga tautan jangkar, lihat rancangan Pemasaran). Pengajar: logo, menu "Beranda" dan "Langganan" ("Langganan" baru dirender setelah halaman Langganan dikerjakan), label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar" (tanpa nama pengguna). Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) menu berpindah ke laci dari kiri yang dibuka tombol menu (`aria-label` "Buka menu", tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
 | Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
-| Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan akun, ganti kunci jawaban, batalkan pilihan file, tinggalkan halaman unggah | Judul singkat ("Hapus Batch", "Selesaikan Batch", "Ganti Kunci Jawaban", "Batalkan Pilihan File", "Tinggalkan Halaman"), satu kalimat persis dari SPEC, dua tombol. Hapus dan selesaikan: "Ya" dan "Batal". Batalkan pilihan file ("Semua file terpilih dan nama peserta didik yang sudah diisi akan dibuang. Lanjutkan?"): "Kembali" dan "Ya". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
+| Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan atau aktifkan akun, ganti kunci jawaban, batalkan pilihan file, tinggalkan halaman unggah | Judul singkat ("Hapus Batch", "Selesaikan Batch", "Nonaktifkan Akun", "Aktifkan Akun", "Ganti Kunci Jawaban", "Batalkan Pilihan File", "Tinggalkan Halaman"), satu kalimat persis dari SPEC, dua tombol. Hapus, selesaikan, nonaktifkan, dan aktifkan: "Ya" dan "Batal". Batalkan pilihan file ("Semua file terpilih dan nama peserta didik yang sudah diisi akan dibuang. Lanjutkan?"): "Kembali" dan "Ya". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
 | Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks (komponen `KartuAngka`). Nilai 0 tetap tampil |
 | Tabel | Hasil koreksi, Akun Pengajar | Aturan di bagian Tata letak |
 | Menu aksi (titik tiga) | Baris daftar batch di Beranda | Tombol ikon titik tiga yang membuka daftar aksi kecil. Punya nama aksesibel, dapat dioperasikan dengan papan ketik (Enter, Esc, panah), tertutup saat klik di luar. Aksi yang merusak berteks `text-kurang-mirip` dan membuka dialog konfirmasi |
@@ -417,12 +418,12 @@ Hanya angka agregat, tanpa isi kunci, jawaban, atau hasil koreksi. Judul halaman
 
 Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba muat ulang halaman."
 
-### 8. Akun Pengajar (`/admin/akun-pengajar`, Admin, nanti)
+### 8. Akun Pengajar (`/admin/akun-pengajar`, Admin)
 
-- **Bilah alat:** kolom cari (nama atau email), filter status langganan (Semua, Free, Pro), filter status akun (Semua, Aktif, Nonaktif).
-- **Tabel:** Nama, Email, Langganan (lencana FREE atau PRO, untuk Pro dengan masa berlaku), Status akun (lencana Aktif atau Nonaktif), Tanggal daftar, Jumlah batch, Aksi. Aksi per baris: "Ubah Langganan" dan "Nonaktifkan" atau "Aktifkan" (menyesuaikan status).
-- **Ubah Langganan:** dialog dengan pilihan status Free atau Pro; untuk Pro, kolom tanggal masa berlaku wajib. Galat: "Masa berlaku wajib diisi dengan tanggal setelah hari ini." Sukses: "Status langganan berhasil diubah". Gagal: "Gagal mengubah status langganan, silakan coba lagi.", "Koneksi internet terputus, silakan coba lagi."
-- **Nonaktifkan atau Aktifkan:** dialog konfirmasi yang menyebut nama akun dan tindakan. Sukses: "Akun berhasil dinonaktifkan" atau "Akun berhasil diaktifkan". Gagal: "Gagal mengubah status akun, silakan coba lagi."
+- **Bilah alat:** kolom cari (nama atau email, live dengan debounce), filter status langganan (Semua, Free, Pro), filter status akun (Semua, Aktif, Nonaktif); pencarian dan filter dikirim lewat query param backend, tanpa pagination.
+- **Tabel:** Nama, Email, Langganan (lencana FREE atau PRO menurut `jenis_akun_efektif`; untuk Pro disertai teks `"Berlaku hingga <tanggal>"` dalam zona waktu WIB), Status akun (lencana Aktif atau Nonaktif), Tanggal daftar (WIB), Jumlah batch, Aksi. Aksi per baris: "Ubah Langganan" dan "Nonaktifkan" atau "Aktifkan" (menyesuaikan status).
+- **Ubah Langganan:** dialog dengan pilihan status Free atau Pro; untuk Pro, kolom tanggal masa berlaku wajib (berlaku inklusif sampai 23:59 WIB pada tanggal terpilih; memilih Free mengosongkan masa berlaku). Galat: "Masa berlaku wajib diisi dengan tanggal setelah hari ini." Sukses: "Status langganan berhasil diubah". Gagal: "Gagal mengubah status langganan, silakan coba lagi.", "Koneksi internet terputus, silakan coba lagi."
+- **Nonaktifkan atau Aktifkan:** dialog konfirmasi yang menyebut nama akun dan tindakan (memakai `DialogKonfirmasi` bersama dengan gaya tombol sesuai mockup). Sukses: "Akun berhasil dinonaktifkan" atau "Akun berhasil diaktifkan". Gagal: "Gagal mengubah status akun, silakan coba lagi."
 - **Keadaan:** kosong "Belum ada akun Pengajar yang terdaftar."; pencarian tanpa hasil "Tidak ada akun yang sesuai dengan pencarian."; gagal "Gagal memuat daftar akun, coba muat ulang halaman."; offline "Koneksi internet terputus, coba muat ulang halaman."
 - Di bawah 1024 px (ponsel dan tablet) tiap baris menjadi kartu dengan aksi di bagian bawah kartu.
 
@@ -458,7 +459,7 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas
     - Pemasaran: judul seksi "Cara kerja", "Fitur utama", "Free dan Pro". Deskripsi kartu fitur: "Lembar jawaban foto atau PDF dibaca menjadi teks.", "Skor sebagai rekomendasi, bukan nilai akhir.", "Edit teks hasil baca dan nilai akhir.", "Unduh rekap nilai dalam file .xlsx.". Penutup: "Siap mulai mengoreksi lebih cepat?".
     - Langganan: judul halaman "Langganan"; judul seksi "Paket Pro" dan "Status transaksi terakhir"; lencana transaksi "Menunggu", "Berhasil", "Gagal", "Kedaluwarsa".
     - Dashboard Pantauan: judul halaman "Dashboard Pantauan"; kelompok "Akun", "Aktivitas", "Kuota API"; label kartu "Total akun Pengajar", "Akun Free", "Akun Pro", "Jumlah batch", "File Diproses", "File Selesai", "File Gagal", "Terpakai hari ini", "Batas harian".
-    - Akun Pengajar: judul halaman "Akun Pengajar"; label "Cari", "Status langganan", "Status akun", "Masa berlaku"; tombol dialog "Simpan", "Batal", "Ya". Dialog nonaktifkan: judul "Nonaktifkan Akun", kalimat "Akun {nama} akan dinonaktifkan dan tidak dapat masuk. Lanjutkan?". Dialog aktifkan: judul "Aktifkan Akun", kalimat "Akun {nama} akan diaktifkan dan dapat masuk kembali. Lanjutkan?".
+    - Akun Pengajar: judul halaman "Akun Pengajar"; label "Cari" (placeholder "Cari berdasarkan nama atau email"), "Status langganan", "Status akun", "Masa berlaku"; keterangan masa berlaku Pro "Berlaku hingga <tanggal>"; tombol dialog "Simpan", "Batal", "Ya". Dialog nonaktifkan: judul "Nonaktifkan Akun", kalimat "Akun {nama} akan dinonaktifkan dan tidak dapat masuk. Lanjutkan?". Dialog aktifkan: judul "Aktifkan Akun", kalimat "Akun {nama} akan diaktifkan dan dapat masuk kembali. Lanjutkan?".
 11. Ejaan baku "silakan" dipakai di semua pesan (SPEC sudah disesuaikan, SRS menyusul saat sinkronisasi).
 12. Tabel Free dan Pro di Pemasaran tetap tabel di semua lebar tanpa gulir horizontal (pengecualian dari aturan tabel menjadi kartu di bawah 1024 px).
 13. Garis hijau pendek di atas judul hanya dipakai di Pemasaran. Halaman aplikasi (termasuk Dashboard Pantauan) tidak memakainya.
