@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Plus, Trash2, Upload } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import {
   batasJawabanUntukAkun,
@@ -10,6 +10,7 @@ import {
 } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
+import { NAMA_FILE_EKSPOR_DEFAULT, pesanGalatEkspor } from "../lib/ekspor.js";
 import { catatHasilPolling } from "../lib/pollingStatus.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
@@ -49,6 +50,8 @@ function HalamanBatch() {
 
   const [sedangOcr, setSedangOcr] = useState(false);
   const [dialogGantiKunciTerbuka, setDialogGantiKunciTerbuka] = useState(false);
+  const [sedangEkspor, setSedangEkspor] = useState(false);
+  const [kesalahanEkspor, setKesalahanEkspor] = useState(null);
 
   const navigate = useNavigate();
   const { statusLangganan } = useAuth();
@@ -176,9 +179,36 @@ function HalamanBatch() {
   }
 
   // Tombol aksi memakai aria-disabled (bukan disabled) supaya fokus tetap ada:
-  // klik diabaikan selama pemeriksaan/request atau unggahan sedang berjalan.
+  // klik diabaikan selama pemeriksaan/request, ekspor, atau unggahan berjalan.
   const tahanTombolAksi =
-    sedangUnggah || aksi.sedangMemproses || aksi.idBatchMemeriksa !== null;
+    sedangUnggah ||
+    sedangEkspor ||
+    aksi.sedangMemproses ||
+    aksi.idBatchMemeriksa !== null;
+
+  async function tanganiEkspor() {
+    if (tahanTombolAksi) return;
+    aksi.bersihkanPesan();
+    setKesalahanEkspor(null);
+    setSedangEkspor(true);
+    try {
+      const { blob, namaFile } = await batchApi.eksporRekapNilai(id);
+      const url = URL.createObjectURL(blob);
+      const tautan = document.createElement("a");
+      tautan.href = url;
+      tautan.download = namaFile || NAMA_FILE_EKSPOR_DEFAULT;
+      document.body.appendChild(tautan);
+      tautan.click();
+      tautan.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      if (error?.kode !== "SESI_BERAKHIR") {
+        setKesalahanEkspor(pesanGalatEkspor(error));
+      }
+    } finally {
+      setSedangEkspor(false);
+    }
+  }
 
   function bukaFormTambahSoal() {
     if (daftarSoal.length >= batasSoal) return;
@@ -349,6 +379,7 @@ function HalamanBatch() {
                 aria-disabled={tahanTombolAksi ? "true" : undefined}
                 onClick={() => {
                   if (tahanTombolAksi) return;
+                  setKesalahanEkspor(null);
                   aksi.pilihSelesaikan(batch);
                 }}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan aria-disabled:opacity-50"
@@ -359,8 +390,22 @@ function HalamanBatch() {
             <button
               type="button"
               aria-disabled={tahanTombolAksi ? "true" : undefined}
+              onClick={tanganiEkspor}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks aria-disabled:opacity-50"
+            >
+              {sedangEkspor ? (
+                <Spinner ukuran="size-4" />
+              ) : (
+                <Download className="size-4" aria-hidden="true" />
+              )}
+              Ekspor Rekap Nilai
+            </button>
+            <button
+              type="button"
+              aria-disabled={tahanTombolAksi ? "true" : undefined}
               onClick={() => {
                 if (tahanTombolAksi) return;
+                setKesalahanEkspor(null);
                 aksi.pilihHapus(batch);
               }}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-kurang-mirip aria-disabled:opacity-50"
@@ -382,6 +427,10 @@ function HalamanBatch() {
               pesan={aksi.pesanAksi.teks}
               kotak
             />
+          )}
+
+          {!aksi.pesanAksi && kesalahanEkspor && (
+            <PesanForm varian="galat" pesan={kesalahanEkspor} kotak />
           )}
         </header>
 

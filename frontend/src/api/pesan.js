@@ -130,6 +130,11 @@ export const PESAN_KODE = {
   PESAN_SELESAIKAN_BATCH:
     "Batch yang diselesaikan tidak dapat diubah lagi. Lanjutkan?",
   BATCH_SELESAI_SUKSES: "Batch berhasil diselesaikan.",
+  EKSPOR_KHUSUS_PRO:
+    "Fitur ekspor hanya tersedia untuk akun Pro. Upgrade untuk mengakses fitur ini.",
+  BATCH_BELUM_ADA_JAWABAN:
+    "Belum ada jawaban peserta didik pada batch ini untuk diekspor.",
+  GAGAL_EKSPOR: "Gagal membuat file ekspor, silakan coba lagi",
   GAGAL_MUAT_LANGGANAN:
     "Gagal memuat status langganan, coba muat ulang halaman",
   GAGAL_MUAT_RINGKASAN: "Gagal memuat ringkasan, coba muat ulang halaman",

@@ -94,6 +94,7 @@ async def test_request_sungguhan_origin_diizinkan_membawa_header(app_produksi) -
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == ORIGIN_PROD
     assert response.headers["vary"] == "Origin"
+    assert "content-disposition" in response.headers["access-control-expose-headers"].lower()
 
 
 async def test_request_sungguhan_origin_ditolak_tanpa_header(app_produksi) -> None:

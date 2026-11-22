@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # frontend/src/api/klien.js yang hanya menyetel Authorization dan Content-Type.
 METHOD_DIIZINKAN = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
 HEADER_DIIZINKAN = ["Authorization", "Content-Type"]
+HEADER_DIEKSPOS = ["Content-Disposition"]
 
 
 @asynccontextmanager
@@ -67,6 +68,7 @@ def buat_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=METHOD_DIIZINKAN,
         allow_headers=HEADER_DIIZINKAN,
+        expose_headers=HEADER_DIEKSPOS,
         max_age=600,
     )
 

@@ -168,7 +168,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi" |
 | Unggah | `upload` | `size-4` | "Upload Jawaban Peserta Didik" |
 | Tambah | `plus` | `size-4` | "Tambah Soal", "Tambah File" |
-| Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" (nanti) |
+| Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" |
 | Hapus | `trash-2` | `size-4` (`size-5` pada tombol ikon hapus baris) | "Hapus Batch", hapus baris daftar file terpilih (`aria-label` "Hapus {nama file} dari daftar") |
 | Keluar | `log-out` | `size-4` | "Keluar" |
 | Memuat, Diproses | `loader-circle` + `animate-spin motion-reduce:animate-none` | `size-4` (`size-3.5` di dalam lencana) | Indikator. SEMUA spinner memakai `motion-reduce:animate-none` (berlaku saat implementasi, juga untuk berkas mockup lama yang belum memilikinya) |
@@ -209,7 +209,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 2 | Daftar | `/daftar` | Publik | FR1 | Form nama, email, password | Selesai | Ada |
 | 3 | Masuk | `/masuk` | Publik | FR1 | Form email dan password; pesan "Akun berhasil dibuat, silakan masuk" dan "Sesi berakhir, silakan masuk kembali." | Selesai | Ada |
 | 4 | Beranda | `/beranda` | Pengajar | FR2, FR3, FR21, FR22, FR23, UC-01, UC-02, UC-03, UC-13, UC-14 | Sapaan, label FREE atau PRO, ringkasan, daftar batch dengan lencana status dan menu aksi (Selesaikan Batch, Hapus Batch), "Buat Batch Baru" | Sebagian selesai | Ada |
-| 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Hapus Batch, Ekspor Rekap Nilai (nanti) | Sebagian selesai | Ada |
+| 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Ekspor Rekap Nilai, Hapus Batch | Selesai | Ada |
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Belum dikerjakan | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Belum dikerjakan | Ada |
 | 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Belum dikerjakan | Ada |
@@ -326,14 +326,14 @@ Sketsa (desktop):
 [Bilah atas]
 < Batch Koreksi
 Nama Batch  [Aktif]
-[Selesaikan Batch] [Ekspor Rekap Nilai (nanti)] [Hapus Batch]  <- baris tombol di bawah judul
+[Selesaikan Batch] [Ekspor Rekap Nilai] [Hapus Batch]  <- baris tombol di bawah judul
 -------------------------------------------------------------------------------------------------
  Soal dan Jawaban | Dashboard Hasil Koreksi
 -------------------------------------------------------------------------------------------------
  (isi tab)
 ```
 
-Kepala halaman (diubah sesuai mockup halaman-batch, disetujui pemilik proyek 2026-11-02): tautan "Batch Koreksi" (kembali ke Beranda), nama batch sebagai judul dengan lencana status batch (Aktif atau Selesai) di sampingnya, dan baris tombol aksi di bawah judul pada semua lebar: "Selesaikan Batch" (hanya batch Aktif), "Ekspor Rekap Nilai" (nanti, FR17; hanya ada di Halaman Batch), dan "Hapus Batch". "Selesaikan Batch" dan "Hapus Batch" juga tersedia dari menu titik tiga di daftar Beranda. Selama pemeriksaan file Diproses, request, atau unggahan sedang berjalan, kedua tombol aksi memakai `aria-disabled` (bukan `disabled`, supaya fokus tidak hilang) dan mengabaikan klik. Pesan galat atau sukses aksi tampil sebagai kotak di bagian bawah kepala dan terlihat di kedua tab. Keadaan memuat dan gagal untuk seluruh halaman: indikator di tengah; gagal menampilkan galat dan tautan "Kembali ke Beranda". Batch yang bukan milik pengguna atau tidak ada: "Batch tidak ditemukan".
+Kepala halaman (diubah sesuai mockup halaman-batch, disetujui pemilik proyek 2026-11-02): tautan "Batch Koreksi" (kembali ke Beranda), nama batch sebagai judul dengan lencana status batch (Aktif atau Selesai) di sampingnya, dan baris tombol aksi di bawah judul pada semua lebar: "Selesaikan Batch" (hanya batch Aktif), "Ekspor Rekap Nilai" (FR17; hanya ada di Halaman Batch, tampil untuk Aktif maupun Selesai serta Pro maupun Free), dan "Hapus Batch". "Selesaikan Batch" dan "Hapus Batch" juga tersedia dari menu titik tiga di daftar Beranda. Selama pemeriksaan file Diproses, request, ekspor, atau unggahan sedang berjalan, tombol-tombol aksi memakai `aria-disabled` (bukan `disabled`, supaya fokus tidak hilang) dan mengabaikan klik. Pesan galat atau sukses aksi tampil sebagai kotak di bagian bawah kepala dan terlihat di kedua tab. Keadaan memuat dan gagal untuk seluruh halaman: indikator di tengah; gagal menampilkan galat dan tautan "Kembali ke Beranda". Batch yang bukan milik pengguna atau tidak ada: "Batch tidak ditemukan".
 
 Dua tab: **Soal dan Jawaban**, **Dashboard Hasil Koreksi**. Tidak ada tab Status Pemrosesan.
 
@@ -388,12 +388,12 @@ Dua seksi bertumpuk, masing-masing diberi judul dan dipisah jelas.
 
 #### Batch Selesai (FR23)
 
-Batch berstatus Selesai bersifat baca saja: lencana "Selesai" di kepala, tombol "Tambah Soal" (berserta form dan pesan di bawah daftar soal), teks peringatan unggah, tombol "Upload Jawaban Peserta Didik", "Coba Lagi", "Edit", dan "Ubah Nilai Akhir" tidak dirender, dan "Selesaikan Batch" tidak tampil; daftar soal dan daftar jawaban yang sudah diunggah tetap tampil dan dapat dibaca. "Ekspor Rekap Nilai" (nanti, FR17) dan "Hapus Batch" tetap ada. Catatan kotak di bawah baris tombol: "Batch ini sudah selesai dan tidak dapat diubah."
+Batch berstatus Selesai bersifat baca saja: lencana "Selesai" di kepala, tombol "Tambah Soal" (berserta form dan pesan di bawah daftar soal), teks peringatan unggah, tombol "Upload Jawaban Peserta Didik", "Coba Lagi", "Edit", dan "Ubah Nilai Akhir" tidak dirender, dan "Selesaikan Batch" tidak tampil; daftar soal dan daftar jawaban yang sudah diunggah tetap tampil dan dapat dibaca. "Ekspor Rekap Nilai" dan "Hapus Batch" tetap ada. Catatan kotak di bawah baris tombol: "Batch ini sudah selesai dan tidak dapat diubah."
 
 #### Perilaku tombol aksi di kepala
 
 - "Selesaikan Batch": jika ada file terpilih yang belum diunggah, pesan galat "Ada file yang belum diunggah. Unggah file tersebut atau batalkan pilihannya sebelum menyelesaikan batch." dan dialog tidak dibuka (pesan hilang saat pilihan file berubah); jika masih ada file Diproses, pesan "Tunggu hingga semua file selesai diproses."; jika tidak, dialog "Batch yang diselesaikan tidak dapat diubah lagi. Lanjutkan?" ("Ya", "Batal"). Gagal: "Gagal menyelesaikan batch, silakan coba lagi".
-- "Ekspor Rekap Nilai" (nanti, FR17): akun Pro mengunduh file .xlsx; akun Free melihat "Fitur ekspor hanya tersedia untuk akun Pro. Upgrade untuk mengakses fitur ini." dengan tautan ke `/langganan`. Gagal: "Gagal membuat file ekspor, silakan coba lagi".
+- "Ekspor Rekap Nilai" (FR17): akun Pro mengunduh file .xlsx (indikator putar selama permintaan berjalan); akun Free melihat "Fitur ekspor hanya tersedia untuk akun Pro. Upgrade untuk mengakses fitur ini." (tampil tanpa tautan ke `/langganan` selama halaman Langganan FR19/FR20 belum dikerjakan); batch tanpa jawaban menampilkan "Belum ada jawaban peserta didik pada batch ini untuk diekspor.". Gagal: "Gagal membuat file ekspor, silakan coba lagi".
 - "Hapus Batch": dialog yang sama seperti di menu Beranda; sukses kembali ke Beranda. Gagal: "Gagal menghapus batch, silakan coba lagi".
 
 ### 6. Langganan (`/langganan`, Pengajar, nanti)

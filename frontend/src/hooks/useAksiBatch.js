@@ -93,11 +93,11 @@ export function useAksiBatch({
     setDialog(null);
   }
 
-  // Kosongkan pesan tertentu tanpa menyentuh pesan lain, misalnya saat
-  // pilihan file berubah sehingga pesan itu sudah tidak berlaku.
+  // Kosongkan pesan tertentu (atau pesan apa pun bila tanpa argumen),
+  // misalnya saat pilihan file berubah atau tombol Ekspor ditekan.
   function bersihkanPesan(teks) {
     setPesanAksi((sebelumnya) =>
-      sebelumnya?.teks === teks ? null : sebelumnya,
+      teks === undefined || sebelumnya?.teks === teks ? null : sebelumnya,
     );
   }
 

@@ -1,3 +1,4 @@
+import { ekstrakNamaFileEkspor } from "../lib/ekspor.js";
 import { gabungUrl } from "../lib/urlApi.js";
 import { pesanUntukKode } from "./pesan.js";
 
@@ -19,7 +20,7 @@ function lemparKesalahan(kode) {
 
 async function kirim(
   path,
-  { method = "GET", body, autentikasi, sertakanKredensial },
+  { method = "GET", body, autentikasi, sertakanKredensial, respons = "json" },
 ) {
   const isFormData = body instanceof FormData;
   let response;
@@ -49,25 +50,45 @@ async function kirim(
     return null;
   }
 
-  let data;
-  try {
-    data = await response.json();
-  } catch {
-    lemparKesalahan("UMUM");
-  }
-
   if (!response.ok) {
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      lemparKesalahan("UMUM");
+    }
+    const objek = data && typeof data === "object" ? data : {};
     throw {
-      kode: data.kode,
-      pesan: pesanUntukKode(data.kode, data.pesan),
+      kode: objek.kode,
+      pesan: pesanUntukKode(objek.kode, objek.pesan),
       status: response.status,
-      ...(Array.isArray(data.file_bermasalah)
-        ? { file_bermasalah: data.file_bermasalah }
+      ...(Array.isArray(objek.file_bermasalah)
+        ? { file_bermasalah: objek.file_bermasalah }
         : {}),
     };
   }
 
-  return data;
+  if (respons === "blob") {
+    const contentType = (
+      response.headers.get("content-type") ?? ""
+    ).toLowerCase();
+    if (!contentType.includes("spreadsheetml")) {
+      lemparKesalahan("GAGAL_EKSPOR");
+    }
+    const blob = await response.blob();
+    return {
+      blob,
+      namaFile: ekstrakNamaFileEkspor(
+        response.headers.get("content-disposition"),
+      ),
+    };
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    lemparKesalahan("UMUM");
+  }
 }
 
 async function cobaRefresh() {
@@ -85,11 +106,23 @@ async function cobaRefresh() {
 
 export async function permintaan(
   path,
-  { method = "GET", body, autentikasi = true, sertakanKredensial = false } = {},
+  {
+    method = "GET",
+    body,
+    autentikasi = true,
+    sertakanKredensial = false,
+    respons = "json",
+  } = {},
   _sudahDicobaUlang = false,
 ) {
   try {
-    return await kirim(path, { method, body, autentikasi, sertakanKredensial });
+    return await kirim(path, {
+      method,
+      body,
+      autentikasi,
+      sertakanKredensial,
+      respons,
+    });
   } catch (error) {
     if (autentikasi && !_sudahDicobaUlang && error?.kode === "SESI_BERAKHIR") {
       try {
@@ -102,7 +135,7 @@ export async function permintaan(
       }
       return permintaan(
         path,
-        { method, body, autentikasi, sertakanKredensial },
+        { method, body, autentikasi, sertakanKredensial, respons },
         true,
       );
     }
