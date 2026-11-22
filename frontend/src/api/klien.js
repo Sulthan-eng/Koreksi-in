@@ -42,7 +42,7 @@ async function kirim(
       },
     );
   } catch {
-    lemparKesalahan("UMUM");
+    throw { kode: "UMUM", pesan: pesanUntukKode("UMUM"), jaringan: true };
   }
 
   if (response.status === 204) {

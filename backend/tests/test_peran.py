@@ -49,6 +49,14 @@ RUTE_PENGAJAR = {
     ("GET", "/api/ringkasan"),
 }
 
+# Rute khusus Admin (Pengajar ditolak 403)
+RUTE_ADMIN = {
+    ("GET", "/api/admin/akun-pengajar"),
+    ("PATCH", "/api/admin/akun-pengajar/{id_pengguna}/langganan"),
+    ("POST", "/api/admin/akun-pengajar/{id_pengguna}/nonaktifkan"),
+    ("POST", "/api/admin/akun-pengajar/{id_pengguna}/aktifkan"),
+}
+
 
 def _rute_dari_app() -> set[tuple[str, str]]:
     """Ekstrak daftar (method, path) dari OpenAPI spec."""
@@ -67,9 +75,9 @@ def _rute_dari_app() -> set[tuple[str, str]]:
 
 
 def test_semua_rute_terklasifikasi() -> None:
-    """Pastikan setiap rute sudah diklasifikasikan sebagai publik, bersama, atau Pengajar."""
+    """Pastikan setiap rute sudah diklasifikasikan sebagai publik, bersama, Pengajar, atau Admin."""
     rute_app = _rute_dari_app()
-    rute_diketahui = RUTE_PUBLIK | RUTE_BERSAMA | RUTE_PENGAJAR
+    rute_diketahui = RUTE_PUBLIK | RUTE_BERSAMA | RUTE_PENGAJAR | RUTE_ADMIN
 
     rute_tidak_diketahui = rute_app - rute_diketahui
     assert not rute_tidak_diketahui, (
@@ -80,62 +88,67 @@ def test_semua_rute_terklasifikasi() -> None:
     assert not rute_tidak_ada, f"Rute di daftar tidak ada di app: {sorted(rute_tidak_ada)}"
 
 
+def _cari_rute_app(method: str, path: str):
+    for included_route in app.routes:
+        if hasattr(included_route, "original_router") and hasattr(
+            included_route, "include_context"
+        ):
+            prefix = included_route.include_context.prefix or ""
+            for r in included_route.original_router.routes:
+                if hasattr(r, "path") and hasattr(r, "methods"):
+                    full_path = prefix + r.path
+                    if full_path == path and method in r.methods:
+                        return r
+    return None
+
+
+def _kumpulkan_dependensi_rute(rute) -> tuple[set[str], set[str]]:
+    semua: set[str] = set()
+    tingkat_pertama: set[str] = set()
+    if not (hasattr(rute, "dependant") and rute.dependant):
+        return semua, tingkat_pertama
+
+    def _telusuri(dep, level: int) -> None:
+        if hasattr(dep, "dependencies") and dep.dependencies:
+            for sub_dep in dep.dependencies:
+                if hasattr(sub_dep, "call") and sub_dep.call:
+                    try:
+                        nama = sub_dep.call.__name__
+                    except AttributeError:
+                        nama = sub_dep.call.__class__.__name__
+                    semua.add(nama)
+                    if level == 0:
+                        tingkat_pertama.add(nama)
+                _telusuri(sub_dep, level + 1)
+
+    _telusuri(rute.dependant, 0)
+    return semua, tingkat_pertama
+
+
 def test_rute_pengajar_memakai_dependensi_pengajar() -> None:
     """Telusuri dependensi rute Pengajar dan pastikan pengajar_saat_ini dipakai tingkat pertama."""
     for method, path in sorted(RUTE_PENGAJAR):
-        rute = None
-        # Traverse _IncludedRouter → original_router → routes
-        for included_route in app.routes:
-            if hasattr(included_route, "original_router") and hasattr(
-                included_route, "include_context"
-            ):
-                prefix = included_route.include_context.prefix or ""
-                for r in included_route.original_router.routes:
-                    if hasattr(r, "path") and hasattr(r, "methods"):
-                        full_path = prefix + r.path
-                        if full_path == path and method in r.methods:
-                            rute = r
-                            break
-            if rute:
-                break
-
+        rute = _cari_rute_app(method, path)
         assert rute is not None, f"Rute {method} {path} tidak ditemukan di app"
+        dependensi_names, first_level_deps = _kumpulkan_dependensi_rute(rute)
+        assert "pengajar_saat_ini" in dependensi_names, (
+            f"{method} {path} tidak memakai pengajar_saat_ini"
+        )
+        assert "pengguna_saat_ini" not in first_level_deps, (
+            f"{method} {path} memakai pengguna_saat_ini langsung (harus via pengajar_saat_ini)"
+        )
 
-        # Telusuri dependensi tingkat pertama
-        if hasattr(rute, "dependant") and rute.dependant:
-            dependensi_names = set()
 
-            def kumpulkan_dependensi(dep):
-                # Dependant punya dependencies (list of Dependant)
-                if hasattr(dep, "dependencies") and dep.dependencies:
-                    for sub_dep in dep.dependencies:
-                        # Dapatkan nama dari Dependant.call (callable function)
-                        if hasattr(sub_dep, "call") and sub_dep.call:
-                            try:
-                                dependensi_names.add(sub_dep.call.__name__)
-                            except AttributeError:
-                                # Untuk class instances, gunakan class name
-                                dependensi_names.add(sub_dep.call.__class__.__name__)
-                        kumpulkan_dependensi(sub_dep)
-
-            kumpulkan_dependensi(rute.dependant)
-
-            # pengajar_saat_ini HARUS ada di dependensi (bisa di tingkat mana pun)
-            assert "pengajar_saat_ini" in dependensi_names, (
-                f"{method} {path} tidak memakai pengajar_saat_ini"
-            )
-
-            # pengguna_saat_ini JANGAN muncul langsung (hanya via pengajar_saat_ini)
-            # Cek di tingkat pertama rute saja
-            first_level_deps = set()
-            if hasattr(rute.dependant, "dependencies"):
-                for dep in rute.dependant.dependencies:
-                    if hasattr(dep, "call") and dep.call:
-                        first_level_deps.add(dep.call.__name__)
-
-            assert "pengguna_saat_ini" not in first_level_deps, (
-                f"{method} {path} memakai pengguna_saat_ini langsung (harus via pengajar_saat_ini)"
-            )
+def test_rute_admin_memakai_dependensi_admin() -> None:
+    """Pastikan rute Admin memakai admin_saat_ini tanpa pengguna_saat_ini langsung."""
+    for method, path in sorted(RUTE_ADMIN):
+        rute = _cari_rute_app(method, path)
+        assert rute is not None, f"Rute {method} {path} tidak ditemukan di app"
+        dependensi_names, first_level_deps = _kumpulkan_dependensi_rute(rute)
+        assert "admin_saat_ini" in dependensi_names, f"{method} {path} tidak memakai admin_saat_ini"
+        assert "pengguna_saat_ini" not in first_level_deps, (
+            f"{method} {path} memakai pengguna_saat_ini langsung (harus via admin_saat_ini)"
+        )
 
 
 @pytest.mark.parametrize("method,path", sorted(RUTE_PENGAJAR))
@@ -190,6 +203,48 @@ async def test_rute_pengajar_menolak_admin(
     )
     body = response.json()
     assert body.get("kode") == "AKSES_DITOLAK", f"Kode error salah: {body}"
+
+
+@pytest.mark.parametrize("method,path", sorted(RUTE_ADMIN))
+async def test_rute_admin_menolak_pengajar(
+    client: AsyncClient, db_session: AsyncSession, method: str, path: str
+) -> None:
+    """Pengajar ditolak 403 pada semua rute Admin."""
+    pengajar = Pengguna(
+        id_pengguna=uuid.uuid4(),
+        nama="Pengajar Test",
+        email="pengajar.rute@example.com",
+        password_hash=await hash_password("pengajar_pass_123456"),
+        peran=Peran.PENGAJAR,
+    )
+    db_session.add(pengajar)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/masuk",
+        json={"email": "pengajar.rute@example.com", "password": "pengajar_pass_123456"},
+    )
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    path_actual = path.replace("{id_pengguna}", str(uuid.uuid4()))
+
+    if method == "GET":
+        response = await client.get(path_actual, headers=headers)
+    elif method == "POST":
+        response = await client.post(path_actual, json={}, headers=headers)
+    elif method == "PATCH":
+        response = await client.patch(path_actual, json={}, headers=headers)
+    elif method == "DELETE":
+        response = await client.delete(path_actual, headers=headers)
+    else:
+        pytest.fail(f"Method tidak dikenal: {method}")
+
+    assert response.status_code == 403, (
+        f"{method} {path} tidak 403, dapat {response.status_code}: {response.text}"
+    )
+    assert response.json().get("kode") == "AKSES_DITOLAK"
 
 
 async def test_rute_bersama_menerima_kedua_peran(

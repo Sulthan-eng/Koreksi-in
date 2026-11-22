@@ -19,7 +19,7 @@ from app.core.errors import (
 from app.core.logging import atur_logging
 from app.core.middleware import BatasUkuranRequest
 from app.core.startup import sapu_proses_tergantung
-from app.routers import auth, batch, health, ringkasan
+from app.routers import admin, auth, batch, health, ringkasan
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,7 @@ def buat_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api")
     app.include_router(batch.router, prefix="/api")
     app.include_router(ringkasan.router, prefix="/api")
+    app.include_router(admin.router, prefix="/api")
     return app
 
 

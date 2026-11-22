@@ -64,6 +64,8 @@ async def masuk(db: AsyncSession, email: str, password: str) -> tuple[str, str]:
     pengguna = await db.scalar(select(Pengguna).where(Pengguna.email == email))
     if pengguna is None or not await verify_password(password, pengguna.password_hash):
         raise LOGIN_GAGAL
+    if pengguna.dinonaktifkan_pada is not None:
+        raise LOGIN_GAGAL
 
     sekarang = datetime.now(UTC)
     token_mentah, token_hash = buat_refresh_token()
@@ -84,10 +86,13 @@ async def refresh(db: AsyncSession, refresh_token: str) -> str:
     token_hash = hash_refresh_token(refresh_token)
     sekarang = datetime.now(UTC)
     sesi = await db.scalar(
-        select(Sesi).where(
+        select(Sesi)
+        .join(Pengguna, Sesi.id_pengguna == Pengguna.id_pengguna)
+        .where(
             Sesi.refresh_token_hash == token_hash,
             Sesi.dicabut_pada.is_(None),
             Sesi.kedaluwarsa_pada > sekarang,
+            Pengguna.dinonaktifkan_pada.is_(None),
         )
     )
     if sesi is None:
@@ -118,10 +123,9 @@ async def minta_reset_password(db: AsyncSession, email: str) -> tuple[Pengguna, 
     respons ke klien SELALU sama terlepas dari hasilnya."""
     email = email.strip().lower()
     pengguna = await db.scalar(select(Pengguna).where(Pengguna.email == email).with_for_update())
-    if pengguna is None:
+    if pengguna is None or pengguna.dinonaktifkan_pada is not None:
+        await db.rollback()
         return None
-    # Catatan: kolom dinonaktifkan_pada belum ada (akan ditambahkan di FR26),
-    # jadi semua akun yang ditemukan diperlakukan aktif untuk sementara.
 
     sekarang = datetime.now(UTC)
     if pengguna.reset_dibuat_pada is not None and (
@@ -153,7 +157,8 @@ async def atur_ulang_password(db: AsyncSession, token: str, password_baru: str) 
     pengguna = await db.scalar(
         select(Pengguna).where(Pengguna.reset_token_hash == token_hash).with_for_update()
     )
-    if pengguna is None:
+    if pengguna is None or pengguna.dinonaktifkan_pada is not None:
+        await db.rollback()
         raise TOKEN_RESET_TIDAK_VALID
 
     sekarang = datetime.now(UTC)

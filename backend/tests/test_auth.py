@@ -744,3 +744,103 @@ async def test_lupa_password_gagal_kirim_email_tetap_respons_generik_tanpa_500(
 
     fn, args, kwargs = _background_tasks_tidak_dijalankan[0]
     await fn(*args, **kwargs)  # kegagalan hanya dicatat log, tidak dilempar
+
+
+async def test_masuk_akun_nonaktif_ditolak_dengan_pesan_generik(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"kode": "LOGIN_GAGAL", "pesan": "Email atau password salah"}
+
+
+async def test_refresh_akun_nonaktif_ditolak_meski_sesi_belum_dicabut(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await _daftar_dan_masuk(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post("/api/auth/refresh")
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "kode": "SESI_BERAKHIR",
+        "pesan": "Sesi berakhir, silakan masuk kembali.",
+    }
+
+
+async def test_request_terproteksi_menolak_akun_nonaktif_meski_sesi_aktif(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    resp_saya = await client.get("/api/auth/saya", headers=headers)
+    assert resp_saya.status_code == 401
+    assert resp_saya.json()["kode"] == "SESI_BERAKHIR"
+
+    resp_batch = await client.get("/api/batch", headers=headers)
+    assert resp_batch.status_code == 401
+    assert resp_batch.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def test_lupa_password_akun_nonaktif_respons_generik_tanpa_token_dan_email(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post("/api/auth/lupa-password", json={"email": "budi@contoh.com"})
+
+    assert response.status_code == 200
+    assert response.json() == _PESAN_LUPA_PASSWORD
+    assert len(_background_tasks_tidak_dijalankan) == 0
+
+    await db_session.refresh(pengguna)
+    assert pengguna.reset_token_hash is None
+    assert pengguna.reset_dibuat_pada is None
+
+
+async def test_atur_ulang_password_akun_nonaktif_ditolak(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    await client.post("/api/auth/daftar", json=_DAFTAR)
+    await client.post("/api/auth/lupa-password", json={"email": "budi@contoh.com"})
+    _, args, _ = _background_tasks_tidak_dijalankan[0]
+    token = args[1]
+
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    hash_lama = pengguna.password_hash
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/atur-ulang-password", json={"token": token, "password_baru": "baru12345"}
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "TOKEN_RESET_TIDAK_VALID",
+        "pesan": "Tautan tidak berlaku atau sudah kedaluwarsa.",
+    }
+    await db_session.refresh(pengguna)
+    assert pengguna.password_hash == hash_lama

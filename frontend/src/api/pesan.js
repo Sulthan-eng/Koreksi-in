@@ -41,6 +41,18 @@ export function pesanLabelHapusFile(namaFile) {
   return `Hapus ${namaFile} dari daftar`;
 }
 
+export function pesanBerlakuHingga(tanggalTeks) {
+  return `Berlaku hingga ${tanggalTeks}`;
+}
+
+export function pesanNonaktifkanAkun(nama) {
+  return `Akun ${nama} akan dinonaktifkan dan tidak dapat masuk. Lanjutkan?`;
+}
+
+export function pesanAktifkanAkun(nama) {
+  return `Akun ${nama} akan diaktifkan dan dapat masuk kembali. Lanjutkan?`;
+}
+
 const KODE_PESAN_DARI_SERVER = new Set([
   "BATAS_SOAL_TERLAMPAUI",
   "BATAS_JAWABAN_TERLAMPAUI",
@@ -139,6 +151,21 @@ export const PESAN_KODE = {
   GAGAL_MUAT_LANGGANAN:
     "Gagal memuat status langganan, coba muat ulang halaman",
   GAGAL_MUAT_RINGKASAN: "Gagal memuat ringkasan, coba muat ulang halaman",
+  AKUN_TIDAK_DITEMUKAN: "Akun Pengajar tidak ditemukan.",
+  MASA_BERLAKU_TIDAK_VALID:
+    "Masa berlaku wajib diisi dengan tanggal setelah hari ini.",
+  GAGAL_UBAH_LANGGANAN: "Gagal mengubah status langganan, silakan coba lagi.",
+  GAGAL_UBAH_STATUS_AKUN: "Gagal mengubah status akun, silakan coba lagi.",
+  KONEKSI_TERPUTUS_COBA_LAGI: "Koneksi internet terputus, silakan coba lagi.",
+  BELUM_ADA_AKUN_PENGAJAR: "Belum ada akun Pengajar yang terdaftar.",
+  PENCARIAN_AKUN_KOSONG: "Tidak ada akun yang sesuai dengan pencarian.",
+  GAGAL_MUAT_AKUN_PENGAJAR:
+    "Gagal memuat daftar akun, coba muat ulang halaman.",
+  LANGGANAN_BERHASIL_DIUBAH: "Status langganan berhasil diubah",
+  AKUN_BERHASIL_DINONAKTIFKAN: "Akun berhasil dinonaktifkan",
+  AKUN_BERHASIL_DIAKTIFKAN: "Akun berhasil diaktifkan",
+  JUDUL_NONAKTIFKAN_AKUN: "Nonaktifkan Akun",
+  JUDUL_AKTIFKAN_AKUN: "Aktifkan Akun",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 

@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef } from "react";
+import PesanForm from "./PesanForm.jsx";
 import Spinner from "./Spinner.jsx";
 
 const KELAS_UTAMA =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan disabled:opacity-50";
 const KELAS_SEKUNDER =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis px-4 font-semibold text-teks disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks disabled:opacity-50";
 const KELAS_SEKUNDER_MERUSAK =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis px-4 font-semibold text-kurang-mirip disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-kurang-mirip disabled:opacity-50";
 
 function DialogKonfirmasi({
   terbuka,
@@ -19,6 +20,7 @@ function DialogKonfirmasi({
   tombolUtama = "batal",
   variasiYa,
   prosesBerjalan = false,
+  pesanGalat = null,
 }) {
   const dialogRef = useRef(null);
   const tombolBatalRef = useRef(null);
@@ -48,7 +50,7 @@ function DialogKonfirmasi({
     <dialog
       ref={dialogRef}
       aria-labelledby={idJudul}
-      className="m-auto w-full max-w-md rounded-xl p-0 shadow-lg backdrop:bg-teks/40"
+      className="m-auto w-full max-w-md rounded-xl border border-garis bg-permukaan p-0 text-teks shadow-lg backdrop:bg-teks/40"
       onCancel={(peristiwa) => {
         peristiwa.preventDefault();
         if (!prosesBerjalan) onBatal();
@@ -59,6 +61,13 @@ function DialogKonfirmasi({
           {judul}
         </h2>
         <p className="text-sm leading-5 text-teks-redup">{isi}</p>
+        {pesanGalat && (
+          <PesanForm
+            varian="galat"
+            pesan={pesanGalat}
+            className="text-sm leading-5"
+          />
+        )}
         <div className="flex justify-end gap-3">
           <button
             type="button"
