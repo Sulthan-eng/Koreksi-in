@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Enum, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
-from app.models.enums import StatusLangganan, nilai_enum
+from app.models.enums import Peran, StatusLangganan, nilai_enum
 
 
 class Pengguna(Base):
@@ -28,5 +28,13 @@ class Pengguna(Base):
     )
     reset_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     reset_dibuat_pada: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    peran: Mapped[Peran] = mapped_column(
+        Enum(Peran, name="peran", values_callable=nilai_enum),
+        nullable=False,
+        server_default=Peran.PENGAJAR.value,
+    )
+    dinonaktifkan_pada: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

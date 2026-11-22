@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Response, U
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.dependencies import pengguna_saat_ini
+from app.core.dependencies import pengajar_saat_ini
 from app.models.pengguna import Pengguna
 from app.schemas.batch import BatchResponse, BuatBatchRequest
 from app.schemas.file_jawaban import FileJawabanResponse
@@ -76,7 +76,7 @@ def _hasil_koreksi_edit_response(baris) -> HasilKoreksiEditResponse:
 
 @router.get("", response_model=list[BatchResponse])
 async def daftar_batch(
-    pengguna: Pengguna = Depends(pengguna_saat_ini), db: AsyncSession = Depends(get_db)
+    pengguna: Pengguna = Depends(pengajar_saat_ini), db: AsyncSession = Depends(get_db)
 ) -> list[BatchResponse]:
     batch_list = await batch_service.daftar_batch(db, pengguna)
     return [_batch_response(batch) for batch in batch_list]
@@ -85,7 +85,7 @@ async def daftar_batch(
 @router.post("", response_model=BatchResponse, status_code=201)
 async def buat_batch(
     body: BuatBatchRequest,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> BatchResponse:
     batch = await batch_service.buat_batch(db, pengguna, body.nama_batch)
@@ -95,7 +95,7 @@ async def buat_batch(
 @router.get("/{id_batch}", response_model=BatchResponse)
 async def ambil_batch(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> BatchResponse:
     batch = await batch_service.ambil_batch(db, pengguna, id_batch)
@@ -105,7 +105,7 @@ async def ambil_batch(
 @router.delete("/{id_batch}", status_code=204)
 async def hapus_batch(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     await batch_service.hapus_batch(db, pengguna, id_batch)
@@ -114,7 +114,7 @@ async def hapus_batch(
 @router.post("/{id_batch}/selesaikan", response_model=BatchResponse)
 async def selesaikan_batch(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> BatchResponse:
     batch = await batch_service.selesaikan_batch(db, pengguna, id_batch)
@@ -124,7 +124,7 @@ async def selesaikan_batch(
 @router.get("/{id_batch}/soal", response_model=list[SoalResponse])
 async def daftar_soal(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> list[SoalResponse]:
     soal_list = await soal_service.daftar_soal(db, pengguna, id_batch)
@@ -135,7 +135,7 @@ async def daftar_soal(
 async def tambah_soal(
     id_batch: uuid.UUID,
     body: TambahSoalRequest,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> SoalResponse:
     soal = await soal_service.tambah_soal(db, pengguna, id_batch, body.kunci_jawaban)
@@ -146,7 +146,7 @@ async def tambah_soal(
 async def ocr_kunci_soal(
     id_batch: uuid.UUID,
     file: UploadFile | None = File(default=None),
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> OcrKunciResponse:
     teks = await soal_service.ocr_kunci(db, pengguna, id_batch, file)
@@ -156,7 +156,7 @@ async def ocr_kunci_soal(
 @router.get("/{id_batch}/file-jawaban", response_model=list[FileJawabanResponse])
 async def daftar_file_jawaban(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> list[FileJawabanResponse]:
     file_jawaban_list = await file_jawaban_service.daftar_file_jawaban(db, pengguna, id_batch)
@@ -169,7 +169,7 @@ async def unggah_jawaban(
     background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(default=[]),
     nama_peserta_didik: list[str] = Form(default=[]),
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> list[FileJawabanResponse]:
     file_jawaban_list = await file_jawaban_service.unggah_jawaban(
@@ -186,7 +186,7 @@ async def coba_lagi_jawaban(
     id_batch: uuid.UUID,
     id_file: uuid.UUID,
     background_tasks: BackgroundTasks,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> FileJawabanResponse:
     file_jawaban = await file_jawaban_service.coba_lagi_file_jawaban(
@@ -199,7 +199,7 @@ async def coba_lagi_jawaban(
 @router.get("/{id_batch}/hasil", response_model=list[HasilKoreksiItem])
 async def daftar_hasil_koreksi(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> list[HasilKoreksiItem]:
     baris_list = await hasil_koreksi_service.daftar_hasil_koreksi(db, pengguna, id_batch)
@@ -211,7 +211,7 @@ async def edit_hasil_koreksi(
     id_batch: uuid.UUID,
     id_koreksi: uuid.UUID,
     body: EditTeksOcrRequest,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> HasilKoreksiEditResponse:
     baris = await hasil_koreksi_service.edit_teks_ocr(
@@ -227,7 +227,7 @@ async def ubah_nilai_akhir_hasil_koreksi(
     id_batch: uuid.UUID,
     id_koreksi: uuid.UUID,
     body: UbahNilaiAkhirRequest,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> HasilKoreksiNilaiResponse:
     baris = await hasil_koreksi_service.ubah_nilai_akhir(
@@ -239,7 +239,7 @@ async def ubah_nilai_akhir_hasil_koreksi(
 @router.get("/{id_batch}/ekspor")
 async def ekspor_rekap_nilai(
     id_batch: uuid.UUID,
-    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     konten, nama_file = await ekspor_service.ekspor_rekap_nilai(db, pengguna, id_batch)

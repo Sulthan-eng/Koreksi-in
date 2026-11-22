@@ -3,9 +3,9 @@ import uuid
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.models.enums import StatusLangganan
+from app.models.enums import Peran, StatusLangganan
 
-_POLA_EMAIL = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
+POLA_EMAIL = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
 
 def _strip_dan_tolak_kosong(value: str) -> str:
@@ -29,7 +29,7 @@ class DaftarRequest(BaseModel):
     @classmethod
     def _validasi_format_email(cls, value: str) -> str:
         # Berjalan setelah trim (urutan definisi validator), jadi pola sengaja tanpa spasi tepi.
-        if _POLA_EMAIL.match(value) is None:
+        if POLA_EMAIL.match(value) is None:
             raise ValueError("format email tidak valid")
         return value
 
@@ -57,6 +57,7 @@ class TokenResponse(BaseModel):
 class SayaResponse(BaseModel):
     nama: str
     status_langganan: StatusLangganan
+    peran: Peran
 
 
 class LupaPasswordRequest(BaseModel):
@@ -66,7 +67,7 @@ class LupaPasswordRequest(BaseModel):
     @classmethod
     def _validasi_email(cls, value: str) -> str:
         stripped = _strip_dan_tolak_kosong(value)
-        if _POLA_EMAIL.match(stripped) is None:
+        if POLA_EMAIL.match(stripped) is None:
             raise ValueError("format email tidak valid")
         return stripped
 

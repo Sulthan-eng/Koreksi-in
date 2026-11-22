@@ -16,7 +16,7 @@ Koreksi-in membantu Pengajar (guru atau dosen) mengoreksi jawaban esai atau jawa
 
 Status per November 2026:
 
-- Sebagian besar fitur Pengajar sudah Selesai di localhost (prototipe UTS beserta tugas-tugas berikutnya, termasuk rombakan tampilan di bagian 9 dan `docs/UI.md`); FR1 belum Selesai penuh karena login Admin belum ada, dan langganan berbayar, ekspor, ringkasan, serta fitur Admin masih "Belum dikerjakan". Rincian status tiap fitur ada di bagian 3; yang belum Selesai dikerjakan satu per satu atas permintaan pemilik proyek.
+- Sebagian besar fitur Pengajar sudah Selesai di localhost (prototipe UTS beserta tugas-tugas berikutnya, termasuk rombakan tampilan di bagian 9 dan `docs/UI.md`); FR1 Selesai (login/logout Admin, fondasi peran), dan langganan berbayar, ekspor, ringkasan, serta fitur Admin (FR24–FR27) masih "Belum dikerjakan". Rincian status tiap fitur ada di bagian 3; yang belum Selesai dikerjakan satu per satu atas permintaan pemilik proyek.
 
 ## 2. Glosarium dan istilah UI
 
@@ -48,7 +48,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 
 | FR | Isi singkat | UC | Status |
 |---|---|---|---|
-| FR1 | Registrasi, login, logout, reset password Pengajar. Admin login dan logout | - | Registrasi, login, logout, reset password Pengajar: Selesai (reset password: lihat F-RESET). Login dan logout Admin: Belum dikerjakan |
+| FR1 | Registrasi, login, logout, reset password Pengajar. Admin login dan logout | - | Selesai. Registrasi, login, logout, reset password Pengajar (reset password: lihat F-RESET) dan Admin keduanya sudah; peran dibaca dari database tiap request (NFR9) |
 | FR2 | Status langganan di profil | UC-01 | Selesai |
 | FR3 | Buat batch | UC-02 | Selesai. Batas batch aktif akun Free berlaku lewat FR18 |
 | FR4 | Kunci jawaban diketik | UC-04 | Selesai |
@@ -80,7 +80,7 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 Konsekuensi status saat ini:
 
 - Tabel `Transaksi_Pembayaran` belum dibuat. Kolom `Pengguna.status_langganan` dan `masa_berlaku_pro` dipakai lewat helper tunggal `jenis_akun_efektif(pengguna)` (memperlakukan akun Pro yang `masa_berlaku_pro`-nya sudah lewat sebagai Free), dikembalikan oleh `GET /api/auth/saya` sebagai label di profil (FR2), dan dipakai pada semua pemeriksaan batas kuota akun (FR18). Banner "Pro berakhir" (bagian 4) belum dikerjakan, serta tautan ke halaman Langganan pada pesan penolakan menunggu halaman Langganan (FR19/FR20) dikerjakan.
-- Kolom `Pengguna.peran` dan `dinonaktifkan_pada` belum ada. Menambahnya adalah bagian dari tugas FR26 atau login Admin, lewat migrasi Alembic. Karena `dinonaktifkan_pada` belum ada, pengecekan "akun aktif" pada F-RESET adalah no-op untuk sekarang (semua akun yang ditemukan diperlakukan aktif); akan diaktifkan saat FR26 dikerjakan.
+- Kolom `Pengguna.peran` ENUM('pengajar','admin') dan `dinonaktifkan_pada` TIMESTAMP sudah ada (migrasi e8f3g5h6i7j8). Semua akun lama diisi `peran='pengajar'`. Pengecekan "akun aktif" (kolom `dinonaktifkan_pada`) pada F-RESET masih no-op (semua akun yang ditemukan diperlakukan aktif); akan diaktifkan saat FR26 dikerjakan. Penegakan akun nonaktif di login (ganti pesan generik) belum dikerjakan (U6).
 - Kolom `Batch.status` sudah ada; nilai `aktif` dan `selesai` sudah dipakai (FR23 Selesai).
 - Kolom `Hasil_Koreksi.skor_revisi` dan `skor_hitung_ulang` kini terpakai lewat FR15 dan FR16: `skor_revisi` diisi Pengajar lewat aksi "Ubah Nilai Akhir" (FR16), `skor_hitung_ulang` ditandai saat hitung ulang skor via judge gagal (FR15).
 - Halaman daftar batch di Beranda sudah ada, karena Pengajar perlu membuka batch miliknya.
@@ -161,9 +161,9 @@ Aturan ini sudah ditetapkan. Implementasi manual.
 - Logout: mengisi `dicabut_pada` pada sesi perangkat itu dan menghapus cookie. Tidak ada menu "keluar dari semua perangkat". Reset password dan penonaktifan akun (FR26) mencabut semua sesi akun.
 - Frontend: saat aplikasi dibuka (termasuk reload), panggil endpoint refresh untuk memulihkan sesi. Jika access token habis atau menerima 401 pada request, panggil refresh sekali (single-flight: request paralel menunggu satu panggilan refresh yang sama), lalu ulangi request. Jika refresh gagal di halaman terproteksi, arahkan ke halaman masuk dengan pesan "Sesi berakhir, silakan masuk kembali." Saat sistem dibuka di alamat utama tanpa sesi yang valid, tampilkan Halaman Pemasaran. Setelah Pengajar atau Admin menekan Keluar, arahkan ke Halaman Pemasaran (tanpa pesan sesi berakhir).
 - Semua halaman dan endpoint kecuali registrasi, login, refresh, lupa password dan atur ulang password (halaman `/lupa-password` dan `/atur-ulang-password` serta `POST /api/auth/lupa-password` dan `POST /api/auth/atur-ulang-password`), Halaman Pemasaran, dan webhook Payment Gateway membutuhkan login.
-- Peran (NFR9, Belum dikerjakan): peran diperiksa di sisi server pada SETIAP request lewat dependensi, bukan dari klaim di frontend. Endpoint Admin hanya untuk peran Admin dan menolak Pengajar dengan 403. Endpoint Pengajar menolak Admin dengan 403. Akun dengan `dinonaktifkan_pada` terisi tidak dapat masuk dan sesinya dicabut.
-- Akun Admin dibuat developer lewat proses terkontrol di server (skrip, bukan menu aplikasi). Kredensial Admin TIDAK BOLEH ditulis di kode atau repository.
-- Rate limit login TIDAK diterapkan. Permintaan tautan reset password hanya dibatasi oleh jeda 60 detik per akun (F-RESET).
+- Peran (NFR9, Selesai): peran diperiksa di sisi server pada SETIAP request lewat dependensi (`pengajar_saat_ini` atau `admin_saat_ini`), bukan dari klaim JWT di frontend. Endpoint Admin hanya untuk peran Admin dan menolak Pengajar dengan 403 `AKSES_DITOLAK`. Endpoint Pengajar menolak Admin dengan 403. Akun dengan `dinonaktifkan_pada` terisi tidak dapat masuk dan sesinya dicabut (penegakan belum dikerjakan, FR26).
+- Akun Admin dibuat developer lewat skrip `backend/scripts/buat_admin.py` (interaktif: nama, email, password via getpass min 8 karakter). Skrip dapat dijalankan: lokal `python -m scripts.buat_admin`, Docker `docker compose run --rm backend python -m scripts.buat_admin`, produksi Fly.io `fly console` lalu jalankan skrip di sana (paling aman, mesin sementara dengan TTY). Kredensial TIDAK BOLEH ditulis di kode, argumen CLI, atau log. Email yang sudah terdaftar ditolak.
+- Rate limit login TIDAK diterapkan. Permintaan tautan reset password hanya dibatasi oleh jeda 60 detik per akun (F-RESET). Risiko brute force admin login dicatat sebagai temuan (layak pertimbangan di PR terpisah saat analisis multi-pengguna).
 - Reset password (FR1): lewat tautan yang dikirim ke email, tanpa tabel baru, lihat F-RESET di bagian 9. Token disimpan sebagai hash di dua kolom `Pengguna` (bagian 5), sama seperti pola refresh token di `Sesi`. Endpoint backend (`POST /api/auth/lupa-password` dan `POST /api/auth/atur-ulang-password`) dan halaman frontend (`/lupa-password` dan `/atur-ulang-password`).
 
 ## 7. Penilaian (LLM-judge)
@@ -336,6 +336,7 @@ Kode error autentikasi (bagian 6):
 | `PASSWORD_TERLALU_PANJANG` | 400 | "Password maksimal 72 karakter" |
 | `LOGIN_GAGAL` | 401 | "Email atau password salah" |
 | `SESI_BERAKHIR` | 401 | "Sesi berakhir, silakan masuk kembali." |
+| `AKSES_DITOLAK` | 403 | "Anda tidak memiliki akses ke fitur ini." |
 
 Kode error reset password (bagian 9, F-RESET):
 

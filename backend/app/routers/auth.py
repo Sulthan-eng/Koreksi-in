@@ -93,7 +93,9 @@ async def keluar(request: Request, response: Response, db: AsyncSession = Depend
 
 @router.get("/saya", response_model=SayaResponse)
 async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
-    return SayaResponse(nama=pengguna.nama, status_langganan=jenis_akun_efektif(pengguna))
+    return SayaResponse(
+        nama=pengguna.nama, status_langganan=jenis_akun_efektif(pengguna), peran=pengguna.peran
+    )
 
 
 @router.post("/lupa-password", response_model=LupaPasswordResponse)

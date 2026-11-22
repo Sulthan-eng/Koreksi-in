@@ -55,6 +55,22 @@ Semua perintah dari folder `backend/` (di situlah `fly.toml` berada, sehingga bu
 5. `fly status` — pastikan hanya ada satu mesin. Bila ternyata lebih dari satu, perbaiki dengan `fly scale count 1`.
 6. Cek: `curl https://<nama-app>.fly.dev/api/health` harus mengembalikan `{"status":"ok"}`, dan `/docs` mengembalikan `404`. `fly logs` memuat log aplikasi `app.*` mulai level `INFO` (termasuk `storage_backend_aktif backend=s3` dan `gemini_call`).
 
+### Membuat akun Admin di produksi
+
+Setelah deploy, buat akun Admin pertama via skrip interaktif `backend/scripts/buat_admin.py`:
+
+```bash
+cd backend
+fly console
+# Di dalam console (mesin sementara dengan TTY):
+cd /app
+python -m scripts.buat_admin
+# Lalu masukkan nama, email, dan password (min 8 karakter, via getpass)
+exit
+```
+
+Mesin sementara dengan TTY diperlukan karena skrip membaca password via `getpass` (tanpa echo). Alternatif bila `fly console` tidak tersedia: `fly machine start <id> && fly ssh console <id> --pty` lalu jalankan skrip pada mesin yang melayani trafik (tidak direkomendasikan). Email yang sudah terdaftar ditolak. Password tidak pernah dicetak atau di-log.
+
 Catatan penting:
 
 - **Jangan mengisi variabel dengan nilai kosong.** `fly secrets set NAMA=` tetap mengirim variabel itu ke proses dan menimpa default di `Settings`. String kosong pada variabel bertipe angka (`GEMINI_RPD_LIMIT`, `SMTP_PORT`) atau pilihan terbatas (`STORAGE_BACKEND`, `COOKIE_SECURE`) menggagalkan validasi saat import, sehingga aplikasi dan `release_command` langsung mati. Variabel opsional cukup tidak di-set.
