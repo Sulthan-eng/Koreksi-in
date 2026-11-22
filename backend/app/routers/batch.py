@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -17,6 +17,7 @@ from app.schemas.hasil_koreksi import (
 )
 from app.schemas.soal import OcrKunciResponse, SoalResponse, TambahSoalRequest
 from app.services import batch as batch_service
+from app.services import ekspor as ekspor_service
 from app.services import file_jawaban as file_jawaban_service
 from app.services import hasil_koreksi as hasil_koreksi_service
 from app.services import pemrosesan
@@ -233,3 +234,20 @@ async def ubah_nilai_akhir_hasil_koreksi(
         db, pengguna, id_batch, id_koreksi, body.skor_revisi
     )
     return HasilKoreksiNilaiResponse(id_koreksi=baris.id_koreksi, skor_revisi=baris.skor_revisi)
+
+
+@router.get("/{id_batch}/ekspor")
+async def ekspor_rekap_nilai(
+    id_batch: uuid.UUID,
+    pengguna: Pengguna = Depends(pengguna_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    konten, nama_file = await ekspor_service.ekspor_rekap_nilai(db, pengguna, id_batch)
+    return Response(
+        content=konten,
+        media_type=ekspor_service.MEDIA_TYPE_XLSX,
+        headers={
+            "Content-Disposition": f'attachment; filename="{nama_file}"',
+            "Cache-Control": "no-store",
+        },
+    )
