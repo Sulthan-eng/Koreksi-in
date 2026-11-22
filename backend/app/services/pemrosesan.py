@@ -178,7 +178,27 @@ async def proses_file_jawaban(
 ) -> None:
     """Entry point BackgroundTasks. Membuka sesi DB pendek per fase sendiri
     (tidak memakai session request) kecuali `db` disediakan oleh test."""
-    data_awal = await _baca_data_awal(id_file_list, db)
+    if not id_file_list:
+        return
+
+    try:
+        data_awal = await _baca_data_awal(id_file_list, db)
+    except DBAPIError as exc:
+        orig_tipe = type(exc.orig).__name__ if exc.orig is not None else "none"
+        logger.error(
+            "pemrosesan_baca_awal_gagal_db jumlah=%d tipe=%s orig=%s connection_invalidated=%s",
+            len(id_file_list),
+            type(exc).__name__,
+            orig_tipe,
+            exc.connection_invalidated,
+        )
+        await _tandai_id_gagal_aman(id_file_list, PESAN_GAGAL_UMUM, db)
+        return
+    except Exception:
+        logger.exception("pemrosesan_baca_awal_gagal_tak_terduga")
+        await _tandai_id_gagal_aman(id_file_list, PESAN_GAGAL_UMUM, db)
+        return
+
     if data_awal is None:
         return
     data_files, data_soal = data_awal

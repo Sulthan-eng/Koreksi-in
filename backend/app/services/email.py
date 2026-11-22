@@ -1,8 +1,8 @@
 """Satu-satunya modul yang mengirim email (SPEC bagian 9, F-RESET).
 
 Memakai smtplib (stdlib) dengan STARTTLS, dibungkus asyncio.to_thread agar
-tidak memblokir event loop. Tidak ada dependency baru. Token TIDAK PERNAH
-dicatat di log.
+tidak memblokir event loop. Tidak ada dependency baru. Token, tautan reset,
+dan alamat email TIDAK PERNAH dicatat di log.
 """
 
 import asyncio
@@ -49,5 +49,12 @@ async def kirim_email_reset_password(email_tujuan: str, token: str) -> None:
     pesan = _buat_pesan_reset(email_tujuan, token)
     try:
         await asyncio.to_thread(_kirim_smtp, pesan)
-    except Exception:
-        logger.error("kirim_email_reset_password_gagal", exc_info=True)
+    except Exception as exc:
+        # Catat metadata aman saja (tanpa exc_info/str(exc)): SMTPRecipientsRefused
+        # dan SMTPSenderRefused memuat alamat email pada representasi error-nya.
+        kode = getattr(exc, "smtp_code", None)
+        logger.error(
+            "kirim_email_reset_password_gagal tipe=%s kode=%s",
+            type(exc).__name__,
+            kode,
+        )

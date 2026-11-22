@@ -10,6 +10,7 @@ import {
 } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
+import { catatHasilPolling } from "../lib/pollingStatus.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
@@ -105,6 +106,7 @@ function HalamanBatch() {
           batchApi.daftarFileJawaban(id),
         ]);
         if (!dibatalkan) {
+          setKesalahanPolling(null);
           setBatch(batchHasil);
           setDaftarSoal(soalHasil);
           setDaftarFileJawaban(fileJawabanHasil);
@@ -128,16 +130,39 @@ function HalamanBatch() {
 
   useEffect(() => {
     if (!adaFileDiproses) return;
-    const interval = setInterval(async () => {
-      try {
-        const hasil = await batchApi.daftarFileJawaban(id);
-        setDaftarFileJawaban(hasil);
-      } catch {
-        setKesalahanPolling(PESAN_KODE.GAGAL_STATUS_PEMROSESAN);
-        clearInterval(interval);
-      }
-    }, JEDA_POLLING_MS);
-    return () => clearInterval(interval);
+    let dibatalkan = false;
+    let timerId = null;
+    let gagalBeruntun = 0;
+
+    function jadwalkanBerikutnya() {
+      timerId = setTimeout(async () => {
+        try {
+          const hasil = await batchApi.daftarFileJawaban(id);
+          if (dibatalkan) return;
+          ({ gagalBeruntun } = catatHasilPolling(gagalBeruntun, true));
+          setDaftarFileJawaban(hasil);
+          if (hasil.some((fj) => fj.status_proses === "diproses")) {
+            jadwalkanBerikutnya();
+          }
+        } catch {
+          if (dibatalkan) return;
+          const berikutnya = catatHasilPolling(gagalBeruntun, false);
+          gagalBeruntun = berikutnya.gagalBeruntun;
+          if (berikutnya.berhenti) {
+            setKesalahanPolling(PESAN_KODE.GAGAL_STATUS_PEMROSESAN);
+            return;
+          }
+          jadwalkanBerikutnya();
+        }
+      }, JEDA_POLLING_MS);
+    }
+
+    jadwalkanBerikutnya();
+
+    return () => {
+      dibatalkan = true;
+      clearTimeout(timerId);
+    };
   }, [id, adaFileDiproses]);
 
   // Pilihan file berubah: pesan "file belum diunggah" sudah tidak berlaku.
