@@ -14,7 +14,7 @@ _URL = "/api/midtrans/notifikasi"
 
 
 def _signature(order_id: str, status_code: str, gross_amount: str) -> str:
-    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SERVER_KEY}"
+    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SIGNATURE_SECRET_KEY}"
     return hashlib.sha512(mentah.encode("utf-8")).hexdigest()
 
 
