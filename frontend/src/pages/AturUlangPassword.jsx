@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { validasiPasswordBaru } from "../lib/validasi.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
+import KolomPassword from "../components/KolomPassword.jsx";
 
 function AturUlangPassword() {
   const [token] = useState(() => {
@@ -110,37 +111,25 @@ function AturUlangPassword() {
                 <PesanForm varian="galat" pesan={kesalahan} kotak />
               )}
 
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-teks">
-                  Password baru
-                </span>
-                <input
-                  id="password_baru"
-                  type="password"
-                  autoComplete="new-password"
-                  value={passwordBaru}
-                  onChange={(peristiwa) =>
-                    setPasswordBaru(peristiwa.target.value)
-                  }
-                  className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks"
-                />
-              </label>
+              <KolomPassword
+                id="password_baru"
+                label="Password baru"
+                autoComplete="new-password"
+                value={passwordBaru}
+                onChange={(peristiwa) =>
+                  setPasswordBaru(peristiwa.target.value)
+                }
+              />
 
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-teks">
-                  Konfirmasi password
-                </span>
-                <input
-                  id="konfirmasi_password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={konfirmasiPassword}
-                  onChange={(peristiwa) =>
-                    setKonfirmasiPassword(peristiwa.target.value)
-                  }
-                  className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks"
-                />
-              </label>
+              <KolomPassword
+                id="konfirmasi_password"
+                label="Konfirmasi password"
+                autoComplete="new-password"
+                value={konfirmasiPassword}
+                onChange={(peristiwa) =>
+                  setKonfirmasiPassword(peristiwa.target.value)
+                }
+              />
 
               <button
                 type="submit"
