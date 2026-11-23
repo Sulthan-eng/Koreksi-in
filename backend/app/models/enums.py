@@ -28,5 +28,17 @@ class Peran(enum.Enum):
     ADMIN = "admin"
 
 
+class PaketLangganan(enum.Enum):
+    PRO_1_BULAN = "pro_1_bulan"
+    PRO_3_BULAN = "pro_3_bulan"
+
+
+class StatusTransaksi(enum.Enum):
+    MENUNGGU = "menunggu"
+    BERHASIL = "berhasil"
+    GAGAL = "gagal"
+    KEDALUWARSA = "kedaluwarsa"
+
+
 def nilai_enum(enum_cls: type[enum.Enum]) -> list[str]:
     return [member.value for member in enum_cls]

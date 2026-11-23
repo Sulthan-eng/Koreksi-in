@@ -5,6 +5,7 @@ from app.models.hasil_koreksi import HasilKoreksi
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
 from app.models.soal import Soal
+from app.models.transaksi_pembayaran import TransaksiPembayaran
 
 __all__ = [
     "Base",
@@ -14,4 +15,5 @@ __all__ = [
     "Soal",
     "FileJawaban",
     "HasilKoreksi",
+    "TransaksiPembayaran",
 ]

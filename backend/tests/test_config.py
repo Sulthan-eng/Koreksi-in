@@ -7,6 +7,7 @@ _DASAR = {
     "DATABASE_URL": "postgresql+asyncpg://u:p@localhost:5432/db",
     "SECRET_KEY": "rahasia",
     "GEMINI_API_KEY": "kunci",
+    "MIDTRANS_SERVER_KEY": "kunci_midtrans",
 }
 
 
