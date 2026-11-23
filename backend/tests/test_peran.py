@@ -22,6 +22,7 @@ RUTE_PUBLIK = {
     ("POST", "/api/auth/keluar"),
     ("POST", "/api/auth/lupa-password"),
     ("POST", "/api/auth/atur-ulang-password"),
+    ("POST", "/api/midtrans/notifikasi"),
 }
 
 # Rute bersama untuk kedua peran
@@ -47,6 +48,8 @@ RUTE_PENGAJAR = {
     ("PATCH", "/api/batch/{id_batch}/hasil/{id_koreksi}/nilai-akhir"),
     ("GET", "/api/batch/{id_batch}/ekspor"),
     ("GET", "/api/ringkasan"),
+    ("POST", "/api/langganan/transaksi"),
+    ("GET", "/api/langganan/transaksi"),
 }
 
 # Rute khusus Admin (Pengajar ditolak 403)
