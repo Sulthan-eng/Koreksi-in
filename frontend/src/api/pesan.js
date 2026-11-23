@@ -150,6 +150,11 @@ export const PESAN_KODE = {
   GAGAL_EKSPOR: "Gagal membuat file ekspor, silakan coba lagi",
   GAGAL_MUAT_LANGGANAN:
     "Gagal memuat status langganan, coba muat ulang halaman",
+  AKUN_MEMAKAI_FREE: "Akun Anda memakai paket Free.",
+  TRANSAKSI_GAGAL_DIBUAT: "Transaksi gagal dibuat, silakan coba lagi",
+  GAGAL_MENCATAT_TRANSAKSI: "Gagal mencatat transaksi, silakan coba lagi",
+  PEMBAYARAN_BELUM_TERKONFIRMASI:
+    "Pembayaran belum terkonfirmasi. Jika sudah membayar, periksa status beberapa saat lagi.",
   GAGAL_MUAT_RINGKASAN: "Gagal memuat ringkasan, coba muat ulang halaman",
   AKUN_TIDAK_DITEMUKAN: "Akun Pengajar tidak ditemukan.",
   MASA_BERLAKU_TIDAK_VALID:

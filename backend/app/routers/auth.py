@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.core.dependencies import pengguna_saat_ini
 from app.core.errors import SESI_BERAKHIR
 from app.core.security import REFRESH_TOKEN_EXPIRE_DAYS
+from app.models.enums import StatusLangganan
 from app.models.pengguna import Pengguna
 from app.schemas.auth import (
     AturUlangPasswordRequest,
@@ -93,8 +94,12 @@ async def keluar(request: Request, response: Response, db: AsyncSession = Depend
 
 @router.get("/saya", response_model=SayaResponse)
 async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
+    efektif = jenis_akun_efektif(pengguna)
     return SayaResponse(
-        nama=pengguna.nama, status_langganan=jenis_akun_efektif(pengguna), peran=pengguna.peran
+        nama=pengguna.nama,
+        status_langganan=efektif,
+        masa_berlaku_pro=pengguna.masa_berlaku_pro if efektif == StatusLangganan.PRO else None,
+        peran=pengguna.peran,
     )
 
 

@@ -17,6 +17,7 @@ import AturUlangPassword from "./pages/AturUlangPassword.jsx";
 import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
+import Langganan from "./pages/Langganan.jsx";
 import DashboardPantauan from "./pages/DashboardPantauan.jsx";
 import AkunPengajar from "./pages/AkunPengajar.jsx";
 
@@ -84,6 +85,7 @@ const rute = createRoutesFromElements(
     </Route>
     <Route element={<TataLetakTerproteksi peran="pengajar" />}>
       <Route path="/batch/:id" element={<HalamanBatch />} />
+      <Route path="/langganan" element={<Langganan />} />
     </Route>
     <Route element={<TataLetakTerproteksi peran="admin" />}>
       <Route path="/admin" element={<DashboardPantauan />} />

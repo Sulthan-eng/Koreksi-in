@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import * as auth from "../api/auth.js";
 import { setPenangananSesiBerakhir } from "../api/klien.js";
 import { pesanUntukKode } from "../api/pesan.js";
@@ -12,10 +19,18 @@ function normalisasiStatusLangganan(nilai) {
   return STATUS_LANGGANAN_VALID.has(nilai) ? nilai : null;
 }
 
+function normalisasiMasaBerlakuPro(nilai, statusLangganan) {
+  if (statusLangganan !== "pro" || typeof nilai !== "string" || !nilai.trim()) {
+    return null;
+  }
+  return nilai;
+}
+
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("memuat");
   const [nama, setNama] = useState(null);
   const [statusLangganan, setStatusLangganan] = useState(null);
+  const [masaBerlakuPro, setMasaBerlakuPro] = useState(null);
   const [peran, setPeran] = useState("pengajar");
   const [pesanSesi, setPesanSesi] = useState(null);
   const [keluarSengaja, setKeluarSengaja] = useState(false);
@@ -27,6 +42,7 @@ export function AuthProvider({ children }) {
       setPesanSesi(pesanUntukKode("SESI_BERAKHIR"));
       setNama(null);
       setStatusLangganan(null);
+      setMasaBerlakuPro(null);
       setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     });
@@ -44,8 +60,12 @@ export function AuthProvider({ children }) {
       try {
         await auth.refresh();
         const hasil = await auth.saya();
+        const langganan = normalisasiStatusLangganan(hasil.status_langganan);
         setNama(hasil.nama);
-        setStatusLangganan(normalisasiStatusLangganan(hasil.status_langganan));
+        setStatusLangganan(langganan);
+        setMasaBerlakuPro(
+          normalisasiMasaBerlakuPro(hasil.masa_berlaku_pro, langganan),
+        );
         setPeran(normalisasiPeran(hasil.peran));
         setStatus("terautentikasi");
       } catch {
@@ -54,13 +74,49 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  function tandaiMasuk(namaPengguna, statusLanggananPengguna, peranPengguna) {
+  function tandaiMasuk(
+    namaPengguna,
+    statusLanggananPengguna,
+    peranPengguna,
+    masaBerlakuProPengguna = null,
+  ) {
+    const langganan = normalisasiStatusLangganan(statusLanggananPengguna);
     setKeluarSengaja(false);
     setNama(namaPengguna);
-    setStatusLangganan(normalisasiStatusLangganan(statusLanggananPengguna));
+    setStatusLangganan(langganan);
+    setMasaBerlakuPro(
+      normalisasiMasaBerlakuPro(masaBerlakuProPengguna, langganan),
+    );
     setPeran(normalisasiPeran(peranPengguna));
     setStatus("terautentikasi");
   }
+
+  const muatUlangProfil = useCallback(
+    async ({ pertahankanSaatGagal = false } = {}) => {
+      try {
+        const hasil = await auth.saya();
+        const langganan = normalisasiStatusLangganan(hasil.status_langganan);
+        if (hasil.nama) {
+          setNama(hasil.nama);
+        }
+        if (langganan !== null || !pertahankanSaatGagal) {
+          setStatusLangganan(langganan);
+          setMasaBerlakuPro(
+            normalisasiMasaBerlakuPro(hasil.masa_berlaku_pro, langganan),
+          );
+        }
+        setPeran(normalisasiPeran(hasil.peran));
+        return hasil;
+      } catch (error) {
+        if (!pertahankanSaatGagal) {
+          setStatusLangganan(null);
+          setMasaBerlakuPro(null);
+        }
+        throw error;
+      }
+    },
+    [],
+  );
 
   async function keluar() {
     try {
@@ -69,6 +125,7 @@ export function AuthProvider({ children }) {
       setKeluarSengaja(true);
       setNama(null);
       setStatusLangganan(null);
+      setMasaBerlakuPro(null);
       setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     }
@@ -80,11 +137,13 @@ export function AuthProvider({ children }) {
         status,
         nama,
         statusLangganan,
+        masaBerlakuPro,
         peran,
         pesanSesi,
         keluarSengaja,
         bersihkanPesanSesi,
         tandaiMasuk,
+        muatUlangProfil,
         keluar,
       }}
     >

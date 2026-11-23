@@ -352,6 +352,7 @@ async def test_saya_dengan_token_valid(client: AsyncClient) -> None:
     assert response.json() == {
         "nama": "Budi Santoso",
         "status_langganan": "free",
+        "masa_berlaku_pro": None,
         "peran": "pengajar",
     }
 
@@ -361,7 +362,9 @@ async def test_saya_mengembalikan_status_langganan_pro(
 ) -> None:
     hasil_masuk = await _daftar_dan_masuk(client)
     pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    batas_pro = datetime(2026, 11, 30, 16, 59, 59, tzinfo=UTC)
     pengguna.status_langganan = StatusLangganan.PRO
+    pengguna.masa_berlaku_pro = batas_pro
     await db_session.commit()
 
     response = await client.get(
@@ -369,11 +372,11 @@ async def test_saya_mengembalikan_status_langganan_pro(
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "nama": "Budi Santoso",
-        "status_langganan": "pro",
-        "peran": "pengajar",
-    }
+    body = response.json()
+    assert body["nama"] == "Budi Santoso"
+    assert body["status_langganan"] == "pro"
+    assert body["peran"] == "pengajar"
+    assert datetime.fromisoformat(body["masa_berlaku_pro"]) == batas_pro
 
 
 def test_jenis_akun_efektif_free_pro_dan_kedaluwarsa() -> None:
@@ -429,6 +432,7 @@ async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
     assert response.json() == {
         "nama": "Budi Santoso",
         "status_langganan": "free",
+        "masa_berlaku_pro": None,
         "peran": "pengajar",
     }
 

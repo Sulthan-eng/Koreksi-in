@@ -43,6 +43,11 @@ function dapatkanDaftarMenu(varian, pathname) {
           pathname === "/beranda" ||
           pathname.startsWith("/batch/"),
       },
+      {
+        label: "Langganan",
+        to: "/langganan",
+        aktif: pathname === "/langganan",
+      },
     ];
   }
 

@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -57,6 +58,7 @@ class TokenResponse(BaseModel):
 class SayaResponse(BaseModel):
     nama: str
     status_langganan: StatusLangganan
+    masa_berlaku_pro: datetime | None = None
     peran: Peran
 
 

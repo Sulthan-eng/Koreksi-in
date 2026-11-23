@@ -26,6 +26,7 @@ function Beranda() {
   const [formTerbuka, setFormTerbuka] = useState(false);
   const [namaBatch, setNamaBatch] = useState("");
   const [kesalahanForm, setKesalahanForm] = useState(null);
+  const [kodeKesalahanForm, setKodeKesalahanForm] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
   const [status, setStatus] = useState("memuat");
   const [kesalahan, setKesalahan] = useState(null);
@@ -116,6 +117,7 @@ function Beranda() {
   function kosongkanForm() {
     setNamaBatch("");
     setKesalahanForm(null);
+    setKodeKesalahanForm(null);
   }
 
   function tanganiToggleForm() {
@@ -134,6 +136,7 @@ function Beranda() {
   async function tanganiBuatBatch(peristiwa) {
     peristiwa.preventDefault();
     setKesalahanForm(null);
+    setKodeKesalahanForm(null);
 
     if (namaBatch.trim() === "") {
       setKesalahanForm(PESAN_KODE.NAMA_BATCH_KOSONG);
@@ -145,6 +148,7 @@ function Beranda() {
       const batch = await batchApi.buatBatch({ nama_batch: namaBatch });
       navigate(`/batch/${batch.id_batch}`);
     } catch (error) {
+      setKodeKesalahanForm(error?.kode || null);
       setKesalahanForm(error.pesan || PESAN_KODE.GAGAL_BUAT_BATCH);
       setSedangKirim(false);
     }
@@ -254,6 +258,7 @@ function Beranda() {
                     varian="galat"
                     id="galat-nama"
                     pesan={kesalahanForm}
+                    kode={kodeKesalahanForm}
                     className="text-sm leading-5"
                   />
                 )}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CircleAlert,
   File,
@@ -20,6 +21,7 @@ import {
   pesanUntukKode,
 } from "../api/pesan.js";
 import { useKonfirmasiTinggalkan } from "../hooks/useKonfirmasiTinggalkan.js";
+import { pecahPesanPenolakanLangganan } from "../lib/langganan.js";
 import {
   pecahKiriman,
   periksaFileDiBrowser,
@@ -51,6 +53,7 @@ function SeksiJawabanPesertaDidik({
   const [kemajuanKirim, setKemajuanKirim] = useState(null);
   const [galatSlot, setGalatSlot] = useState(null);
   const [kesalahanUpload, setKesalahanUpload] = useState(null);
+  const [kodeKesalahanUpload, setKodeKesalahanUpload] = useState(null);
   const [pesanGagalTengah, setPesanGagalTengah] = useState(null);
   const [dialogBatalTerbuka, setDialogBatalTerbuka] = useState(false);
 
@@ -182,6 +185,7 @@ function SeksiJawabanPesertaDidik({
 
       setGalatSlot(null);
       setKesalahanUpload(null);
+      setKodeKesalahanUpload(null);
       setPesanGagalTengah(null);
 
       const barisBaru = await Promise.all(
@@ -233,6 +237,7 @@ function SeksiJawabanPesertaDidik({
 
     if (daftarBaru.length === 0) {
       setKesalahanUpload(null);
+      setKodeKesalahanUpload(null);
       setPesanGagalTengah(null);
       onPilihanBelumUnggah?.(false);
       fokusTertundaRef.current = { jenis: "upload-awal" };
@@ -251,6 +256,7 @@ function SeksiJawabanPesertaDidik({
     setFileTerpilih([]);
     setGalatSlot(null);
     setKesalahanUpload(null);
+    setKodeKesalahanUpload(null);
     setPesanGagalTengah(null);
     onPilihanBelumUnggah?.(false);
     fokusTertundaRef.current = { jenis: "upload-awal" };
@@ -273,6 +279,7 @@ function SeksiJawabanPesertaDidik({
     try {
       setGalatSlot(null);
       setKesalahanUpload(null);
+      setKodeKesalahanUpload(null);
       setPesanGagalTengah(null);
 
       const hasilPeriksa = await Promise.all(
@@ -363,6 +370,7 @@ function SeksiJawabanPesertaDidik({
               jenis: jumlahTersimpan > 0 ? "galat-tengah" : "galat-bermasalah",
             };
           } else {
+            setKodeKesalahanUpload(error?.kode || null);
             setKesalahanUpload(error.pesan);
             fokusTertundaRef.current = {
               jenis: jumlahTersimpan > 0 ? "galat-tengah" : "galat-umum",
@@ -485,7 +493,27 @@ function SeksiJawabanPesertaDidik({
                     className="mt-0.5 size-4 shrink-0"
                     aria-hidden="true"
                   />
-                  <span>{kesalahanUpload}</span>
+                  <span>
+                    {(() => {
+                      const pecahan = pecahPesanPenolakanLangganan(
+                        kodeKesalahanUpload,
+                        kesalahanUpload,
+                      );
+                      if (!pecahan) return kesalahanUpload;
+                      return (
+                        <>
+                          {pecahan.awalan}
+                          <Link
+                            to="/langganan"
+                            className="font-semibold underline"
+                          >
+                            {pecahan.teksTautan}
+                          </Link>
+                          {pecahan.akhiran}
+                        </>
+                      );
+                    })()}
+                  </span>
                 </p>
               )}
 
