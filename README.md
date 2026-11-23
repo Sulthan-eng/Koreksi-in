@@ -35,7 +35,7 @@ Fitur yang sudah berjalan dan yang belum dikerjakan tercantum di `docs/SPEC.md` 
 
 Berguna untuk menguji image yang sama dengan yang dipakai di produksi. Alur pengembangan sehari-hari tetap memakai `uvicorn --reload` seperti di atas. Semua perintah dari root proyek, dan port 8000 harus bebas lebih dulu.
 
-Compose meng-override `DATABASE_URL` ke host `db` (bukan `localhost`) dan memaksa `STORAGE_BACKEND=lokal` dengan volume untuk `UPLOAD_DIR`, jadi Supabase dan S3 tidak tersentuh. `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, dan ketiga variabel `POSTGRES_*` tetap dibaca dari `.env` di root.
+Compose meng-override `DATABASE_URL` ke host `db` (bukan `localhost`) dan memaksa `STORAGE_BACKEND=lokal` dengan volume untuk `UPLOAD_DIR`, jadi Supabase dan S3 tidak tersentuh. `SECRET_KEY`, `GEMINI_API_KEY`, `GEMINI_RPD_LIMIT`, `MIDTRANS_SERVER_KEY`, dan ketiga variabel `POSTGRES_*` tetap dibaca dari `.env` di root.
 
 1. Bangun image: `docker compose build backend`.
 2. Jalankan database: `docker compose up -d db` (tunggu `docker compose ps` menunjukkan `db` `healthy`).
