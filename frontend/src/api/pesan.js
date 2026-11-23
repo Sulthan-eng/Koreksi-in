@@ -77,6 +77,8 @@ export const PESAN_KODE = {
   NAMA_KOSONG: "Nama wajib diisi.",
   EMAIL_KOSONG: "Email wajib diisi.",
   PASSWORD_KOSONG: "Password wajib diisi.",
+  NAMA_TERLALU_PANJANG: "Nama maksimal 100 karakter.",
+  EMAIL_TERLALU_PANJANG: "Email maksimal 255 karakter.",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
   BATAS_BATCH_AKTIF_TERCAPAI:
     "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas.",

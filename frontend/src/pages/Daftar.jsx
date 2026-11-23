@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
-import { REGEX_EMAIL, validasiPanjangPassword } from "../lib/validasi.js";
+import {
+  REGEX_EMAIL,
+  validasiPanjangEmail,
+  validasiPanjangNama,
+  validasiPanjangPassword,
+} from "../lib/validasi.js";
 import {
   fieldPertamaBermasalah,
   galatDaftarDariKode,
@@ -33,11 +38,21 @@ function Daftar() {
 
     if (nama.trim() === "") {
       galatBaru.nama = PESAN_KODE.NAMA_KOSONG;
+    } else {
+      const kodePanjangNama = validasiPanjangNama(nama);
+      if (kodePanjangNama) {
+        galatBaru.nama = PESAN_KODE[kodePanjangNama];
+      }
     }
     if (email.trim() === "") {
       galatBaru.email = PESAN_KODE.EMAIL_KOSONG;
-    } else if (!REGEX_EMAIL.test(email.trim())) {
-      galatBaru.email = PESAN_KODE.FORMAT_EMAIL_TIDAK_VALID;
+    } else {
+      const kodePanjangEmail = validasiPanjangEmail(email);
+      if (kodePanjangEmail) {
+        galatBaru.email = PESAN_KODE[kodePanjangEmail];
+      } else if (!REGEX_EMAIL.test(email.trim())) {
+        galatBaru.email = PESAN_KODE.FORMAT_EMAIL_TIDAK_VALID;
+      }
     }
     if (password === "") {
       galatBaru.password = PESAN_KODE.PASSWORD_KOSONG;

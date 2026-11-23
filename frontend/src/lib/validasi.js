@@ -1,6 +1,20 @@
-export const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const REGEX_EMAIL = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/;
 
 const encoder = new TextEncoder();
+
+export function validasiPanjangNama(nama) {
+  if (Array.from(nama).length > 100) {
+    return "NAMA_TERLALU_PANJANG";
+  }
+  return null;
+}
+
+export function validasiPanjangEmail(email) {
+  if (Array.from(email).length > 255) {
+    return "EMAIL_TERLALU_PANJANG";
+  }
+  return null;
+}
 
 export function validasiPanjangPassword(password) {
   const panjangByte = encoder.encode(password).length;
