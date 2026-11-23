@@ -4,15 +4,24 @@ import * as auth from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { PESAN_KODE } from "../api/pesan.js";
 import { REGEX_EMAIL } from "../lib/validasi.js";
+import {
+  fieldPertamaBermasalah,
+  galatMasukDariKode,
+} from "../lib/galatAuth.js";
 import { berandaUntukPeran } from "../lib/peran.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
+import KolomIsian from "../components/KolomIsian.jsx";
+import KolomPassword from "../components/KolomPassword.jsx";
+
+const URUTAN_FIELD_MASUK = ["email", "password"];
 
 function Masuk() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [kesalahan, setKesalahan] = useState(null);
-  const [kolomTidakValid, setKolomTidakValid] = useState(new Set());
+  const [galat, setGalat] = useState({ email: null, password: null });
+  const [kredensialTidakValid, setKredensialTidakValid] = useState(false);
+  const [kesalahanUmum, setKesalahanUmum] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
   const { tandaiMasuk, pesanSesi, bersihkanPesanSesi } = useAuth();
   const navigate = useNavigate();
@@ -35,24 +44,30 @@ function Masuk() {
 
   async function tanganiSubmit(peristiwa) {
     peristiwa.preventDefault();
-    const tidakValid = new Set();
+    const galatBaru = { email: null, password: null };
 
-    if (email.trim() === "" || !REGEX_EMAIL.test(email.trim())) {
-      tidakValid.add("email");
+    if (email.trim() === "") {
+      galatBaru.email = PESAN_KODE.EMAIL_KOSONG;
+    } else if (!REGEX_EMAIL.test(email.trim())) {
+      galatBaru.email = PESAN_KODE.FORMAT_EMAIL_TIDAK_VALID;
     }
     if (password === "") {
-      tidakValid.add("password");
+      galatBaru.password = PESAN_KODE.PASSWORD_KOSONG;
     }
 
-    if (tidakValid.size > 0) {
-      setKolomTidakValid(tidakValid);
-      setKesalahan(PESAN_KODE.VALIDASI_GAGAL);
+    const bermasalah = fieldPertamaBermasalah(galatBaru, URUTAN_FIELD_MASUK);
+    if (bermasalah) {
+      setGalat(galatBaru);
+      setKesalahanUmum(null);
+      setKredensialTidakValid(false);
+      document.getElementById(bermasalah)?.focus();
       return;
     }
 
     setSedangKirim(true);
-    setKesalahan(null);
-    setKolomTidakValid(new Set());
+    setKesalahanUmum(null);
+    setGalat({ email: null, password: null });
+    setKredensialTidakValid(false);
 
     try {
       await auth.masuk({ email, password });
@@ -65,15 +80,14 @@ function Masuk() {
       );
       navigate(berandaUntukPeran(hasil.peran), { replace: true });
     } catch (error) {
-      if (error.kode === "LOGIN_GAGAL") {
-        setKolomTidakValid(new Set(["email", "password"]));
-      }
-      setKesalahan(error.pesan);
+      const hasil = galatMasukDariKode(error.kode, error.pesan);
+      setKredensialTidakValid(hasil.kredensialTidakValid);
+      setKesalahanUmum(hasil.umum);
       setSedangKirim(false);
     }
   }
 
-  const varianPesan = kesalahan
+  const varianPesan = kesalahanUmum
     ? "galat"
     : pesanFlash
       ? pesanFlash === PESAN_KODE.SESI_BERAKHIR
@@ -93,7 +107,7 @@ function Masuk() {
           {varianPesan && (
             <PesanForm
               varian={varianPesan}
-              pesan={kesalahan || pesanFlash}
+              pesan={kesalahanUmum || pesanFlash}
               id="pesan-masuk"
               kotak
             />
@@ -104,34 +118,43 @@ function Masuk() {
             onSubmit={tanganiSubmit}
             className="flex flex-col gap-4"
           >
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-teks">Email</span>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(peristiwa) => setEmail(peristiwa.target.value)}
-                aria-invalid={kolomTidakValid.has("email") ? "true" : undefined}
-                aria-describedby={kesalahan ? "pesan-masuk" : undefined}
-                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-teks">Password</span>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(peristiwa) => setPassword(peristiwa.target.value)}
-                aria-invalid={
-                  kolomTidakValid.has("password") ? "true" : undefined
-                }
-                aria-describedby={kesalahan ? "pesan-masuk" : undefined}
-                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
-              />
-            </label>
+            <KolomIsian
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(peristiwa) => {
+                setEmail(peristiwa.target.value);
+                setGalat((sebelumnya) =>
+                  sebelumnya.email
+                    ? { ...sebelumnya, email: null }
+                    : sebelumnya,
+                );
+                setKredensialTidakValid(false);
+              }}
+              galat={galat.email}
+              ariaInvalid={galat.email ? undefined : kredensialTidakValid}
+              ariaDescribedby={kesalahanUmum ? "pesan-masuk" : undefined}
+            />
+            <KolomPassword
+              id="password"
+              label="Password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(peristiwa) => {
+                setPassword(peristiwa.target.value);
+                setGalat((sebelumnya) =>
+                  sebelumnya.password
+                    ? { ...sebelumnya, password: null }
+                    : sebelumnya,
+                );
+                setKredensialTidakValid(false);
+              }}
+              galat={galat.password}
+              ariaInvalid={galat.password ? undefined : kredensialTidakValid}
+              ariaDescribedby={kesalahanUmum ? "pesan-masuk" : undefined}
+            />
             <Link
               to="/lupa-password"
               className="inline-flex min-h-11 items-center self-end text-sm font-semibold text-biru-utama underline"
