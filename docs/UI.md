@@ -173,6 +173,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Keluar | `log-out` | `size-4` | "Keluar" |
 | Memuat, Diproses | `loader-circle` + `animate-spin motion-reduce:animate-none` | `size-4` (`size-3.5` di dalam lencana) | Indikator. SEMUA spinner memakai `motion-reduce:animate-none` (berlaku saat implementasi, juga untuk berkas mockup lama yang belum memilikinya) |
 | Galat | `circle-alert` | `size-4` | Pesan galat |
+| Tampilkan/Sembunyikan password | `eye` / `eye-off` | `size-5` | Tombol di kolom Password (`KolomPassword`), `aria-label` berganti "Tampilkan password"/"Sembunyikan password" |
 | File jawaban | `file` | `size-4` | Nama file di form unggah |
 | Membaca tulisan tangan | `scan-text` | `size-5` dalam kotak `size-11 rounded-lg bg-biru-muda text-biru-utama` | Kartu fitur Pemasaran |
 | Skor kemiripan dan kategori | `gauge` | sama | Kartu fitur Pemasaran |
@@ -238,6 +239,7 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 | Menu aksi (titik tiga) | Baris daftar batch di Beranda | Tombol ikon titik tiga yang membuka daftar aksi kecil. Punya nama aksesibel, dapat dioperasikan dengan papan ketik (Enter, Esc, panah), tertutup saat klik di luar. Aksi yang merusak berteks `text-kurang-mirip` dan membuka dialog konfirmasi |
 | Keadaan data | Semua data yang dimuat | Tiga keadaan: memuat (indikator), kosong (teks dari SPEC), gagal (teks dari SPEC) |
 | Pesan sukses dan galat | Semua form | Sukses singkat ("Kunci jawaban tersimpan."), galat memakai `text-kurang-mirip` |
+| Kolom isian | Daftar, Masuk, Atur Ulang Password | Label, input, petunjuk opsional, dan galat opsional tampil tepat di bawah kolom (`KolomIsian`). Varian password (`KolomPassword`) menambah tombol tampilkan/sembunyikan password di dalam kolom, tanpa mengubah label atau posisi petunjuk/galat |
 
 ## Tata letak
 
@@ -292,18 +294,19 @@ Keadaan: halaman statis, tanpa pemuatan data. Penegasan isi: skor selalu disebut
 
 Kartu di tengah dengan `logo.png`, judul "Daftar". Pengguna yang sudah login dialihkan ke Beranda.
 
-- Kolom: Nama, Email, Password. Petunjuk kecil di bawah Password: "Minimal 8 karakter."
+- Kolom: Nama, Email, Password (`KolomIsian`/`KolomPassword`, lihat Komponen bersama). Petunjuk kecil di bawah Password: "Minimal 8 karakter." Password memakai tombol tampilkan/sembunyikan.
 - Tombol "Daftar" (indikator putar selama mengirim, tombol nonaktif). Di bawah kartu: "Sudah punya akun? Masuk".
-- Galat tampil di atas form (`role="alert"`, `text-kurang-mirip`): "Email sudah terdaftar", "Password minimal 8 karakter", "Password maksimal 72 karakter", "Data yang dikirim tidak valid." (kolom kosong atau email tidak berformat valid).
+- Galat tampil tepat di bawah kolomnya masing-masing, bukan di atas form: "Nama wajib diisi.", "Email wajib diisi." atau "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", "Password minimal 8 karakter" (dicek juga di klien sebelum mengirim), "Password maksimal 72 karakter", "Email sudah terdaftar". Mengetik di suatu kolom membersihkan galat kolom itu. Kirim gagal karena validasi memindahkan fokus ke kolom bermasalah pertama (urutan Nama, Email, Password). Banner di atas form (`role="alert"`, `text-kurang-mirip`) hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom.
 - Sukses: arahkan ke `/masuk` dengan pesan "Akun berhasil dibuat, silakan masuk". Tidak ada sesi yang dibuat.
 
 ### 3. Masuk (`/masuk`)
 
 Kartu di tengah dengan `logo.png`, judul "Masuk". Pengguna yang sudah login dialihkan menurut peran.
 
-- Kolom: Email, Password. Tombol "Masuk" (indikator putar). Tautan "Belum punya akun? Daftar".
+- Kolom: Email, Password (`KolomIsian`/`KolomPassword`, lihat Komponen bersama; Password memakai tombol tampilkan/sembunyikan). Tombol "Masuk" (indikator putar). Tautan "Belum punya akun? Daftar".
 - Tautan "Lupa password?" ke `/lupa-password`, rata kanan tepat di bawah kolom Password dan di atas tombol "Masuk".
-- Pesan di atas form, satu pesan sekali tampil: sukses "Akun berhasil dibuat, silakan masuk" (gaya sukses), "Password berhasil diubah, silakan masuk." (gaya sukses), "Sesi berakhir, silakan masuk kembali." (gaya netral, bukan galat).
+- Galat kolom kosong/format: "Email wajib diisi.", "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", tampil tepat di bawah kolomnya, memindahkan fokus ke kolom bermasalah pertama (Email lalu Password), dan hilang saat kolom itu diketik ulang. Kredensial salah (`LOGIN_GAGAL`) sengaja TIDAK diatribusikan ke satu kolom (agar tidak membocorkan apakah email atau password yang salah): kedua kolom diberi tanda tidak valid (garis merah) tanpa teks di bawahnya, dan pesannya hanya tampil sebagai banner di atas form.
+- Pesan di atas form, satu pesan sekali tampil: galat "Email atau password salah" (`LOGIN_GAGAL`), sukses "Akun berhasil dibuat, silakan masuk" (gaya sukses), "Password berhasil diubah, silakan masuk." (gaya sukses), "Sesi berakhir, silakan masuk kembali." (gaya netral, bukan galat).
 - Galat: "Email atau password salah" untuk semua kegagalan login, termasuk email tidak terdaftar (SPEC bagian 6).
 - Sukses: Pengajar ke `/beranda`, Admin ke `/admin`.
 
@@ -431,7 +434,7 @@ Tanpa data: kartu menampilkan 0. Gagal: "Gagal memuat dashboard pantauan, coba m
 
 Kartu di tengah dengan `logo.png`, judul "Lupa Password", tanpa bilah atas. Dibungkus `RouteTamu` sehingga pengguna yang sudah login dialihkan ke Beranda.
 - Kolom Email, tombol "Kirim Tautan" (indikator putar, `aria-disabled` selama mengirim), tautan kembali "Kembali ke Masuk" di bawah form.
-- Format email tidak valid: "Format email tidak valid." di bawah kolom, tanpa permintaan terkirim.
+- Format email tidak valid: "Format email tidak valid. Contoh: nama@email.com." di bawah kolom, tanpa permintaan terkirim.
 - Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Tautan Atur Ulang Password Telah Dikirim" (kotak sukses di atas form, `role="status"`). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
 - Gagal mengirim karena galat server atau koneksi terputus: "Gagal mengirim tautan, silakan coba lagi." (kotak galat di atas form, `role="alert"`). Pesan lama dibersihkan saat submit berikutnya, dan galat serta sukses tidak pernah tampil bersamaan.
 
@@ -448,7 +451,7 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas
 
 1. Tombol "Upgrade ke Pro" dan pesan "batch tidak terbatas" memakai Bahasa Indonesia (SPEC sudah disesuaikan).
 2. Akun Pro yang masih berlaku boleh membeli paket lagi. Masa berlaku baru dihitung dari masa berlaku saat ini (SPEC F-LANGGANAN). Tombol berlabel "Perpanjang Pro" untuk akun itu (label usulan).
-3. Kolom kosong di Daftar dan Masuk cukup memakai "Data yang dikirim tidak valid." untuk sementara.
+3. Kolom kosong atau tidak valid di Daftar dan Masuk menampilkan pesan spesifik tepat di bawah kolomnya masing-masing (lewat komponen `KolomIsian`/`KolomPassword`), bukan lagi pesan generik "Data yang dikirim tidak valid." di atas form (keputusan lama pada poin ini, diganti 23 November 2026). Banner di atas form hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom, contohnya `LOGIN_GAGAL` yang sengaja ambigu agar tidak membocorkan apakah email atau password yang salah.
 4. Teks yang bertanda "(usulan)" dan label kecil di luar daftar pesan SPEC disetujui untuk sementara. Perancang TIDAK BOLEH menambah teks baru di luar itu; perubahan teks lewat pemilik proyek.
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
 6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
