@@ -51,6 +51,14 @@ Semua perintah frontend dijalankan dari folder `frontend/`.
 - Perubahan skema database HARUS lewat migrasi Alembic, tidak mengubah tabel manual.
 - Agent TIDAK BOLEH mengedit `build/`, `dist/`, `node_modules/`, lockfile secara manual. Ubah manifest lalu jalankan installer.
 
+## Rencana
+
+- Rencana ditulis dalam bahasa manusia, bukan kode. Untuk setiap perubahan sebutkan apa yang diubah, di berkas mana, kenapa, dan risikonya.
+- Istilah teknis dan nama fungsi boleh disebut seperlunya, dengan penjelasan satu kalimat tentang gunanya.
+- TIDAK BOLEH menempelkan kode di rencana, kecuali satu bagian rumit yang memang perlu dilihat.
+- Panjang rencana maksimal sekitar satu halaman.
+- Keputusan yang butuh persetujuan pemilik proyek diringkas di bagian tersendiri, terpisah dari rincian perubahan.
+
 ## Prinsip
 
 - Kerjakan hal paling sederhana yang memenuhi permintaan. Jika terasa perlu menambah sesuatu, tanya dulu, jangan menambah sendiri.
