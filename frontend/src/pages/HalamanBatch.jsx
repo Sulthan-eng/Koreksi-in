@@ -52,6 +52,7 @@ function HalamanBatch() {
   const [dialogGantiKunciTerbuka, setDialogGantiKunciTerbuka] = useState(false);
   const [sedangEkspor, setSedangEkspor] = useState(false);
   const [kesalahanEkspor, setKesalahanEkspor] = useState(null);
+  const [kodeKesalahanEkspor, setKodeKesalahanEkspor] = useState(null);
 
   const navigate = useNavigate();
   const { statusLangganan } = useAuth();
@@ -190,6 +191,7 @@ function HalamanBatch() {
     if (tahanTombolAksi) return;
     aksi.bersihkanPesan();
     setKesalahanEkspor(null);
+    setKodeKesalahanEkspor(null);
     setSedangEkspor(true);
     try {
       const { blob, namaFile } = await batchApi.eksporRekapNilai(id);
@@ -203,6 +205,7 @@ function HalamanBatch() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       if (error?.kode !== "SESI_BERAKHIR") {
+        setKodeKesalahanEkspor(error?.kode || null);
         setKesalahanEkspor(pesanGalatEkspor(error));
       }
     } finally {
@@ -380,6 +383,7 @@ function HalamanBatch() {
                 onClick={() => {
                   if (tahanTombolAksi) return;
                   setKesalahanEkspor(null);
+                  setKodeKesalahanEkspor(null);
                   aksi.pilihSelesaikan(batch);
                 }}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan aria-disabled:opacity-50"
@@ -406,6 +410,7 @@ function HalamanBatch() {
               onClick={() => {
                 if (tahanTombolAksi) return;
                 setKesalahanEkspor(null);
+                setKodeKesalahanEkspor(null);
                 aksi.pilihHapus(batch);
               }}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-kurang-mirip aria-disabled:opacity-50"
@@ -430,7 +435,12 @@ function HalamanBatch() {
           )}
 
           {!aksi.pesanAksi && kesalahanEkspor && (
-            <PesanForm varian="galat" pesan={kesalahanEkspor} kotak />
+            <PesanForm
+              varian="galat"
+              pesan={kesalahanEkspor}
+              kode={kodeKesalahanEkspor}
+              kotak
+            />
           )}
         </header>
 

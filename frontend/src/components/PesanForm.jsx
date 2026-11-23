@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+import { pecahPesanPenolakanLangganan } from "../lib/langganan.js";
+
 const VARIAN_PESAN = {
   sukses: {
     role: "status",
@@ -18,6 +21,7 @@ const VARIAN_PESAN = {
 function PesanForm({
   varian = "galat",
   pesan,
+  kode,
   id,
   className = "",
   kotak = false,
@@ -25,6 +29,7 @@ function PesanForm({
   if (!pesan) return null;
 
   const konfigurasi = VARIAN_PESAN[varian] ?? VARIAN_PESAN.galat;
+  const pecahanTautan = pecahPesanPenolakanLangganan(kode, pesan);
 
   const kotakClass = kotak
     ? `rounded-lg px-4 py-3 text-sm leading-5 ${konfigurasi.latar}`
@@ -36,7 +41,17 @@ function PesanForm({
       role={konfigurasi.role}
       className={`${konfigurasi.warna} ${kotakClass} ${className}`.trim()}
     >
-      {pesan}
+      {pecahanTautan ? (
+        <>
+          {pecahanTautan.awalan}
+          <Link to="/langganan" className="font-semibold underline">
+            {pecahanTautan.teksTautan}
+          </Link>
+          {pecahanTautan.akhiran}
+        </>
+      ) : (
+        pesan
+      )}
     </p>
   );
 }
