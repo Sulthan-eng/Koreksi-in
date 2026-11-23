@@ -66,7 +66,7 @@ export const PESAN_KODE = {
   LOGIN_GAGAL: "Email atau password salah",
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
   TOKEN_RESET_TIDAK_VALID: "Tautan tidak berlaku atau sudah kedaluwarsa.",
-  FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid.",
+  FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid. Contoh: nama@email.com.",
   TAUTAN_RESET_TERKIRIM: "Tautan Atur Ulang Password Telah Dikirim",
   GAGAL_KIRIM_TAUTAN: "Gagal mengirim tautan, silakan coba lagi.",
   KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
@@ -74,6 +74,9 @@ export const PESAN_KODE = {
   PASSWORD_BERHASIL_DIUBAH: "Password berhasil diubah, silakan masuk.",
   AKSES_DITOLAK: "Anda tidak memiliki akses ke fitur ini.",
   BATCH_TIDAK_DITEMUKAN: "Batch tidak ditemukan",
+  NAMA_KOSONG: "Nama wajib diisi.",
+  EMAIL_KOSONG: "Email wajib diisi.",
+  PASSWORD_KOSONG: "Password wajib diisi.",
   NAMA_BATCH_KOSONG: "Nama batch tidak boleh kosong.",
   BATAS_BATCH_AKTIF_TERCAPAI:
     "Batas batch aktif untuk akun Free telah tercapai. Upgrade ke Pro untuk batch tidak terbatas.",

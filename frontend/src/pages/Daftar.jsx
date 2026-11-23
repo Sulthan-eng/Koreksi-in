@@ -2,42 +2,63 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
-import { REGEX_EMAIL } from "../lib/validasi.js";
+import { REGEX_EMAIL, validasiPanjangPassword } from "../lib/validasi.js";
+import {
+  fieldPertamaBermasalah,
+  galatDaftarDariKode,
+} from "../lib/galatAuth.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
+import KolomIsian from "../components/KolomIsian.jsx";
+import KolomPassword from "../components/KolomPassword.jsx";
+
+const URUTAN_FIELD_DAFTAR = ["nama", "email", "password"];
 
 function Daftar() {
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [kesalahan, setKesalahan] = useState(null);
-  const [kolomTidakValid, setKolomTidakValid] = useState(new Set());
+  const [galat, setGalat] = useState({
+    nama: null,
+    email: null,
+    password: null,
+  });
+  const [kesalahanUmum, setKesalahanUmum] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
   const navigate = useNavigate();
 
   async function tanganiSubmit(peristiwa) {
     peristiwa.preventDefault();
-    const tidakValid = new Set();
+    const galatBaru = { nama: null, email: null, password: null };
 
     if (nama.trim() === "") {
-      tidakValid.add("nama");
+      galatBaru.nama = PESAN_KODE.NAMA_KOSONG;
     }
-    if (email.trim() === "" || !REGEX_EMAIL.test(email.trim())) {
-      tidakValid.add("email");
+    if (email.trim() === "") {
+      galatBaru.email = PESAN_KODE.EMAIL_KOSONG;
+    } else if (!REGEX_EMAIL.test(email.trim())) {
+      galatBaru.email = PESAN_KODE.FORMAT_EMAIL_TIDAK_VALID;
     }
     if (password === "") {
-      tidakValid.add("password");
+      galatBaru.password = PESAN_KODE.PASSWORD_KOSONG;
+    } else {
+      const kodePanjang = validasiPanjangPassword(password);
+      if (kodePanjang) {
+        galatBaru.password = PESAN_KODE[kodePanjang];
+      }
     }
 
-    if (tidakValid.size > 0) {
-      setKolomTidakValid(tidakValid);
-      setKesalahan(PESAN_KODE.VALIDASI_GAGAL);
+    const bermasalah = fieldPertamaBermasalah(galatBaru, URUTAN_FIELD_DAFTAR);
+    if (bermasalah) {
+      setGalat(galatBaru);
+      setKesalahanUmum(null);
+      document.getElementById(bermasalah)?.focus();
       return;
     }
 
     setSedangKirim(true);
-    setKesalahan(null);
-    setKolomTidakValid(new Set());
+    setKesalahanUmum(null);
+    setGalat({ nama: null, email: null, password: null });
 
     try {
       await auth.daftar({ nama, email, password });
@@ -45,18 +66,16 @@ function Daftar() {
         state: { pesan: "Akun berhasil dibuat, silakan masuk" },
       });
     } catch (error) {
-      const tidakValidServer = new Set();
-      if (error.kode === "EMAIL_SUDAH_TERDAFTAR") {
-        tidakValidServer.add("email");
-      } else if (
-        error.kode === "PASSWORD_TERLALU_PENDEK" ||
-        error.kode === "PASSWORD_TERLALU_PANJANG"
-      ) {
-        tidakValidServer.add("password");
-      }
-      setKolomTidakValid(tidakValidServer);
-      setKesalahan(error.pesan);
+      const hasil = galatDaftarDariKode(error.kode, error.pesan);
+      setGalat({
+        nama: hasil.nama,
+        email: hasil.email,
+        password: hasil.password,
+      });
+      setKesalahanUmum(hasil.umum);
       setSedangKirim(false);
+      const target = fieldPertamaBermasalah(hasil, URUTAN_FIELD_DAFTAR);
+      if (target) document.getElementById(target)?.focus();
     }
   }
 
@@ -69,10 +88,10 @@ function Daftar() {
             <h1 className="text-2xl font-bold leading-8 text-teks">Daftar</h1>
           </div>
 
-          {kesalahan && (
+          {kesalahanUmum && (
             <PesanForm
               varian="galat"
-              pesan={kesalahan}
+              pesan={kesalahanUmum}
               id="pesan-daftar"
               kotak
             />
@@ -83,57 +102,55 @@ function Daftar() {
             onSubmit={tanganiSubmit}
             className="flex flex-col gap-4"
           >
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-teks">Nama</span>
-              <input
-                id="nama"
-                type="text"
-                autoComplete="name"
-                value={nama}
-                onChange={(peristiwa) => setNama(peristiwa.target.value)}
-                aria-invalid={kolomTidakValid.has("nama") ? "true" : undefined}
-                aria-describedby={kesalahan ? "pesan-daftar" : undefined}
-                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-teks">Email</span>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(peristiwa) => setEmail(peristiwa.target.value)}
-                aria-invalid={kolomTidakValid.has("email") ? "true" : undefined}
-                aria-describedby={kesalahan ? "pesan-daftar" : undefined}
-                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-semibold text-teks">Password</span>
-              <input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(peristiwa) => setPassword(peristiwa.target.value)}
-                aria-invalid={
-                  kolomTidakValid.has("password") ? "true" : undefined
-                }
-                aria-describedby={
-                  kolomTidakValid.has("password")
-                    ? "petunjuk-password pesan-daftar"
-                    : "petunjuk-password"
-                }
-                className="h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip"
-              />
-              <span
-                id="petunjuk-password"
-                className="text-sm leading-5 text-teks-redup"
-              >
-                Minimal 8 karakter.
-              </span>
-            </label>
+            <KolomIsian
+              id="nama"
+              label="Nama"
+              type="text"
+              autoComplete="name"
+              value={nama}
+              onChange={(peristiwa) => {
+                setNama(peristiwa.target.value);
+                setGalat((sebelumnya) =>
+                  sebelumnya.nama ? { ...sebelumnya, nama: null } : sebelumnya,
+                );
+              }}
+              galat={galat.nama}
+              ariaDescribedby={kesalahanUmum ? "pesan-daftar" : undefined}
+            />
+            <KolomIsian
+              id="email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(peristiwa) => {
+                setEmail(peristiwa.target.value);
+                setGalat((sebelumnya) =>
+                  sebelumnya.email
+                    ? { ...sebelumnya, email: null }
+                    : sebelumnya,
+                );
+              }}
+              galat={galat.email}
+              ariaDescribedby={kesalahanUmum ? "pesan-daftar" : undefined}
+            />
+            <KolomPassword
+              id="password"
+              label="Password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(peristiwa) => {
+                setPassword(peristiwa.target.value);
+                setGalat((sebelumnya) =>
+                  sebelumnya.password
+                    ? { ...sebelumnya, password: null }
+                    : sebelumnya,
+                );
+              }}
+              petunjuk="Minimal 8 karakter."
+              galat={galat.password}
+              ariaDescribedby={kesalahanUmum ? "pesan-daftar" : undefined}
+            />
             <button
               type="submit"
               disabled={sedangKirim}
