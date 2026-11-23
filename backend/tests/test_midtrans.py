@@ -93,7 +93,7 @@ def test_validasi_signature_benar() -> None:
     import hashlib
 
     order_id, status_code, gross_amount = "KRS-1", "200", "30000.00"
-    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SERVER_KEY}"
+    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SIGNATURE_SECRET_KEY}"
     signature_key = hashlib.sha512(mentah.encode("utf-8")).hexdigest()
 
     assert midtrans.validasi_signature(order_id, status_code, gross_amount, signature_key)
@@ -107,7 +107,7 @@ def test_validasi_signature_format_gross_amount_harus_persis() -> None:
     import hashlib
 
     order_id, status_code = "KRS-1", "200"
-    mentah_benar = f"{order_id}{status_code}30000.00{settings.MIDTRANS_SERVER_KEY}"
+    mentah_benar = f"{order_id}{status_code}30000.00{settings.MIDTRANS_SIGNATURE_SECRET_KEY}"
     signature_key = hashlib.sha512(mentah_benar.encode("utf-8")).hexdigest()
 
     # gross_amount tanpa desimal (format berbeda) harus gagal walau nilainya "sama".

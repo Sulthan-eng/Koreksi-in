@@ -60,10 +60,14 @@ async def buat_transaksi_snap(id_order: str, nominal: int, nama_paket: str) -> s
 def validasi_signature(
     order_id: str, status_code: str, gross_amount: str, signature_key: str
 ) -> bool:
-    """SHA512(order_id + status_code + gross_amount + ServerKey) harus sama
+    """SHA512(order_id + status_code + gross_amount + SignatureSecretKey) harus sama
     dengan signature_key yang dikirim Midtrans. Ketiga field pertama dipakai
     persis seperti diterima (string apa adanya), tanpa parsing ulang jadi
-    int/float, karena itulah yang dipakai Midtrans menghitung signature-nya."""
-    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SERVER_KEY}"
+    int/float, karena itulah yang dipakai Midtrans menghitung signature-nya.
+
+    Sejak 28 Oktober 2026 Midtrans menghitung signature_key dengan Signature
+    Secret Key, bukan Server Key lagi (lihat docs.midtrans.com/docs/access-keys).
+    Server Key tetap dipakai untuk Basic Auth ke Snap API (buat_transaksi_snap)."""
+    mentah = f"{order_id}{status_code}{gross_amount}{settings.MIDTRANS_SIGNATURE_SECRET_KEY}"
     hitung = hashlib.sha512(mentah.encode("utf-8")).hexdigest()
     return hmac.compare_digest(hitung, signature_key)
