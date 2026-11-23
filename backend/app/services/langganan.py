@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta, timezone
 
-from app.models.enums import StatusLangganan
+from app.models.enums import PaketLangganan, StatusLangganan
 from app.models.pengguna import Pengguna
 
 # Offset tetap WIB (UTC+7) tanpa ketergantungan tzdata di container slim.
@@ -44,3 +44,39 @@ def jenis_akun_efektif(pengguna: Pengguna, sekarang: datetime | None = None) -> 
 
 def batas_untuk_pengguna(pengguna: Pengguna) -> BatasAkun:
     return BATAS_PER_JENIS_AKUN[jenis_akun_efektif(pengguna)]
+
+
+# Harga dan durasi paket harus sama persis dengan docs/SPEC.md bagian 9 (F-LANGGANAN,
+# U10): 1 bulan = 30 hari tetap, 3 bulan = 90 hari tetap (bukan bulan kalender).
+HARGA_PAKET: dict[PaketLangganan, int] = {
+    PaketLangganan.PRO_1_BULAN: 30_000,
+    PaketLangganan.PRO_3_BULAN: 80_000,
+}
+
+DURASI_HARI_PAKET: dict[PaketLangganan, int] = {
+    PaketLangganan.PRO_1_BULAN: 30,
+    PaketLangganan.PRO_3_BULAN: 90,
+}
+
+
+def hitung_masa_berlaku_baru(
+    pengguna: Pengguna, paket: PaketLangganan, sekarang: datetime
+) -> datetime:
+    """Masa berlaku Pro baru setelah pembayaran dikonfirmasi.
+
+    Pro yang masih berlaku DAN punya masa_berlaku_pro jelas: masa berlaku baru =
+    masa berlaku saat ini + durasi paket (perpanjangan manual, U8/changelog
+    2026-11-01). Selain itu (Free, Pro kedaluwarsa, atau Pro aktif tapi
+    masa_berlaku_pro NULL -- misal diset permanen lewat FR25 Admin tanpa tanggal):
+    dihitung dari sekarang, dibulatkan ke 23:59:59 WIB pada hari jatuh tempo.
+    """
+    durasi = timedelta(days=DURASI_HARI_PAKET[paket])
+    if (
+        jenis_akun_efektif(pengguna, sekarang) == StatusLangganan.PRO
+        and pengguna.masa_berlaku_pro is not None
+    ):
+        return pengguna.masa_berlaku_pro + durasi
+
+    tanggal_akhir_wib = (sekarang.astimezone(TZ_WIB) + durasi).date()
+    akhir_hari_wib = datetime.combine(tanggal_akhir_wib, time(23, 59, 59), tzinfo=TZ_WIB)
+    return akhir_hari_wib.astimezone(UTC)

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     GEMINI_API_KEY: str
     GEMINI_RPD_LIMIT: int = 450
+    MIDTRANS_SERVER_KEY: str
     UPLOAD_DIR: str = ""
     STORAGE_BACKEND: Literal["lokal", "s3"] = "lokal"
     S3_ENDPOINT_URL: str = ""
