@@ -2,12 +2,14 @@
 
 Memuat: fungsi OCR grup, fungsi judge grup, semaphore (maks 2 panggilan
 paralel), retry (hanya untuk error sementara), dan penghitung anggaran
-harian in-memory (zona America/Los_Angeles).
+harian persisten di database (zona America/Los_Angeles) dengan fallback
+memori proses bila database gagal diakses.
 """
 
 import asyncio
 import json
 import logging
+import uuid
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -15,8 +17,12 @@ from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
+from app.models.pemakaian_gemini import PemakaianGemini
 
 logger = logging.getLogger(__name__)
 
@@ -75,20 +81,72 @@ class _Anggaran:
         self._tanggal: date | None = None
         self._hitung: dict[str, int] = {}
 
-    def _reset_jika_hari_baru(self) -> None:
-        hari_ini = datetime.now(_TZ_LA).date()
+    def _reset_jika_hari_baru(self, hari_ini: date) -> None:
         if hari_ini != self._tanggal:
             self._tanggal = hari_ini
             self._hitung = {}
 
-    def boleh_panggil(self, model: str) -> bool:
-        self._reset_jika_hari_baru()
-        return self._hitung.get(model, 0) < settings.GEMINI_RPD_LIMIT
+    async def klaim(self, model: str) -> int | None:
+        """Klaim 1 slot anggaran harian untuk model ini secara atomik di database.
+        Mengembalikan hitungan harian baru (1..GEMINI_RPD_LIMIT) bila masih di
+        bawah batas, atau None bila batas harian sudah tercapai. Setiap operasi
+        database yang berhasil menyinkronkan memori proses ke angka database;
+        bila database gagal diakses, galat dicatat secara aman ke log tanpa
+        parameter SQL dan penghitung jatuh ke angka memori proses."""
+        hari_ini = datetime.now(_TZ_LA).date()
+        self._reset_jika_hari_baru(hari_ini)
+        batas = settings.GEMINI_RPD_LIMIT
+        if batas <= 0:
+            return None
 
-    def catat(self, model: str) -> int:
-        self._reset_jika_hari_baru()
-        self._hitung[model] = self._hitung.get(model, 0) + 1
-        return self._hitung[model]
+        try:
+            stmt = (
+                pg_insert(PemakaianGemini)
+                .values(
+                    id_pemakaian_gemini=uuid.uuid4(),
+                    tanggal=hari_ini,
+                    model=model,
+                    jumlah_panggilan=1,
+                )
+                .on_conflict_do_update(
+                    index_elements=[PemakaianGemini.tanggal, PemakaianGemini.model],
+                    set_={"jumlah_panggilan": PemakaianGemini.jumlah_panggilan + 1},
+                    where=PemakaianGemini.jumlah_panggilan < batas,
+                )
+                .returning(PemakaianGemini.jumlah_panggilan)
+            )
+            async with AsyncSessionLocal() as sesi:
+                hitung_db = await sesi.scalar(stmt)
+                hitung_saat_ini: int | None = None
+                if hitung_db is None:
+                    hitung_saat_ini = await sesi.scalar(
+                        select(PemakaianGemini.jumlah_panggilan).where(
+                            PemakaianGemini.tanggal == hari_ini,
+                            PemakaianGemini.model == model,
+                        )
+                    )
+                await sesi.commit()
+        except Exception as exc:
+            orig = getattr(exc, "orig", None)
+            orig_tipe = type(orig).__name__ if orig is not None else "none"
+            logger.error(
+                "gemini_anggaran_db_gagal model=%s tipe=%s orig=%s",
+                model,
+                type(exc).__name__,
+                orig_tipe,
+            )
+            saat_ini = self._hitung.get(model, 0)
+            if saat_ini >= batas:
+                return None
+            baru = saat_ini + 1
+            self._hitung[model] = baru
+            return baru
+
+        if hitung_db is None:
+            self._hitung[model] = hitung_saat_ini if hitung_saat_ini is not None else batas
+            return None
+        self._hitung[model] = hitung_db
+        return hitung_db
 
 
 _anggaran = _Anggaran()
@@ -286,15 +344,18 @@ def _klasifikasikan(exc: Exception) -> str:
 async def _dengan_retry_dan_anggaran(
     model: str, jumlah_item: int, fn, retry_delays: tuple[int, ...] = _RETRY_DELAYS
 ):
-    if not _anggaran.boleh_panggil(model):
-        logger.info("gemini_call_skipped model=%s items=%d reason=rpd_habis", model, jumlah_item)
-        raise KuotaHarianHabis()
-
     percobaan = 0
     while True:
         delay: int | None = None
         async with _SEM:
-            hitung_hari_ini = _anggaran.catat(model)
+            hitung_hari_ini = await _anggaran.klaim(model)
+            if hitung_hari_ini is None:
+                logger.info(
+                    "gemini_call_skipped model=%s items=%d reason=rpd_habis",
+                    model,
+                    jumlah_item,
+                )
+                raise KuotaHarianHabis()
             logger.info(
                 "gemini_call model=%s items=%d daily_count=%d attempt=%d",
                 model,
