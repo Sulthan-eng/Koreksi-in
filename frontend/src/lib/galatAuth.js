@@ -11,6 +11,16 @@ export function galatDaftarDariKode(kode, pesan) {
   return { nama: null, email: null, password: null, umum: pesan };
 }
 
+export function galatAturUlangPasswordDariKode(kode, pesan) {
+  if (
+    kode === "PASSWORD_TERLALU_PENDEK" ||
+    kode === "PASSWORD_TERLALU_PANJANG"
+  ) {
+    return { passwordBaru: pesan, konfirmasiPassword: null, umum: null };
+  }
+  return { passwordBaru: null, konfirmasiPassword: null, umum: pesan };
+}
+
 export function galatMasukDariKode(kode, pesan) {
   if (kode === "LOGIN_GAGAL") {
     return { kredensialTidakValid: true, umum: pesan };

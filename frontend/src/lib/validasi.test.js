@@ -5,7 +5,6 @@ import {
   validasiPanjangEmail,
   validasiPanjangNama,
   validasiPanjangPassword,
-  validasiPasswordBaru,
 } from "./validasi.js";
 
 test("REGEX_EMAIL - menerima format email yang wajar", () => {
@@ -71,26 +70,4 @@ test("validasiPanjangPassword - menolak password lebih dari 72 byte", () => {
     validasiPanjangPassword("a".repeat(73)),
     "PASSWORD_TERLALU_PANJANG",
   );
-});
-
-test("validasiPasswordBaru - meneruskan kode galat panjang password", () => {
-  strictEqual(
-    validasiPasswordBaru("pendek", "pendek"),
-    "PASSWORD_TERLALU_PENDEK",
-  );
-  strictEqual(
-    validasiPasswordBaru("a".repeat(73), "a".repeat(73)),
-    "PASSWORD_TERLALU_PANJANG",
-  );
-});
-
-test("validasiPasswordBaru - menolak konfirmasi yang tidak sama", () => {
-  strictEqual(
-    validasiPasswordBaru("passwordvalid", "beda"),
-    "KONFIRMASI_PASSWORD_TIDAK_SAMA",
-  );
-});
-
-test("validasiPasswordBaru - menerima password dan konfirmasi yang valid", () => {
-  strictEqual(validasiPasswordBaru("passwordvalid", "passwordvalid"), null);
 });

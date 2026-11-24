@@ -69,6 +69,7 @@ export const PESAN_KODE = {
   FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid. Contoh: nama@email.com.",
   TAUTAN_RESET_TERKIRIM: "Tautan Atur Ulang Password Telah Dikirim",
   GAGAL_KIRIM_TAUTAN: "Gagal mengirim tautan, silakan coba lagi.",
+  KONFIRMASI_PASSWORD_KOSONG: "Konfirmasi password wajib diisi.",
   KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
   GAGAL_UBAH_PASSWORD: "Gagal mengubah password, silakan coba lagi.",
   PASSWORD_BERHASIL_DIUBAH: "Password berhasil diubah, silakan masuk.",

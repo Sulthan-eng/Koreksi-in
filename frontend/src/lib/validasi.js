@@ -26,14 +26,3 @@ export function validasiPanjangPassword(password) {
   }
   return null;
 }
-
-export function validasiPasswordBaru(password, konfirmasiPassword) {
-  const kodePanjang = validasiPanjangPassword(password);
-  if (kodePanjang) {
-    return kodePanjang;
-  }
-  if (konfirmasiPassword !== password) {
-    return "KONFIRMASI_PASSWORD_TIDAK_SAMA";
-  }
-  return null;
-}
