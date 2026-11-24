@@ -251,7 +251,7 @@ async def test_anggaran_reset_pergantian_hari(db_session: AsyncSession, monkeypa
     await gemini.ocr_grup([], [])
     assert gemini._anggaran._hitung[gemini._MODEL] == 2
 
-    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    hari_ini = gemini.tanggal_hari_ini_pasifik()
     besok = hari_ini + timedelta(days=1)
 
     class _DatetimePalsu:
@@ -260,6 +260,7 @@ async def test_anggaran_reset_pergantian_hari(db_session: AsyncSession, monkeypa
             return real_datetime.combine(besok, time(12, 0), tzinfo=tz)
 
     monkeypatch.setattr(gemini, "datetime", _DatetimePalsu)
+    assert gemini.tanggal_hari_ini_pasifik() == besok
 
     await gemini.ocr_grup([], [])
     assert gemini._anggaran._hitung[gemini._MODEL] == 1

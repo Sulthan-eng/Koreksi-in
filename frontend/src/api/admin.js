@@ -1,5 +1,9 @@
 import { permintaan } from "./klien.js";
 
+export async function ambilRingkasanDashboard() {
+  return permintaan("/api/admin/ringkasan");
+}
+
 export async function daftarAkunPengajar({
   cari = "",
   status_langganan = "",
