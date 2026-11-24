@@ -216,7 +216,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 4 | Beranda | `/beranda` | Pengajar | FR2, FR3, FR21, FR22, FR23, UC-01, UC-02, UC-03, UC-13, UC-14 | Sapaan, label FREE atau PRO, ringkasan, daftar batch dengan lencana status dan menu aksi (Selesaikan Batch, Hapus Batch), "Buat Batch Baru" | Sebagian selesai | Ada |
 | 5 | Halaman Batch | `/batch/:id_batch` | Pengajar | FR4 sampai FR11, FR14 sampai FR17, FR23 | Judul batch, status batch, dua tab: Soal dan Jawaban, dan Dashboard Hasil Koreksi. Aksi: Selesaikan Batch, Ekspor Rekap Nilai, Hapus Batch | Selesai | Ada |
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Selesai | Ada |
-| 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Penampung (rute dan bilah atas ada, kartu angka menunggu FR27) | Ada |
+| 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Selesai | Ada |
 | 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Selesai | Ada |
 | 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Tautan Atur Ulang Password Telah Dikirim" | Selesai | Ada |
 | 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Selesai | Ada |
@@ -412,9 +412,7 @@ Blok dari atas ke bawah:
 3. **Tombol.** "Upgrade ke Pro" (untuk akun Pro yang masih berlaku, label "Perpanjang Pro") membuka ringkasan paket terpilih ("1 bulan (30 hari), Rp 30.000" atau "3 bulan (90 hari), Rp 80.000" beserta daftar manfaat) dengan tombol "Lanjutkan ke Pembayaran", yang membawa pengguna ke halaman pembayaran Midtrans (Sandbox). Galat: "Transaksi gagal dibuat, silakan coba lagi", "Gagal mencatat transaksi, silakan coba lagi", "Koneksi internet terputus, silakan coba lagi.".
 4. **Status transaksi terakhir.** Tidak dirender bila belum ada transaksi. Saat ada transaksi: lencana status ("Menunggu", "Berhasil", "Gagal", "Kedaluwarsa") beserta paket dan nominalnya ("1 bulan (30 hari), Rp 30.000" atau "3 bulan (90 hari), Rp 80.000"). Jika transaksi terakhir berstatus Menunggu, halaman melakukan polling terbatas tiap 3 detik (maksimal 10 kali percobaan atau berhenti setelah 3 kegagalan beruntun); saat status berubah menjadi Berhasil, profil dimuat ulang sehingga lencana akun di bilah atas dan kartu status akun berubah menjadi PRO (kegagalan memuat ulang profil saat polling tidak mengosongkan label akun yang sudah ada). Bila polling berhenti dan transaksi masih Menunggu, tampil pesan "Pembayaran belum terkonfirmasi. Jika sudah membayar, periksa status beberapa saat lagi." dengan tombol "Periksa Status" untuk memuat ulang transaksi dan profil. Gagal memuat daftar transaksi: "Gagal memuat status langganan, coba muat ulang halaman" atau "Koneksi internet terputus, coba muat ulang halaman.".
 
-### 7. Dashboard Pantauan (`/admin`, Admin, penampung)
-
-**Catatan:** Halaman ini sekarang berisi hanya keadaan kosong "Dashboard Pantauan belum tersedia." sementara kartu angka dikerjakan di FR27. Desain di bawah adalah target untuk FR27.
+### 7. Dashboard Pantauan (`/admin`, Admin)
 
 Hanya angka agregat, tanpa isi kunci, jawaban, atau hasil koreksi. Tata letak harus rapi di desktop 1280 px maupun ponsel 375 px tanpa gulir horizontal, dan semua target sentuh (tombol, tautan) memiliki tinggi minimal `min-h-11` (44 px).
 
