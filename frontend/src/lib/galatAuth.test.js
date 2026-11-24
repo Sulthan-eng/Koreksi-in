@@ -2,6 +2,7 @@ import { test } from "node:test";
 import { deepStrictEqual, strictEqual } from "node:assert/strict";
 import {
   fieldPertamaBermasalah,
+  galatAturUlangPasswordDariKode,
   galatDaftarDariKode,
   galatMasukDariKode,
 } from "./galatAuth.js";
@@ -53,6 +54,45 @@ test("galatDaftarDariKode - kode lain jatuh ke galat umum", () => {
       email: null,
       password: null,
       umum: "Data yang dikirim tidak valid.",
+    },
+  );
+});
+
+test("galatAturUlangPasswordDariKode - PASSWORD_TERLALU_PENDEK dan PASSWORD_TERLALU_PANJANG dipetakan ke kolom password baru", () => {
+  deepStrictEqual(
+    galatAturUlangPasswordDariKode(
+      "PASSWORD_TERLALU_PENDEK",
+      "Password minimal 8 karakter",
+    ),
+    {
+      passwordBaru: "Password minimal 8 karakter",
+      konfirmasiPassword: null,
+      umum: null,
+    },
+  );
+  deepStrictEqual(
+    galatAturUlangPasswordDariKode(
+      "PASSWORD_TERLALU_PANJANG",
+      "Password maksimal 72 karakter",
+    ),
+    {
+      passwordBaru: "Password maksimal 72 karakter",
+      konfirmasiPassword: null,
+      umum: null,
+    },
+  );
+});
+
+test("galatAturUlangPasswordDariKode - kode lain jatuh ke galat umum", () => {
+  deepStrictEqual(
+    galatAturUlangPasswordDariKode(
+      "GAGAL_UBAH_PASSWORD",
+      "Gagal mengubah password, silakan coba lagi.",
+    ),
+    {
+      passwordBaru: null,
+      konfirmasiPassword: null,
+      umum: "Gagal mengubah password, silakan coba lagi.",
     },
   );
 });

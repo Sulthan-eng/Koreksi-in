@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import * as auth from "../api/auth.js";
-import { PESAN_KODE, pesanUntukKode } from "../api/pesan.js";
+import { PESAN_KODE } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { validasiPasswordBaru } from "../lib/validasi.js";
+import { validasiPanjangPassword } from "../lib/validasi.js";
+import {
+  fieldPertamaBermasalah,
+  galatAturUlangPasswordDariKode,
+} from "../lib/galatAuth.js";
 import PesanForm from "../components/PesanForm.jsx";
 import Spinner from "../components/Spinner.jsx";
 import KolomPassword from "../components/KolomPassword.jsx";
+
+const URUTAN_FIELD_ATUR_ULANG = ["passwordBaru", "konfirmasiPassword"];
+const ID_KOLOM_ATUR_ULANG = {
+  passwordBaru: "password_baru",
+  konfirmasiPassword: "konfirmasi_password",
+};
 
 function AturUlangPassword() {
   const [token] = useState(() => {
@@ -16,7 +26,11 @@ function AturUlangPassword() {
   const [tokenTidakSah, setTokenTidakSah] = useState(() => token === null);
   const [passwordBaru, setPasswordBaru] = useState("");
   const [konfirmasiPassword, setKonfirmasiPassword] = useState("");
-  const [kesalahan, setKesalahan] = useState(null);
+  const [galat, setGalat] = useState({
+    passwordBaru: null,
+    konfirmasiPassword: null,
+  });
+  const [kesalahanUmum, setKesalahanUmum] = useState(null);
   const [sedangKirim, setSedangKirim] = useState(false);
 
   const { status, keluar } = useAuth();
@@ -33,15 +47,37 @@ function AturUlangPassword() {
     peristiwa.preventDefault();
     if (sedangKirim) return;
 
-    setKesalahan(null);
+    const galatBaru = { passwordBaru: null, konfirmasiPassword: null };
 
-    const kodeGalat = validasiPasswordBaru(passwordBaru, konfirmasiPassword);
-    if (kodeGalat) {
-      setKesalahan(pesanUntukKode(kodeGalat));
+    if (passwordBaru === "") {
+      galatBaru.passwordBaru = PESAN_KODE.PASSWORD_KOSONG;
+    } else {
+      const kodePanjang = validasiPanjangPassword(passwordBaru);
+      if (kodePanjang) {
+        galatBaru.passwordBaru = PESAN_KODE[kodePanjang];
+      }
+    }
+    if (konfirmasiPassword === "") {
+      galatBaru.konfirmasiPassword = PESAN_KODE.KONFIRMASI_PASSWORD_KOSONG;
+    } else if (passwordBaru !== "" && konfirmasiPassword !== passwordBaru) {
+      galatBaru.konfirmasiPassword = PESAN_KODE.KONFIRMASI_PASSWORD_TIDAK_SAMA;
+    }
+
+    const bermasalah = fieldPertamaBermasalah(
+      galatBaru,
+      URUTAN_FIELD_ATUR_ULANG,
+    );
+    if (bermasalah) {
+      setGalat(galatBaru);
+      setKesalahanUmum(null);
+      document.getElementById(ID_KOLOM_ATUR_ULANG[bermasalah])?.focus();
       return;
     }
 
     setSedangKirim(true);
+    setKesalahanUmum(null);
+    setGalat({ passwordBaru: null, konfirmasiPassword: null });
+
     try {
       await auth.aturUlangPassword({
         token,
@@ -50,13 +86,20 @@ function AturUlangPassword() {
     } catch (error) {
       if (error?.kode === "TOKEN_RESET_TIDAK_VALID") {
         setTokenTidakSah(true);
-      } else if (
-        error?.kode === "PASSWORD_TERLALU_PENDEK" ||
-        error?.kode === "PASSWORD_TERLALU_PANJANG"
-      ) {
-        setKesalahan(pesanUntukKode(error.kode));
       } else {
-        setKesalahan(PESAN_KODE.GAGAL_UBAH_PASSWORD);
+        const hasil = galatAturUlangPasswordDariKode(
+          error?.kode,
+          error?.pesan || PESAN_KODE.GAGAL_UBAH_PASSWORD,
+        );
+        setGalat({
+          passwordBaru: hasil.passwordBaru,
+          konfirmasiPassword: hasil.konfirmasiPassword,
+        });
+        setKesalahanUmum(hasil.umum);
+        const target = fieldPertamaBermasalah(hasil, URUTAN_FIELD_ATUR_ULANG);
+        if (target) {
+          document.getElementById(ID_KOLOM_ATUR_ULANG[target])?.focus();
+        }
       }
       setSedangKirim(false);
       return;
@@ -102,47 +145,76 @@ function AturUlangPassword() {
               </Link>
             </div>
           ) : (
-            <form
-              noValidate
-              onSubmit={tanganiSubmit}
-              className="flex flex-col gap-4"
-            >
-              {kesalahan && (
-                <PesanForm varian="galat" pesan={kesalahan} kotak />
+            <>
+              {kesalahanUmum && (
+                <PesanForm
+                  varian="galat"
+                  pesan={kesalahanUmum}
+                  id="pesan-atur-ulang"
+                  kotak
+                />
               )}
 
-              <KolomPassword
-                id="password_baru"
-                label="Password baru"
-                autoComplete="new-password"
-                value={passwordBaru}
-                onChange={(peristiwa) =>
-                  setPasswordBaru(peristiwa.target.value)
-                }
-              />
-
-              <KolomPassword
-                id="konfirmasi_password"
-                label="Konfirmasi password"
-                autoComplete="new-password"
-                value={konfirmasiPassword}
-                onChange={(peristiwa) =>
-                  setKonfirmasiPassword(peristiwa.target.value)
-                }
-              />
-
-              <button
-                type="submit"
-                aria-disabled={sedangKirim ? "true" : undefined}
-                onClick={(peristiwa) => {
-                  if (sedangKirim) peristiwa.preventDefault();
-                }}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan aria-disabled:opacity-50"
+              <form
+                noValidate
+                onSubmit={tanganiSubmit}
+                className="flex flex-col gap-4"
               >
-                {sedangKirim && <Spinner ukuran="size-4" />}
-                Simpan Password
-              </button>
-            </form>
+                <KolomPassword
+                  id="password_baru"
+                  label="Password baru"
+                  autoComplete="new-password"
+                  value={passwordBaru}
+                  onChange={(peristiwa) => {
+                    setPasswordBaru(peristiwa.target.value);
+                    setGalat((sebelumnya) =>
+                      sebelumnya.passwordBaru || sebelumnya.konfirmasiPassword
+                        ? {
+                            ...sebelumnya,
+                            passwordBaru: null,
+                            konfirmasiPassword: null,
+                          }
+                        : sebelumnya,
+                    );
+                  }}
+                  galat={galat.passwordBaru}
+                  ariaDescribedby={
+                    kesalahanUmum ? "pesan-atur-ulang" : undefined
+                  }
+                />
+
+                <KolomPassword
+                  id="konfirmasi_password"
+                  label="Konfirmasi password"
+                  autoComplete="new-password"
+                  value={konfirmasiPassword}
+                  onChange={(peristiwa) => {
+                    setKonfirmasiPassword(peristiwa.target.value);
+                    setGalat((sebelumnya) =>
+                      sebelumnya.konfirmasiPassword
+                        ? { ...sebelumnya, konfirmasiPassword: null }
+                        : sebelumnya,
+                    );
+                  }}
+                  galat={galat.konfirmasiPassword}
+                  ariaDescribedby={
+                    kesalahanUmum ? "pesan-atur-ulang" : undefined
+                  }
+                />
+
+                <button
+                  type="submit"
+                  aria-disabled={sedangKirim ? "true" : undefined}
+                  onClick={(peristiwa) => {
+                    if (sedangKirim) peristiwa.preventDefault();
+                  }}
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-4 font-semibold text-permukaan aria-disabled:opacity-50"
+                >
+                  {sedangKirim && <Spinner ukuran="size-4" />}
+                  Simpan Password
+                </button>
+              </form>
+            </>
           )}
         </section>
       </main>
