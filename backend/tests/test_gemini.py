@@ -478,6 +478,59 @@ async def test_kegagalan_db_tidak_menggagalkan_ocr_dan_judge_dengan_fallback_mem
     assert "RAHASIA_SENSITIF_DB_ANGGARAN" not in caplog.text
 
 
+async def test_klaim_anggaran_db_lewat_batas_waktu_jatuh_ke_fallback_memori(monkeypatch, caplog):
+    """Bila klaim database melewati _BATAS_WAKTU_DB_ANGGARAN, sesi ditutup bersih
+    tanpa bocor, log mencatat gemini_anggaran_db_gagal tanpa isi sensitif, dan
+    OCR/judge tetap berjalan memakai fallback memori."""
+    monkeypatch.setattr(gemini, "_BATAS_WAKTU_DB_ANGGARAN", 0.02)
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 2)
+    pelacak = {"aktif": 0, "ditutup": 0}
+
+    class _SesiLambat:
+        async def __aenter__(self):
+            pelacak["aktif"] += 1
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pelacak["aktif"] -= 1
+            pelacak["ditutup"] += 1
+            return False
+
+        async def scalar(self, stmt):
+            await asyncio.sleep(1)
+            return 1
+
+        async def commit(self):
+            return None
+
+    monkeypatch.setattr(gemini, "AsyncSessionLocal", lambda: _SesiLambat())
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban OCR")])
+
+    async def fake_judge(items):
+        return gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=92)])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    monkeypatch.setattr(gemini, "_panggil_sdk_judge", fake_judge)
+
+    with caplog.at_level("ERROR"):
+        hasil_ocr = await gemini.ocr_grup([], [1])
+        hasil_judge = await gemini.judge_grup(
+            [gemini.ItemJudgeMasuk(id_item="0:1", kunci_jawaban="Kunci", teks_jawaban="Jawaban")]
+        )
+        with pytest.raises(gemini.KuotaHarianHabis):
+            await gemini.ocr_grup([], [1])
+
+    assert len(hasil_ocr.items) == 1
+    assert hasil_judge.items[0].skor == 92
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
+    assert pelacak["aktif"] == 0
+    assert pelacak["ditutup"] == 3
+    assert "gemini_anggaran_db_gagal" in caplog.text
+    assert "tipe=TimeoutError" in caplog.text
+
+
 async def test_kegagalan_db_anggaran_tidak_menggagalkan_koreksi_file_jawaban(
     db_session: AsyncSession, tmp_path, monkeypatch, caplog
 ):
