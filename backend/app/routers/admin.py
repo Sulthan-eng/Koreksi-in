@@ -7,7 +7,13 @@ from app.core.database import get_db
 from app.core.dependencies import admin_saat_ini
 from app.models.enums import StatusLangganan
 from app.models.pengguna import Pengguna
-from app.schemas.admin import AkunPengajarResponse, StatusAkunFilter, UbahLanggananRequest
+from app.schemas.admin import (
+    AkunPengajarResponse,
+    KuotaResponse,
+    RingkasanDashboardResponse,
+    StatusAkunFilter,
+    UbahLanggananRequest,
+)
 from app.services import admin as admin_service
 
 router = APIRouter(prefix="/admin")
@@ -24,6 +30,34 @@ def _akun_response(item: admin_service.AkunPengajarItem) -> AkunPengajarResponse
         dibuat_pada=item.dibuat_pada,
         jumlah_batch=item.jumlah_batch,
     )
+
+
+def _ringkasan_response(
+    item: admin_service.RingkasanDashboard,
+) -> RingkasanDashboardResponse:
+    return RingkasanDashboardResponse(
+        jumlah_akun_pengajar=item.jumlah_akun_pengajar,
+        jumlah_akun_free=item.jumlah_akun_free,
+        jumlah_akun_pro=item.jumlah_akun_pro,
+        jumlah_batch=item.jumlah_batch,
+        jumlah_file_diproses=item.jumlah_file_diproses,
+        jumlah_file_selesai=item.jumlah_file_selesai,
+        jumlah_file_gagal=item.jumlah_file_gagal,
+        kuota=KuotaResponse(
+            terpakai=item.kuota_terpakai,
+            batas=item.kuota_batas,
+            nama_model=item.nama_model,
+        ),
+    )
+
+
+@router.get("/ringkasan", response_model=RingkasanDashboardResponse)
+async def ringkasan_dashboard(
+    _: Pengguna = Depends(admin_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> RingkasanDashboardResponse:
+    item = await admin_service.ambil_ringkasan_dashboard(db)
+    return _ringkasan_response(item)
 
 
 @router.get("/akun-pengajar", response_model=list[AkunPengajarResponse])

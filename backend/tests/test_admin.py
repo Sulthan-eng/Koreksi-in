@@ -8,11 +8,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.batch import Batch
-from app.models.enums import Peran, StatusBatch, StatusLangganan
+from app.models.enums import Peran, StatusBatch, StatusLangganan, StatusProses
+from app.models.file_jawaban import FileJawaban
+from app.models.pemakaian_gemini import PemakaianGemini
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
+from app.services.gemini import MODEL_GEMINI, tanggal_hari_ini_pasifik
 from app.services.langganan import TZ_WIB, jenis_akun_efektif
 
 
@@ -527,3 +531,181 @@ async def test_gagal_commit_langganan_dan_status_akun_mengembalikan_500(
             "kode": "GAGAL_UBAH_STATUS_AKUN",
             "pesan": "Gagal mengubah status akun, silakan coba lagi.",
         }
+
+
+async def test_ringkasan_dashboard_hanya_admin(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    response = await client.get("/api/admin/ringkasan")
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"
+
+    await _buat_pengguna(db_session, nama="Budi", email="budi@contoh.id")
+    token_pengajar = await _masuk(client, "budi@contoh.id")
+    response = await client.get(
+        "/api/admin/ringkasan",
+        headers={"Authorization": f"Bearer {token_pengajar}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["kode"] == "AKSES_DITOLAK"
+
+    _, headers = await _token_admin(client, db_session)
+    response = await client.get("/api/admin/ringkasan", headers=headers)
+    assert response.status_code == 200
+
+
+async def test_ringkasan_dashboard_menghitung_akun_efektif_termasuk_nonaktif(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    _, headers = await _token_admin(client, db_session)
+    sekarang = datetime.now(UTC)
+
+    await _buat_pengguna(db_session, nama="Free Aktif", email="free@contoh.id")
+    await _buat_pengguna(
+        db_session,
+        nama="Pro Aktif",
+        email="pro@contoh.id",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang + timedelta(days=30),
+    )
+    await _buat_pengguna(
+        db_session,
+        nama="Pro Kedaluwarsa",
+        email="kedaluwarsa@contoh.id",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang - timedelta(minutes=5),
+    )
+    await _buat_pengguna(
+        db_session,
+        nama="Free Nonaktif",
+        email="free-nonaktif@contoh.id",
+        dinonaktifkan_pada=sekarang - timedelta(days=1),
+    )
+    await _buat_pengguna(
+        db_session,
+        nama="Pro Nonaktif",
+        email="pro-nonaktif@contoh.id",
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang + timedelta(days=30),
+        dinonaktifkan_pada=sekarang - timedelta(days=1),
+    )
+    await _buat_pengguna(
+        db_session,
+        nama="Admin Lain",
+        email="admin-lain@contoh.id",
+        peran=Peran.ADMIN,
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=sekarang + timedelta(days=30),
+    )
+
+    response = await client.get("/api/admin/ringkasan", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["jumlah_akun_pengajar"] == 5
+    assert body["jumlah_akun_free"] == 3
+    assert body["jumlah_akun_pro"] == 2
+
+
+async def test_ringkasan_dashboard_menghitung_batch_dan_file(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    _, headers = await _token_admin(client, db_session)
+    pengajar = await _buat_pengguna(db_session, nama="Budi", email="budi@contoh.id")
+
+    batch_aktif = Batch(
+        id_pengguna=pengajar.id_pengguna,
+        nama_batch="Aktif",
+        status=StatusBatch.AKTIF,
+    )
+    batch_selesai = Batch(
+        id_pengguna=pengajar.id_pengguna,
+        nama_batch="Selesai",
+        status=StatusBatch.SELESAI,
+    )
+    db_session.add_all([batch_aktif, batch_selesai])
+    await db_session.commit()
+
+    status_file = [
+        StatusProses.DIPROSES,
+        StatusProses.DIPROSES,
+        StatusProses.SELESAI,
+        StatusProses.SELESAI,
+        StatusProses.SELESAI,
+        StatusProses.GAGAL,
+    ]
+    db_session.add_all(
+        [
+            FileJawaban(
+                id_batch=batch_aktif.id_batch,
+                nama_peserta_didik=f"Peserta {indeks}",
+                path=f"jawaban-{indeks}.pdf",
+                status_proses=status,
+            )
+            for indeks, status in enumerate(status_file, start=1)
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/admin/ringkasan", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["jumlah_batch"] == 2
+    assert body["jumlah_file_diproses"] == 2
+    assert body["jumlah_file_selesai"] == 3
+    assert body["jumlah_file_gagal"] == 1
+
+
+async def test_ringkasan_dashboard_kuota_tanpa_baris(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    _, headers = await _token_admin(client, db_session)
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 500)
+
+    response = await client.get("/api/admin/ringkasan", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["kuota"] == {
+        "terpakai": 0,
+        "batas": 500,
+        "nama_model": MODEL_GEMINI,
+    }
+
+
+async def test_ringkasan_dashboard_kuota_hari_ini_model_gemini(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch
+) -> None:
+    _, headers = await _token_admin(client, db_session)
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 500)
+    hari_ini = tanggal_hari_ini_pasifik()
+
+    db_session.add_all(
+        [
+            PemakaianGemini(
+                tanggal=hari_ini,
+                model=MODEL_GEMINI,
+                jumlah_panggilan=123,
+            ),
+            PemakaianGemini(
+                tanggal=hari_ini - timedelta(days=1),
+                model=MODEL_GEMINI,
+                jumlah_panggilan=400,
+            ),
+            PemakaianGemini(
+                tanggal=hari_ini,
+                model="model-lain",
+                jumlah_panggilan=400,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/admin/ringkasan", headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["kuota"] == {
+        "terpakai": 123,
+        "batas": 500,
+        "nama_model": MODEL_GEMINI,
+    }

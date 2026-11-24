@@ -54,6 +54,7 @@ RUTE_PENGAJAR = {
 
 # Rute khusus Admin (Pengajar ditolak 403)
 RUTE_ADMIN = {
+    ("GET", "/api/admin/ringkasan"),
     ("GET", "/api/admin/akun-pengajar"),
     ("PATCH", "/api/admin/akun-pengajar/{id_pengguna}/langganan"),
     ("POST", "/api/admin/akun-pengajar/{id_pengguna}/nonaktifkan"),

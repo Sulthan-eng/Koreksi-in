@@ -26,8 +26,10 @@ from app.models.pemakaian_gemini import PemakaianGemini
 
 logger = logging.getLogger(__name__)
 
-_MODEL = "gemini-3.5-flash-lite"
-_TZ_LA = ZoneInfo("America/Los_Angeles")
+MODEL_GEMINI = "gemini-3.5-flash-lite"
+TZ_LA = ZoneInfo("America/Los_Angeles")
+_MODEL = MODEL_GEMINI
+_TZ_LA = TZ_LA
 _SEM = asyncio.Semaphore(2)
 _RETRY_DELAYS = (10, 30, 60)
 _TIMEOUT_MS = 120_000
@@ -77,6 +79,11 @@ class GagalPermanen(Exception):
     """Kegagalan lain yang bukan masalah kuota/sementara."""
 
 
+def tanggal_hari_ini_pasifik() -> date:
+    """Tanggal hari ini menurut zona waktu America/Los_Angeles."""
+    return datetime.now(TZ_LA).date()
+
+
 class _Anggaran:
     def __init__(self) -> None:
         self._tanggal: date | None = None
@@ -94,7 +101,7 @@ class _Anggaran:
         database yang berhasil menyinkronkan memori proses ke angka database;
         bila database gagal diakses, galat dicatat secara aman ke log tanpa
         parameter SQL dan penghitung jatuh ke angka memori proses."""
-        hari_ini = datetime.now(_TZ_LA).date()
+        hari_ini = tanggal_hari_ini_pasifik()
         self._reset_jika_hari_baru(hari_ini)
         batas = settings.GEMINI_RPD_LIMIT
         if batas <= 0:

@@ -8,12 +8,16 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.errors import AppError
 from app.models.batch import Batch
-from app.models.enums import Peran, StatusLangganan
+from app.models.enums import Peran, StatusLangganan, StatusProses
+from app.models.file_jawaban import FileJawaban
+from app.models.pemakaian_gemini import PemakaianGemini
 from app.models.pengguna import Pengguna
 from app.models.sesi import Sesi
 from app.schemas.admin import StatusAkunFilter
+from app.services.gemini import MODEL_GEMINI, tanggal_hari_ini_pasifik
 from app.services.langganan import TZ_WIB, jenis_akun_efektif
 
 AKUN_TIDAK_DITEMUKAN = AppError(
@@ -50,6 +54,20 @@ class AkunPengajarItem:
     dinonaktifkan_pada: datetime | None
     dibuat_pada: datetime
     jumlah_batch: int
+
+
+@dataclass(frozen=True)
+class RingkasanDashboard:
+    jumlah_akun_pengajar: int
+    jumlah_akun_free: int
+    jumlah_akun_pro: int
+    jumlah_batch: int
+    jumlah_file_diproses: int
+    jumlah_file_selesai: int
+    jumlah_file_gagal: int
+    kuota_terpakai: int
+    kuota_batas: int
+    nama_model: str
 
 
 def _escape_like(teks: str) -> str:
@@ -108,6 +126,68 @@ async def _hitung_jumlah_batch(db: AsyncSession, id_pengguna: uuid.UUID) -> int:
         select(func.count()).select_from(Batch).where(Batch.id_pengguna == id_pengguna)
     )
     return int(jumlah or 0)
+
+
+async def ambil_ringkasan_dashboard(db: AsyncSession) -> RingkasanDashboard:
+    """Ambil agregat Dashboard Pantauan Admin tanpa data pribadi."""
+    sekarang = datetime.now(UTC)
+
+    jumlah_akun_pengajar = int(
+        await db.scalar(
+            select(func.count()).select_from(Pengguna).where(Pengguna.peran == Peran.PENGAJAR)
+        )
+        or 0
+    )
+    # Kondisi Pro efektif ini harus sama dengan filter status_langganan=PRO di
+    # daftar_akun_pengajar dan logika jenis_akun_efektif: Pro tanpa masa berlaku
+    # atau Pro yang masa berlakunya belum lewat.
+    jumlah_akun_pro = int(
+        await db.scalar(
+            select(func.count())
+            .select_from(Pengguna)
+            .where(
+                Pengguna.peran == Peran.PENGAJAR,
+                Pengguna.status_langganan == StatusLangganan.PRO,
+                or_(
+                    Pengguna.masa_berlaku_pro.is_(None),
+                    Pengguna.masa_berlaku_pro > sekarang,
+                ),
+            )
+        )
+        or 0
+    )
+    jumlah_akun_free = jumlah_akun_pengajar - jumlah_akun_pro
+
+    jumlah_batch = int(await db.scalar(select(func.count()).select_from(Batch)) or 0)
+
+    hasil_file = await db.execute(
+        select(FileJawaban.status_proses, func.count()).group_by(FileJawaban.status_proses)
+    )
+    jumlah_file = {status: int(jumlah) for status, jumlah in hasil_file.all()}
+
+    hari_ini = tanggal_hari_ini_pasifik()
+    kuota_terpakai = int(
+        await db.scalar(
+            select(func.coalesce(func.sum(PemakaianGemini.jumlah_panggilan), 0)).where(
+                PemakaianGemini.tanggal == hari_ini,
+                PemakaianGemini.model == MODEL_GEMINI,
+            )
+        )
+        or 0
+    )
+
+    return RingkasanDashboard(
+        jumlah_akun_pengajar=jumlah_akun_pengajar,
+        jumlah_akun_free=jumlah_akun_free,
+        jumlah_akun_pro=jumlah_akun_pro,
+        jumlah_batch=jumlah_batch,
+        jumlah_file_diproses=jumlah_file.get(StatusProses.DIPROSES, 0),
+        jumlah_file_selesai=jumlah_file.get(StatusProses.SELESAI, 0),
+        jumlah_file_gagal=jumlah_file.get(StatusProses.GAGAL, 0),
+        kuota_terpakai=kuota_terpakai,
+        kuota_batas=settings.GEMINI_RPD_LIMIT,
+        nama_model=MODEL_GEMINI,
+    )
 
 
 async def daftar_akun_pengajar(
