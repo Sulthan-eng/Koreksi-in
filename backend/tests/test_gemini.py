@@ -1,21 +1,27 @@
+import asyncio
+import uuid
 from datetime import datetime as real_datetime
 from datetime import time, timedelta
 
 import pytest
+import pytest_asyncio
 from google.genai import errors as genai_errors
+from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.pemakaian_gemini import PemakaianGemini
+from app.models.pengguna import Pengguna
 from app.services import gemini
 
 
-@pytest.fixture(autouse=True)
-def _anggaran_bersih():
-    gemini._anggaran._hitung = {}
-    gemini._anggaran._tanggal = None
+@pytest_asyncio.fixture(autouse=True, loop_scope="session")
+async def _anggaran_bersih(db_session: AsyncSession):
+    gemini._anggaran = gemini._Anggaran()
     gemini._client = None
     yield
-    gemini._anggaran._hitung = {}
-    gemini._anggaran._tanggal = None
+    gemini._anggaran = gemini._Anggaran()
     gemini._client = None
 
 
@@ -186,7 +192,7 @@ async def test_error_lain_dianggap_permanen(monkeypatch):
     assert sleeps == []
 
 
-async def test_anggaran_bertambah_per_panggilan(monkeypatch):
+async def test_anggaran_bertambah_per_panggilan(db_session: AsyncSession, monkeypatch):
     async def fake_ocr(bagian_file, no_soal_list):
         return gemini.ResponsOcr(items=[])
 
@@ -196,8 +202,19 @@ async def test_anggaran_bertambah_per_panggilan(monkeypatch):
     await gemini.ocr_grup([], [])
     assert gemini._anggaran._hitung[gemini._MODEL] == 2
 
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    baris = await db_session.scalar(
+        select(PemakaianGemini).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert baris is not None
+    assert isinstance(baris.id_pemakaian_gemini, uuid.UUID)
+    assert baris.jumlah_panggilan == 2
 
-async def test_anggaran_berhenti_tepat_limit(monkeypatch):
+
+async def test_anggaran_berhenti_tepat_limit(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 1)
     calls: list[int] = []
 
@@ -206,21 +223,33 @@ async def test_anggaran_berhenti_tepat_limit(monkeypatch):
         return gemini.ResponsOcr(items=[])
 
     monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    sleeps = _patch_sleep(monkeypatch)
 
     await gemini.ocr_grup([], [])
     with pytest.raises(gemini.KuotaHarianHabis):
         await gemini.ocr_grup([], [])
     assert len(calls) == 1
+    assert sleeps == []
+
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    jumlah_db = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_db == 1
 
 
-async def test_anggaran_reset_pergantian_hari(monkeypatch):
+async def test_anggaran_reset_pergantian_hari(db_session: AsyncSession, monkeypatch):
     async def fake_ocr(bagian_file, no_soal_list):
         return gemini.ResponsOcr(items=[])
 
     monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
 
     await gemini.ocr_grup([], [])
-    assert gemini._anggaran._hitung[gemini._MODEL] == 1
+    await gemini.ocr_grup([], [])
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
 
     hari_ini = real_datetime.now(gemini._TZ_LA).date()
     besok = hari_ini + timedelta(days=1)
@@ -235,8 +264,305 @@ async def test_anggaran_reset_pergantian_hari(monkeypatch):
     await gemini.ocr_grup([], [])
     assert gemini._anggaran._hitung[gemini._MODEL] == 1
 
+    # Baris hari baru mulai dari 0 lalu menjadi 1; riwayat hari sebelumnya tetap tersimpan.
+    jumlah_hari_ini = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    jumlah_besok = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == besok,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_hari_ini == 2
+    assert jumlah_besok == 1
 
-def test_timeout_eksplisit_120_detik():
+
+async def test_anggaran_bertahan_setelah_restart(db_session: AsyncSession, monkeypatch):
+    """Simulasi restart: objek _Anggaran dibuat ulang (memori kosong), tetapi
+    hitungan dan pagar anggaran tetap ditegakkan dari database."""
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 2)
+    calls: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        calls.append(1)
+        return gemini.ResponsOcr(items=[])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+
+    await gemini.ocr_grup([], [])
+    assert gemini._anggaran._hitung[gemini._MODEL] == 1
+
+    # Restart ke-1: memori kosong, panggilan berikutnya melanjutkan dari angka DB (1 -> 2).
+    gemini._anggaran = gemini._Anggaran()
+    assert gemini._anggaran._hitung == {}
+
+    await gemini.ocr_grup([], [])
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
+    assert len(calls) == 2
+
+    # Restart ke-2: memori kembali kosong, tetapi di DB sudah mencapai limit (2)
+    # sehingga panggilan langsung ditolak dan memori disinkronkan ke angka DB.
+    gemini._anggaran = gemini._Anggaran()
+    assert gemini._anggaran._hitung == {}
+
+    with pytest.raises(gemini.KuotaHarianHabis):
+        await gemini.ocr_grup([], [])
+    assert len(calls) == 2
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
+
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    jumlah_db = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_db == 2
+
+
+async def test_anggaran_klaim_atomik_dua_panggilan_paralel(db_session: AsyncSession, monkeypatch):
+    """Dua panggilan bersamaan (maks 2 paralel) menambah hitungan secara atomik
+    tanpa IntegrityError atau lost update, dan tetap menghormati batas kuota."""
+    calls: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        calls.append(1)
+        await asyncio.sleep(0)
+        return gemini.ResponsOcr(items=[])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+
+    await asyncio.gather(gemini.ocr_grup([], []), gemini.ocr_grup([], []))
+    assert len(calls) == 2
+
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    baris_list = list(
+        await db_session.scalars(
+            select(PemakaianGemini).where(
+                PemakaianGemini.tanggal == hari_ini,
+                PemakaianGemini.model == gemini._MODEL,
+            )
+        )
+    )
+    assert len(baris_list) == 1
+    assert baris_list[0].jumlah_panggilan == 2
+
+    # Sekarang set limit = 3 (tersisa 1 slot) lalu jalankan 2 panggilan paralel:
+    # tepat 1 berhasil dan 1 ditolak KuotaHarianHabis.
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 3)
+    hasil_paralel = await asyncio.gather(
+        gemini.ocr_grup([], []),
+        gemini.ocr_grup([], []),
+        return_exceptions=True,
+    )
+    sukses = [h for h in hasil_paralel if isinstance(h, gemini.ResponsOcr)]
+    gagal = [h for h in hasil_paralel if isinstance(h, gemini.KuotaHarianHabis)]
+    assert len(sukses) == 1
+    assert len(gagal) == 1
+    assert len(calls) == 3
+
+    db_session.expire_all()
+    jumlah_akhir = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_akhir == 3
+
+
+async def test_anggaran_retry_ditolak_bila_batas_tercapai(db_session: AsyncSession, monkeypatch):
+    """Klaim kuota berlaku per percobaan (termasuk retry): jika percobaan pertama
+    menghabiskan slot terakhir lalu gagal sementara (503), percobaan retry ditolak
+    dengan KuotaHarianHabis."""
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 1)
+    calls: list[int] = []
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        calls.append(1)
+        raise genai_errors.ServerError(503, {"error": {"message": "unavailable"}})
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    sleeps = _patch_sleep(monkeypatch)
+
+    with pytest.raises(gemini.KuotaHarianHabis):
+        await gemini.ocr_grup([], [])
+    assert len(calls) == 1
+    assert sleeps == [10]
+
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    jumlah_db = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_db == 1
+
+
+async def test_anggaran_tidak_hilang_saat_transaksi_pemanggil_rollback(
+    db_session: AsyncSession, monkeypatch
+):
+    """Hitungan dicatat di sesi pendek tersendiri sehingga rollback pada transaksi
+    permintaan pemanggil tidak menghapus hitungan panggilan yang sudah dikirim."""
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        return gemini.ResponsOcr(items=[])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+
+    db_session.add(
+        Pengguna(nama="Sementara", email=f"{uuid.uuid4()}@contoh.com", password_hash="hash")
+    )
+    await db_session.flush()
+    await gemini.ocr_grup([], [])
+    await db_session.rollback()
+
+    hari_ini = real_datetime.now(gemini._TZ_LA).date()
+    jumlah_db = await db_session.scalar(
+        select(PemakaianGemini.jumlah_panggilan).where(
+            PemakaianGemini.tanggal == hari_ini,
+            PemakaianGemini.model == gemini._MODEL,
+        )
+    )
+    assert jumlah_db == 1
+
+
+async def test_kegagalan_db_tidak_menggagalkan_ocr_dan_judge_dengan_fallback_memori(
+    monkeypatch, caplog
+):
+    """Kegagalan membaca/menulis hitungan di database tidak boleh menggagalkan
+    OCR atau judge: galat dicatat ke log tanpa isi sensitif dan pagar anggaran
+    jatuh ke hitungan memori proses."""
+    monkeypatch.setattr(settings, "GEMINI_RPD_LIMIT", 2)
+
+    class _SesiGagal:
+        async def __aenter__(self):
+            raise OperationalError(
+                'INSERT INTO "Pemakaian_Gemini" VALUES (:rahasia)',
+                {"rahasia": "RAHASIA_SENSITIF_DB_ANGGARAN"},
+                ConnectionResetError("database down"),
+                connection_invalidated=True,
+            )
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return False
+
+    monkeypatch.setattr(gemini, "AsyncSessionLocal", lambda: _SesiGagal())
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Jawaban OCR")])
+
+    async def fake_judge(items):
+        return gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=90)])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    monkeypatch.setattr(gemini, "_panggil_sdk_judge", fake_judge)
+
+    with caplog.at_level("ERROR"):
+        hasil_ocr = await gemini.ocr_grup([], [1])
+        hasil_judge = await gemini.judge_grup(
+            [gemini.ItemJudgeMasuk(id_item="0:1", kunci_jawaban="Kunci", teks_jawaban="Jawaban")]
+        )
+        with pytest.raises(gemini.KuotaHarianHabis):
+            await gemini.ocr_grup([], [1])
+
+    assert len(hasil_ocr.items) == 1
+    assert hasil_judge.items[0].skor == 90
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
+    assert "gemini_anggaran_db_gagal" in caplog.text
+    assert "RAHASIA_SENSITIF_DB_ANGGARAN" not in caplog.text
+
+
+async def test_kegagalan_db_anggaran_tidak_menggagalkan_koreksi_file_jawaban(
+    db_session: AsyncSession, tmp_path, monkeypatch, caplog
+):
+    """Ketika database anggaran gagal, alur koreksi lembar jawaban (OCR + judge +
+    simpan Hasil_Koreksi) tetap selesai normal lewat fallback memori."""
+    from app.models.batch import Batch
+    from app.models.enums import Kategori, StatusProses
+    from app.models.file_jawaban import FileJawaban
+    from app.models.hasil_koreksi import HasilKoreksi
+    from app.models.soal import Soal
+    from app.services import pemrosesan
+
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path))
+
+    pengguna = Pengguna(nama="Budi", email=f"{uuid.uuid4()}@contoh.com", password_hash="hash")
+    db_session.add(pengguna)
+    await db_session.commit()
+
+    batch = Batch(id_pengguna=pengguna.id_pengguna, nama_batch="Batch Koreksi")
+    db_session.add(batch)
+    await db_session.commit()
+
+    soal = Soal(
+        id_batch=batch.id_batch, no_soal=1, kunci_jawaban="Fotosintesis menghasilkan glukosa"
+    )
+    db_session.add(soal)
+    await db_session.commit()
+
+    id_file = uuid.uuid4()
+    rel_path = f"uploads/{batch.id_batch}/{id_file}.png"
+    full_path = tmp_path / rel_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    full_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"isi")
+
+    fj = FileJawaban(
+        id_file=id_file,
+        id_batch=batch.id_batch,
+        nama_peserta_didik="Ani",
+        path=rel_path,
+        status_proses=StatusProses.DIPROSES,
+    )
+    db_session.add(fj)
+    await db_session.commit()
+
+    class _SesiAnggaranGagal:
+        async def __aenter__(self):
+            raise OperationalError(
+                'INSERT INTO "Pemakaian_Gemini"',
+                {"kunci": "RAHASIA_KOREKSI"},
+                ConnectionResetError("db down"),
+                connection_invalidated=True,
+            )
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return False
+
+    monkeypatch.setattr(gemini, "AsyncSessionLocal", lambda: _SesiAnggaranGagal())
+
+    async def fake_ocr(bagian_file, no_soal_list):
+        return gemini.ResponsOcr(items=[gemini.HasilOcrItem(id_item="0:1", teks="Glukosa dibuat")])
+
+    async def fake_judge(items):
+        return gemini.ResponsJudge(items=[gemini.HasilJudgeItem(id_item="0:1", skor=85)])
+
+    monkeypatch.setattr(gemini, "_panggil_sdk_ocr", fake_ocr)
+    monkeypatch.setattr(gemini, "_panggil_sdk_judge", fake_judge)
+
+    with caplog.at_level("ERROR"):
+        await pemrosesan.proses_file_jawaban([fj.id_file], db=db_session)
+
+    await db_session.refresh(fj)
+    assert fj.status_proses == StatusProses.SELESAI
+    assert fj.pesan_error is None
+
+    hasil = await db_session.scalar(select(HasilKoreksi).where(HasilKoreksi.id_file == fj.id_file))
+    assert hasil is not None
+    assert hasil.teks_ocr == "Glukosa dibuat"
+    assert hasil.skor_sistem == 85
+    assert hasil.kategori == Kategori.SANGAT_MIRIP
+    assert gemini._anggaran._hitung[gemini._MODEL] == 2
+    assert "gemini_anggaran_db_gagal" in caplog.text
+    assert "RAHASIA_KOREKSI" not in caplog.text
+
+
+async def test_timeout_eksplisit_120_detik():
     client = gemini._ambil_client()
     assert client._api_client._http_options.timeout == gemini._TIMEOUT_MS
     assert gemini._TIMEOUT_MS == 120_000
@@ -245,7 +571,7 @@ def test_timeout_eksplisit_120_detik():
 # --- OCR kunci jawaban (F-KUNCI-FILE): retry lebih ketat, batas waktu total terpisah ---
 
 
-def test_prompt_ocr_kunci_memuat_penanda_tidak_ada_teks():
+async def test_prompt_ocr_kunci_memuat_penanda_tidak_ada_teks():
     assert gemini.PENANDA_TIDAK_ADA_TEKS in gemini._prompt_ocr_kunci()
 
 

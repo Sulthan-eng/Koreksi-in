@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.main import app
 from app.models.base import Base
+from app.services import gemini
 
 _BASE_URL = make_url(settings.DATABASE_URL)
 _TEST_DB_NAME = f"{_BASE_URL.database}_test"
@@ -50,7 +51,12 @@ async def _engine() -> AsyncGenerator:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    yield engine
+    sessionlocal_asli = gemini.AsyncSessionLocal
+    gemini.AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        yield engine
+    finally:
+        gemini.AsyncSessionLocal = sessionlocal_asli
 
     _assert_nama_db_test(_TEST_DB_NAME)
     async with engine.begin() as conn:
@@ -62,12 +68,17 @@ async def _engine() -> AsyncGenerator:
 async def db_session(_engine) -> AsyncGenerator[AsyncSession, None]:
     _assert_nama_db_test(_TEST_DB_NAME)
     sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
+    gemini.AsyncSessionLocal = sessionmaker
+    gemini._anggaran = gemini._Anggaran()
     async with sessionmaker() as session:
         yield session
 
     _assert_nama_db_test(_TEST_DB_NAME)
     async with _engine.begin() as conn:
-        await conn.exec_driver_sql('TRUNCATE TABLE "Sesi", "Pengguna" RESTART IDENTITY CASCADE')
+        await conn.exec_driver_sql(
+            'TRUNCATE TABLE "Sesi", "Pengguna", "Pemakaian_Gemini" RESTART IDENTITY CASCADE'
+        )
+    gemini._anggaran = gemini._Anggaran()
 
 
 @pytest.fixture(autouse=True)
