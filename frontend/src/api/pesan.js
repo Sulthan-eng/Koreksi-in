@@ -172,6 +172,8 @@ export const PESAN_KODE = {
   PENCARIAN_AKUN_KOSONG: "Tidak ada akun yang sesuai dengan pencarian.",
   GAGAL_MUAT_AKUN_PENGAJAR:
     "Gagal memuat daftar akun, coba muat ulang halaman.",
+  GAGAL_MUAT_DASHBOARD_PANTAUAN:
+    "Gagal memuat dashboard pantauan, coba muat ulang halaman.",
   LANGGANAN_BERHASIL_DIUBAH: "Status langganan berhasil diubah",
   AKUN_BERHASIL_DINONAKTIFKAN: "Akun berhasil dinonaktifkan",
   AKUN_BERHASIL_DIAKTIFKAN: "Akun berhasil diaktifkan",
