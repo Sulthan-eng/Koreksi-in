@@ -209,11 +209,7 @@ function DashboardPantauan() {
               </div>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
                 {kartuAkun.map((kartu) => (
-                  <KartuAngka
-                    key={kartu.label}
-                    {...kartu}
-                    kelasIsi="gap-2"
-                  />
+                  <KartuAngka key={kartu.label} {...kartu} kelasIsi="gap-2" />
                 ))}
               </div>
             </section>
@@ -225,11 +221,7 @@ function DashboardPantauan() {
               </h2>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {kartuAktivitas.map((kartu) => (
-                  <KartuAngka
-                    key={kartu.label}
-                    {...kartu}
-                    kelasIsi="gap-2"
-                  />
+                  <KartuAngka key={kartu.label} {...kartu} kelasIsi="gap-2" />
                 ))}
               </div>
             </section>
