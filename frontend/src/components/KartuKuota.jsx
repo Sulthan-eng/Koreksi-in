@@ -55,7 +55,7 @@ function KartuKuota({ kuota }) {
           role="progressbar"
           aria-valuemin="0"
           aria-valuemax={kuota.batas}
-          aria-valuenow={kuota.terpakai}
+          aria-valuenow={Math.min(kuota.terpakai, kuota.batas)}
           aria-label="Pemakaian kuota API hari ini"
         >
           <div
