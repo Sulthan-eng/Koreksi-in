@@ -31,6 +31,7 @@ _TZ_LA = ZoneInfo("America/Los_Angeles")
 _SEM = asyncio.Semaphore(2)
 _RETRY_DELAYS = (10, 30, 60)
 _TIMEOUT_MS = 120_000
+_BATAS_WAKTU_DB_ANGGARAN = 5
 
 # Jalur OCR kunci jawaban (F-KUNCI-FILE) sinkron dengan NFR1 (maks 120 detik
 # total): kebijakan retry lebih ketat daripada OCR jawaban/judge di atas, dan
@@ -115,17 +116,18 @@ class _Anggaran:
                 )
                 .returning(PemakaianGemini.jumlah_panggilan)
             )
-            async with AsyncSessionLocal() as sesi:
-                hitung_db = await sesi.scalar(stmt)
-                hitung_saat_ini: int | None = None
-                if hitung_db is None:
-                    hitung_saat_ini = await sesi.scalar(
-                        select(PemakaianGemini.jumlah_panggilan).where(
-                            PemakaianGemini.tanggal == hari_ini,
-                            PemakaianGemini.model == model,
+            async with asyncio.timeout(_BATAS_WAKTU_DB_ANGGARAN):
+                async with AsyncSessionLocal() as sesi:
+                    hitung_db = await sesi.scalar(stmt)
+                    hitung_saat_ini: int | None = None
+                    if hitung_db is None:
+                        hitung_saat_ini = await sesi.scalar(
+                            select(PemakaianGemini.jumlah_panggilan).where(
+                                PemakaianGemini.tanggal == hari_ini,
+                                PemakaianGemini.model == model,
+                            )
                         )
-                    )
-                await sesi.commit()
+                    await sesi.commit()
         except Exception as exc:
             orig = getattr(exc, "orig", None)
             orig_tipe = type(orig).__name__ if orig is not None else "none"
