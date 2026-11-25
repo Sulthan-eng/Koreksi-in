@@ -54,7 +54,7 @@ export function pesanAktifkanAkun(nama) {
 }
 
 export function pesanTautanResetTerkirim(email) {
-  return `Jika email terdaftar, tautan atur ulang password telah dikirim ke ${email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit.`;
+  return `Tautan atur ulang password telah dikirim ke ${email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit.`;
 }
 
 const KODE_PESAN_DARI_SERVER = new Set([
