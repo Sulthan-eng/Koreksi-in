@@ -53,6 +53,10 @@ export function pesanAktifkanAkun(nama) {
   return `Akun ${nama} akan diaktifkan dan dapat masuk kembali. Lanjutkan?`;
 }
 
+export function pesanTautanResetTerkirim(email) {
+  return `Jika email terdaftar, tautan atur ulang password telah dikirim ke ${email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit.`;
+}
+
 const KODE_PESAN_DARI_SERVER = new Set([
   "BATAS_SOAL_TERLAMPAUI",
   "BATAS_JAWABAN_TERLAMPAUI",
@@ -67,7 +71,6 @@ export const PESAN_KODE = {
   SESI_BERAKHIR: "Sesi berakhir, silakan masuk kembali.",
   TOKEN_RESET_TIDAK_VALID: "Tautan tidak berlaku atau sudah kedaluwarsa.",
   FORMAT_EMAIL_TIDAK_VALID: "Format email tidak valid. Contoh: nama@email.com.",
-  TAUTAN_RESET_TERKIRIM: "Tautan Atur Ulang Password Telah Dikirim",
   GAGAL_KIRIM_TAUTAN: "Gagal mengirim tautan, silakan coba lagi.",
   KONFIRMASI_PASSWORD_KOSONG: "Konfirmasi password wajib diisi.",
   KONFIRMASI_PASSWORD_TIDAK_SAMA: "Konfirmasi password tidak sama.",
