@@ -40,7 +40,7 @@ function KolomIsian({
           onChange={onChange}
           aria-invalid={invalid ? "true" : undefined}
           aria-describedby={describedBy}
-          className={`h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip ${Ikon ? "pl-9" : ""} ${kelasInputTambahan}`}
+          className={`h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks placeholder:text-teks-redup aria-invalid:border-kurang-mirip ${Ikon ? "pl-9" : ""} ${kelasInputTambahan}`}
           {...sisaProps}
         />
         {anak}
