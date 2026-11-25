@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Lock } from "lucide-react";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -128,6 +129,9 @@ function AturUlangPassword() {
             <h1 className="text-2xl font-bold leading-8 text-teks">
               Atur Ulang Password
             </h1>
+            <p className="text-center text-sm leading-5 text-teks-redup">
+              Buat password baru untuk akunmu. Minimal 8 karakter.
+            </p>
           </div>
 
           {tokenTidakSah ? (
@@ -164,6 +168,8 @@ function AturUlangPassword() {
                   id="password_baru"
                   label="Password baru"
                   autoComplete="new-password"
+                  placeholder="Password baru"
+                  Ikon={Lock}
                   value={passwordBaru}
                   onChange={(peristiwa) => {
                     setPasswordBaru(peristiwa.target.value);
@@ -187,6 +193,8 @@ function AturUlangPassword() {
                   id="konfirmasi_password"
                   label="Konfirmasi password"
                   autoComplete="new-password"
+                  placeholder="Ulangi password baru"
+                  Ikon={Lock}
                   value={konfirmasiPassword}
                   onChange={(peristiwa) => {
                     setKonfirmasiPassword(peristiwa.target.value);
