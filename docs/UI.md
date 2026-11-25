@@ -298,27 +298,27 @@ Keadaan: halaman statis, tanpa pemuatan data. Penegasan isi: skor selalu disebut
 
 ### 2. Daftar (`/daftar`)
 
-Kartu di tengah dengan `logo.png`, judul "Daftar" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Buat akun Pengajar untuk mulai mengoreksi jawaban esai." Pengguna yang sudah login dialihkan ke Beranda.
+Kartu di tengah dengan `logo.png`, judul "Daftar" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Buat akun Pengajar untuk mulai mengoreksi jawaban esai." Pengguna yang sudah login dialihkan ke Beranda. Pojok kiri atas kartu (sebelum logo): tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
 
 - Kolom (`KolomIsian`/`KolomPassword`, lihat Komponen bersama):
   - Nama: ikon kiri `user` (`size-4`, `aria-hidden="true"`), placeholder "Nama lengkap".
   - Email: ikon kiri `mail` (`size-4`, `aria-hidden="true"`), placeholder "nama@email.com".
   - Password: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Buat password", dan petunjuk kecil tetap di bawah kolom: "Minimal 8 karakter."
   - Placeholder memakai `placeholder:text-teks-redup` (kontras 7,58 : 1 di atas `bg-permukaan`, memenuhi 4,5 : 1) dan tidak menggantikan label maupun petunjuk di bawah kolom.
-- Tombol "Daftar" (indikator putar selama mengirim, tombol nonaktif). Di bawah kartu: "Sudah punya akun? Masuk", diikuti tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
+- Tombol "Daftar" (indikator putar selama mengirim, tombol nonaktif). Di bawah kartu: "Sudah punya akun? Masuk".
 - Galat tampil tepat di bawah kolomnya masing-masing, bukan di atas form: "Nama wajib diisi.", "Nama maksimal 100 karakter.", "Email wajib diisi.", "Email maksimal 255 karakter.", "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", "Password minimal 8 karakter" (dicek juga di klien sebelum mengirim), "Password maksimal 72 karakter", "Email sudah terdaftar". Batas panjang Nama (100) dan Email (255) dihitung dari nilai mentah (belum di-trim) per code point Unicode, sama seperti batas backend. Mengetik di suatu kolom membersihkan galat kolom itu. Kirim gagal karena validasi memindahkan fokus ke kolom bermasalah pertama (urutan Nama, Email, Password). Banner di atas form (`role="alert"`, `text-kurang-mirip`) hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom.
 - Sukses: arahkan ke `/masuk` dengan pesan "Akun berhasil dibuat, silakan masuk". Tidak ada sesi yang dibuat.
 - Aturan format email (dicek dengan pola yang sama persis seperti backend, menolak titik ganda/berurutan seperti "nama@email..com") berlaku di sini maupun di Masuk dan Lupa Password, karena ketiganya memakai satu `REGEX_EMAIL` bersama di `lib/validasi.js`.
 
 ### 3. Masuk (`/masuk`)
 
-Kartu di tengah dengan `logo.png`, judul "Masuk" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Masuk untuk membuat batch koreksi dan melihat hasilnya." Pengguna yang sudah login dialihkan menurut peran.
+Kartu di tengah dengan `logo.png`, judul "Masuk" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Masuk untuk membuat batch koreksi dan melihat hasilnya." Pengguna yang sudah login dialihkan menurut peran. Pojok kiri atas kartu (sebelum logo): tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
 
 - Kolom (`KolomIsian`/`KolomPassword`, lihat Komponen bersama):
   - Email: ikon kiri `mail` (`size-4`, `aria-hidden="true"`), placeholder "nama@email.com".
   - Password: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Masukkan password".
   - Placeholder memakai `placeholder:text-teks-redup` (kontras >= 4,5 : 1) dan tidak menggantikan label.
-- Tombol "Masuk" (indikator putar). Di bawah kartu: tautan "Belum punya akun? Daftar", diikuti tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
+- Tombol "Masuk" (indikator putar). Di bawah kartu: tautan "Belum punya akun? Daftar".
 - Tautan "Lupa password?" ke `/lupa-password`, rata kanan tepat di bawah kolom Password dan di atas tombol "Masuk".
 - Galat kolom kosong/format: "Email wajib diisi.", "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", tampil tepat di bawah kolomnya, memindahkan fokus ke kolom bermasalah pertama (Email lalu Password), dan hilang saat kolom itu diketik ulang. Kredensial salah (`LOGIN_GAGAL`) sengaja TIDAK diatribusikan ke satu kolom (agar tidak membocorkan apakah email atau password yang salah): kedua kolom diberi tanda tidak valid (garis merah) tanpa teks di bawahnya, dan pesannya hanya tampil sebagai banner di atas form.
 - Pesan di atas form, satu pesan sekali tampil: galat "Email atau password salah" (`LOGIN_GAGAL`), sukses "Akun berhasil dibuat, silakan masuk" (gaya sukses), "Password berhasil diubah, silakan masuk." (gaya sukses), "Sesi berakhir, silakan masuk kembali." (gaya netral, bukan galat).
