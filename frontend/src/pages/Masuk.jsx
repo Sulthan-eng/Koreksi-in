@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Mail, Lock, ArrowLeft } from "lucide-react";
 import * as auth from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { PESAN_KODE } from "../api/pesan.js";
@@ -99,9 +100,20 @@ function Masuk() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-latar px-4 py-6">
       <div className="flex w-full max-w-md flex-col gap-6">
         <section className="flex flex-col gap-6 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+          <Link
+            to="/"
+            className="inline-flex min-h-11 w-fit items-center gap-1.5 self-start text-sm font-semibold text-biru-utama underline"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Kembali ke beranda
+          </Link>
+
           <div className="flex flex-col items-center gap-4">
             <img src="/logo.png" alt="Koreksi-in" className="h-16 w-auto" />
             <h1 className="text-2xl font-bold leading-8 text-teks">Masuk</h1>
+            <p className="text-center text-sm leading-5 text-teks-redup">
+              Masuk untuk membuat batch koreksi dan melihat hasilnya.
+            </p>
           </div>
 
           {varianPesan && (
@@ -123,6 +135,8 @@ function Masuk() {
               label="Email"
               type="email"
               autoComplete="email"
+              placeholder="nama@email.com"
+              Ikon={Mail}
               value={email}
               onChange={(peristiwa) => {
                 setEmail(peristiwa.target.value);
@@ -141,6 +155,8 @@ function Masuk() {
               id="password"
               label="Password"
               autoComplete="current-password"
+              placeholder="Masukkan password"
+              Ikon={Lock}
               value={password}
               onChange={(peristiwa) => {
                 setPassword(peristiwa.target.value);

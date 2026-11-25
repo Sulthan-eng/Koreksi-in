@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { User, Mail, Lock, ArrowLeft } from "lucide-react";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import {
@@ -98,9 +99,20 @@ function Daftar() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-latar px-4 py-6">
       <div className="flex w-full max-w-md flex-col gap-6">
         <section className="flex flex-col gap-6 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+          <Link
+            to="/"
+            className="inline-flex min-h-11 w-fit items-center gap-1.5 self-start text-sm font-semibold text-biru-utama underline"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Kembali ke beranda
+          </Link>
+
           <div className="flex flex-col items-center gap-4">
             <img src="/logo.png" alt="Koreksi-in" className="h-16 w-auto" />
             <h1 className="text-2xl font-bold leading-8 text-teks">Daftar</h1>
+            <p className="text-center text-sm leading-5 text-teks-redup">
+              Buat akun Pengajar untuk mulai mengoreksi jawaban esai.
+            </p>
           </div>
 
           {kesalahanUmum && (
@@ -122,6 +134,8 @@ function Daftar() {
               label="Nama"
               type="text"
               autoComplete="name"
+              placeholder="Nama lengkap"
+              Ikon={User}
               value={nama}
               onChange={(peristiwa) => {
                 setNama(peristiwa.target.value);
@@ -137,6 +151,8 @@ function Daftar() {
               label="Email"
               type="email"
               autoComplete="email"
+              placeholder="nama@email.com"
+              Ikon={Mail}
               value={email}
               onChange={(peristiwa) => {
                 setEmail(peristiwa.target.value);
@@ -153,6 +169,8 @@ function Daftar() {
               id="password"
               label="Password"
               autoComplete="new-password"
+              placeholder="Buat password"
+              Ikon={Lock}
               value={password}
               onChange={(peristiwa) => {
                 setPassword(peristiwa.target.value);
