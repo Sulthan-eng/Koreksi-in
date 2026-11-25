@@ -139,6 +139,14 @@ function LupaPassword() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-latar px-4 py-6">
       <main className="flex w-full max-w-md flex-col gap-6">
         <section className="flex flex-col gap-6 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+          <Link
+            to="/masuk"
+            className="inline-flex min-h-11 w-fit items-center gap-1.5 self-start text-sm font-semibold text-biru-utama underline"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Kembali ke Masuk
+          </Link>
+
           <div className="flex flex-col items-center gap-4">
             <img src="/logo.png" alt="Koreksi-in" className="h-16 w-auto" />
             <h1 className="text-2xl font-bold leading-8 text-teks">
@@ -190,14 +198,6 @@ function LupaPassword() {
               {labelTombolLupaPassword(sisaDetikTersisa)}
             </button>
           </form>
-
-          <Link
-            to="/masuk"
-            className="inline-flex min-h-11 items-center justify-center gap-1.5 font-semibold text-biru-utama underline"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Kembali ke Masuk
-          </Link>
         </section>
       </main>
     </div>

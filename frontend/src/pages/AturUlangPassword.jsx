@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Lock } from "lucide-react";
+import { Lock, ArrowLeft } from "lucide-react";
 import * as auth from "../api/auth.js";
 import { PESAN_KODE } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -124,6 +124,16 @@ function AturUlangPassword() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-latar px-4 py-6">
       <main className="flex w-full max-w-md flex-col gap-6">
         <section className="flex flex-col gap-6 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+          {tokenTidakSah && (
+            <Link
+              to="/lupa-password"
+              className="inline-flex min-h-11 w-fit items-center gap-1.5 self-start text-sm font-semibold text-biru-utama underline"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Lupa Password
+            </Link>
+          )}
+
           <div className="flex flex-col items-center gap-4">
             <img src="/logo.png" alt="Koreksi-in" className="h-16 w-auto" />
             <h1 className="text-2xl font-bold leading-8 text-teks">
@@ -135,19 +145,11 @@ function AturUlangPassword() {
           </div>
 
           {tokenTidakSah ? (
-            <div className="flex flex-col gap-4">
-              <PesanForm
-                varian="galat"
-                pesan={PESAN_KODE.TOKEN_RESET_TIDAK_VALID}
-                kotak
-              />
-              <Link
-                to="/lupa-password"
-                className="inline-flex min-h-11 items-center justify-center font-semibold text-biru-utama underline"
-              >
-                Lupa Password
-              </Link>
-            </div>
+            <PesanForm
+              varian="galat"
+              pesan={PESAN_KODE.TOKEN_RESET_TIDAK_VALID}
+              kotak
+            />
           ) : (
             <>
               {kesalahanUmum && (
