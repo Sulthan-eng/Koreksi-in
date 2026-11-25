@@ -12,10 +12,12 @@ function KolomPassword({
   value,
   onChange,
   autoComplete,
+  placeholder,
   petunjuk,
   galat,
   ariaInvalid,
   ariaDescribedby,
+  Ikon,
 }) {
   const [tampilkan, setTampilkan] = useState(false);
 
@@ -25,10 +27,12 @@ function KolomPassword({
       label={label}
       value={value}
       onChange={onChange}
+      placeholder={placeholder}
       petunjuk={petunjuk}
       galat={galat}
       ariaInvalid={ariaInvalid}
       ariaDescribedby={ariaDescribedby}
+      Ikon={Ikon}
       type={jenisInputPassword(tampilkan)}
       autoComplete={autoComplete}
       autoCapitalize="off"
