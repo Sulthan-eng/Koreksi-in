@@ -9,6 +9,7 @@ function KolomIsian({
   ariaDescribedby,
   kelasInputTambahan = "",
   anak,
+  Ikon,
   ...sisaProps
 }) {
   const invalid = ariaInvalid ?? Boolean(galat);
@@ -27,13 +28,19 @@ function KolomIsian({
         {label}
       </label>
       <div className="relative">
+        {Ikon && (
+          <Ikon
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-teks-redup"
+          />
+        )}
         <input
           id={id}
           value={value}
           onChange={onChange}
           aria-invalid={invalid ? "true" : undefined}
           aria-describedby={describedBy}
-          className={`h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks aria-invalid:border-kurang-mirip ${kelasInputTambahan}`}
+          className={`h-11 w-full rounded-lg border border-garis bg-permukaan px-3 text-teks placeholder:text-teks-redup aria-invalid:border-kurang-mirip ${Ikon ? "pl-9" : ""} ${kelasInputTambahan}`}
           {...sisaProps}
         />
         {anak}
