@@ -53,7 +53,7 @@ Kelas Tailwind yang dihasilkan, misalnya `bg-biru-utama`, `text-teks`, `bg-latar
 | Latar halaman | `bg-latar` |
 | Kartu, tabel, form | `bg-permukaan`, border `border-garis` |
 | Teks utama | `text-teks` |
-| Teks pendukung (keterangan, label kecil) | `text-teks-redup` |
+| Teks pendukung (keterangan, label kecil, placeholder input `placeholder:text-teks-redup`) | `text-teks-redup` |
 | Tombol utama | `bg-biru-utama` dengan teks putih |
 | Tautan dan tab aktif | `text-biru-utama` |
 | Baris atau item terpilih | `bg-biru-muda` |
@@ -101,7 +101,7 @@ Pesan error dan validasi memakai `text-kurang-mirip`.
 
 Berkas ada di `frontend/public/`:
 
-- `logo.png`: logo lengkap (ikon dan tulisan "Koreksi-in"). Dipakai di halaman Masuk dan Daftar.
+- `logo.png`: logo lengkap (ikon dan tulisan "Koreksi-in"). Dipakai di halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password).
 - `logo-ikon.png`: ikon saja. Dipakai di bilah atas aplikasi dan sebagai favicon.
 
 Aturan: jangan mengubah warna, rasio, atau memutar logo. Beri ruang kosong di sekeliling minimal setinggi lingkaran kecil pada ikon. Latar logo harus putih atau `latar`. Tinggi ikon di bilah atas sekitar 40 px.
@@ -165,7 +165,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Tutup menu | `x` | `size-5` | Laci menu (`aria-label` "Tutup menu") |
 | Menu aksi | `ellipsis-vertical` | `size-5` | Titik tiga (`aria-label` berisi nama batch) |
 | Coba Lagi | `rotate-ccw` | `size-4` | File yang Gagal |
-| Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi" |
+| Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi", "Kembali ke beranda" (Masuk, Daftar), "Kembali ke Masuk" (Lupa Password) |
 | Unggah | `upload` | `size-4` | "Upload Jawaban Peserta Didik" |
 | Tambah | `plus` | `size-4` | "Tambah Soal", "Tambah File" |
 | Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" |
@@ -191,6 +191,9 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Ya (tersedia) | `check` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Ya" |
 | Tidak (tidak tersedia) | `x` | `size-4` | Tabel Free dan Pro, selalu berdampingan dengan teks "Tidak" (`x` juga dipakai untuk "Tutup menu", maknanya ditentukan teks di sampingnya atau `aria-label`) |
 | Cari | `search` | `size-4` | Kolom pencarian Akun Pengajar |
+| Kolom Nama | `user` | `size-4` | Ikon kiri di dalam `KolomIsian` Nama (Daftar) |
+| Kolom Email | `mail` | `size-4` | Ikon kiri di dalam `KolomIsian` Email (Masuk, Daftar, Lupa Password) |
+| Kolom Password | `lock` | `size-4` | Ikon kiri di dalam `KolomPassword` (Masuk, Daftar, Atur Ulang Password) |
 
 ### Catatan
 
@@ -218,7 +221,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 6 | Langganan | `/langganan` | Pengajar | FR2, FR19, FR20, UC-10, UC-11 | Status langganan dan masa berlaku, paket Pro, "Upgrade ke Pro", status transaksi | Selesai | Ada |
 | 7 | Dashboard Pantauan | `/admin` | Admin | FR27, UC-18 | Angka jumlah akun (total, Free, Pro), jumlah batch, file jawaban per status, pemakaian kuota API harian | Selesai | Ada |
 | 8 | Akun Pengajar | `/admin/akun-pengajar` | Admin | FR24 sampai FR26, UC-15 sampai UC-17 | Tabel akun, cari, filter, "Ubah Langganan", "Nonaktifkan" atau "Aktifkan" | Selesai | Ada |
-| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan", pesan "Tautan Atur Ulang Password Telah Dikirim" | Selesai | Ada |
+| 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan" (hitung mundur 60 detik "Kirim ulang dalam N detik"), pesan sukses dengan `{email}` dan masa berlaku 30 menit | Selesai | Ada |
 | 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Selesai | Ada |
 
 Halaman 9 dan 10 mengikuti SPEC F-RESET. Halaman Masuk mendapat tautan "Lupa password?". Setelah Keluar, pengguna dialihkan ke Halaman Pemasaran (SPEC bagian 6).
@@ -242,12 +245,12 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 | Menu aksi (titik tiga) | Baris daftar batch di Beranda | Tombol ikon titik tiga yang membuka daftar aksi kecil. Punya nama aksesibel, dapat dioperasikan dengan papan ketik (Enter, Esc, panah), tertutup saat klik di luar. Aksi yang merusak berteks `text-kurang-mirip` dan membuka dialog konfirmasi |
 | Keadaan data | Semua data yang dimuat | Tiga keadaan: memuat (indikator), kosong (teks dari SPEC), gagal (teks dari SPEC) |
 | Pesan sukses dan galat | Semua form | Sukses singkat ("Kunci jawaban tersimpan."), galat memakai `text-kurang-mirip` |
-| Kolom isian | Daftar, Masuk, Atur Ulang Password | Label, input, petunjuk opsional, dan galat opsional tampil tepat di bawah kolom (`KolomIsian`). Varian password (`KolomPassword`) menambah tombol tampilkan/sembunyikan password di dalam kolom, tanpa mengubah label atau posisi petunjuk/galat |
+| Kolom isian | Daftar, Masuk, Lupa Password, Atur Ulang Password | Label, input (`placeholder:text-teks-redup` agar kontras placeholder minimal 4,5 : 1), ikon kiri opsional (`size-4 text-teks-redup`, `aria-hidden="true"`, memberi ruang kiri `pl-9` pada input), petunjuk opsional, dan galat opsional tampil tepat di bawah kolom (`KolomIsian`). Varian password (`KolomPassword`) dapat memakai ikon kiri opsional (mis. `lock`) dan menambah tombol tampilkan/sembunyikan password di sisi kanan dalam kolom (`pr-11`), tanpa mengubah label atau posisi petunjuk/galat |
 
 ## Tata letak
 
 - Bilah atas: ikon logo, nama "Koreksi-in", dan isi menurut peran (lihat Komponen bersama).
-- Halaman Masuk dan Daftar: kartu di tengah dengan `logo.png` di atasnya.
+- Halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password): kartu di tengah dengan `logo.png` di atasnya, tanpa bilah atas.
 - Beranda: judul "Batch Koreksi", tombol "Buat Batch Baru", lalu daftar batch. Tata letak yang lebih kaya (ringkasan, label langganan) ditetapkan di Rancangan halaman.
 - Halaman Batch: judul batch, dua tab (Soal dan Jawaban, Dashboard Hasil Koreksi).
 - Tabel: baris cukup lega, header `text-teks-redup`, teks OCR panjang dipotong dengan opsi tampilkan lengkap.
@@ -295,19 +298,27 @@ Keadaan: halaman statis, tanpa pemuatan data. Penegasan isi: skor selalu disebut
 
 ### 2. Daftar (`/daftar`)
 
-Kartu di tengah dengan `logo.png`, judul "Daftar". Pengguna yang sudah login dialihkan ke Beranda.
+Kartu di tengah dengan `logo.png`, judul "Daftar" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Buat akun Pengajar untuk mulai mengoreksi jawaban esai." Pengguna yang sudah login dialihkan ke Beranda.
 
-- Kolom: Nama, Email, Password (`KolomIsian`/`KolomPassword`, lihat Komponen bersama). Petunjuk kecil di bawah Password: "Minimal 8 karakter." Password memakai tombol tampilkan/sembunyikan.
-- Tombol "Daftar" (indikator putar selama mengirim, tombol nonaktif). Di bawah kartu: "Sudah punya akun? Masuk".
+- Kolom (`KolomIsian`/`KolomPassword`, lihat Komponen bersama):
+  - Nama: ikon kiri `user` (`size-4`, `aria-hidden="true"`), placeholder "Nama lengkap".
+  - Email: ikon kiri `mail` (`size-4`, `aria-hidden="true"`), placeholder "nama@email.com".
+  - Password: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Buat password", dan petunjuk kecil tetap di bawah kolom: "Minimal 8 karakter."
+  - Placeholder memakai `placeholder:text-teks-redup` (kontras 7,58 : 1 di atas `bg-permukaan`, memenuhi 4,5 : 1) dan tidak menggantikan label maupun petunjuk di bawah kolom.
+- Tombol "Daftar" (indikator putar selama mengirim, tombol nonaktif). Di bawah kartu: "Sudah punya akun? Masuk", diikuti tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
 - Galat tampil tepat di bawah kolomnya masing-masing, bukan di atas form: "Nama wajib diisi.", "Nama maksimal 100 karakter.", "Email wajib diisi.", "Email maksimal 255 karakter.", "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", "Password minimal 8 karakter" (dicek juga di klien sebelum mengirim), "Password maksimal 72 karakter", "Email sudah terdaftar". Batas panjang Nama (100) dan Email (255) dihitung dari nilai mentah (belum di-trim) per code point Unicode, sama seperti batas backend. Mengetik di suatu kolom membersihkan galat kolom itu. Kirim gagal karena validasi memindahkan fokus ke kolom bermasalah pertama (urutan Nama, Email, Password). Banner di atas form (`role="alert"`, `text-kurang-mirip`) hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom.
 - Sukses: arahkan ke `/masuk` dengan pesan "Akun berhasil dibuat, silakan masuk". Tidak ada sesi yang dibuat.
 - Aturan format email (dicek dengan pola yang sama persis seperti backend, menolak titik ganda/berurutan seperti "nama@email..com") berlaku di sini maupun di Masuk dan Lupa Password, karena ketiganya memakai satu `REGEX_EMAIL` bersama di `lib/validasi.js`.
 
 ### 3. Masuk (`/masuk`)
 
-Kartu di tengah dengan `logo.png`, judul "Masuk". Pengguna yang sudah login dialihkan menurut peran.
+Kartu di tengah dengan `logo.png`, judul "Masuk" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Masuk untuk membuat batch koreksi dan melihat hasilnya." Pengguna yang sudah login dialihkan menurut peran.
 
-- Kolom: Email, Password (`KolomIsian`/`KolomPassword`, lihat Komponen bersama; Password memakai tombol tampilkan/sembunyikan). Tombol "Masuk" (indikator putar). Tautan "Belum punya akun? Daftar".
+- Kolom (`KolomIsian`/`KolomPassword`, lihat Komponen bersama):
+  - Email: ikon kiri `mail` (`size-4`, `aria-hidden="true"`), placeholder "nama@email.com".
+  - Password: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Masukkan password".
+  - Placeholder memakai `placeholder:text-teks-redup` (kontras >= 4,5 : 1) dan tidak menggantikan label.
+- Tombol "Masuk" (indikator putar). Di bawah kartu: tautan "Belum punya akun? Daftar", diikuti tautan "Kembali ke beranda" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/`).
 - Tautan "Lupa password?" ke `/lupa-password`, rata kanan tepat di bawah kolom Password dan di atas tombol "Masuk".
 - Galat kolom kosong/format: "Email wajib diisi.", "Format email tidak valid. Contoh: nama@email.com.", "Password wajib diisi.", tampil tepat di bawah kolomnya, memindahkan fokus ke kolom bermasalah pertama (Email lalu Password), dan hilang saat kolom itu diketik ulang. Kredensial salah (`LOGIN_GAGAL`) sengaja TIDAK diatribusikan ke satu kolom (agar tidak membocorkan apakah email atau password yang salah): kedua kolom diberi tanda tidak valid (garis merah) tanpa teks di bawahnya, dan pesannya hanya tampil sebagai banner di atas form.
 - Pesan di atas form, satu pesan sekali tampil: galat "Email atau password salah" (`LOGIN_GAGAL`), sukses "Akun berhasil dibuat, silakan masuk" (gaya sukses), "Password berhasil diubah, silakan masuk." (gaya sukses), "Sesi berakhir, silakan masuk kembali." (gaya netral, bukan galat).
@@ -455,17 +466,36 @@ Hanya angka agregat, tanpa isi kunci, jawaban, atau hasil koreksi. Tata letak ha
 
 ### 9. Lupa Password (`/lupa-password`, publik)
 
-Kartu di tengah dengan `logo.png`, judul "Lupa Password", tanpa bilah atas. Dibungkus `RouteTamu` sehingga pengguna yang sudah login dialihkan ke Beranda.
-- Kolom Email, tombol "Kirim Tautan" (indikator putar, `aria-disabled` selama mengirim), tautan kembali "Kembali ke Masuk" di bawah form.
-- Format email tidak valid: "Format email tidak valid. Contoh: nama@email.com." di bawah kolom, tanpa permintaan terkirim.
-- Setelah dikirim, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak): "Tautan Atur Ulang Password Telah Dikirim" (kotak sukses di atas form, `role="status"`). Halaman TIDAK BOLEH membedakan hasilnya. Form tetap tampil setelah pesan sukses.
-- Gagal mengirim karena galat server atau koneksi terputus: "Gagal mengirim tautan, silakan coba lagi." (kotak galat di atas form, `role="alert"`). Pesan lama dibersihkan saat submit berikutnya, dan galat serta sukses tidak pernah tampil bersamaan.
+Kartu di tengah dengan `logo.png`, judul "Lupa Password" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Masukkan email akunmu. Jika terdaftar, kami kirim tautan untuk mengatur ulang password." Tanpa bilah atas. Dibungkus `RouteTamu` sehingga pengguna yang sudah login dialihkan ke Beranda.
+
+- Kolom Email memakai `KolomIsian` dengan ikon kiri `mail` (`size-4`, `aria-hidden="true"`) dan placeholder "nama@email.com" (`placeholder:text-teks-redup`, kontras >= 4,5 : 1, tidak menggantikan label).
+- Tombol submit berlabel normal "Kirim Tautan" (indikator putar dan `aria-disabled="true"` selama mengirim). Tautan kembali di bawah form cukup tetap "Kembali ke Masuk" (ikon `arrow-left` `size-4`, `aria-hidden="true"`, ke `/masuk`), tanpa tautan "Kembali ke beranda".
+- Format email tidak valid (kosong atau tidak sesuai `REGEX_EMAIL`): tampilkan "Format email tidak valid. Contoh: nama@email.com." tepat di bawah kolom Email, pindahkan fokus ke kolom Email, tanpa permintaan terkirim dan tanpa memulai hitungan mundur. Mengetik di kolom Email membersihkan galat kolom itu.
+- Setelah permintaan sukses, apa pun hasilnya (email terdaftar atau tidak, akun aktif atau tidak, atau sedang dalam jeda 60 detik di server — U12):
+  - Tampilkan kotak pesan sukses di atas form (`role="status"`): "Jika email terdaftar, tautan atur ulang password telah dikirim ke {email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit." (`{email}` adalah alamat email yang sudah di-trim saat dikirim). Tampil sama untuk semua email agar tidak membocorkan apakah email terdaftar.
+  - Kolom Email tetap terisi dan tetap bisa diedit (tidak memakai `disabled` atau `readOnly`).
+  - Tombol submit memakai `aria-disabled="true"` selama 60 detik dengan label "Kirim ulang dalam N detik" (`N` berjalan dari 60 turun ke 1). Selama hitungan mundur aktif (maupun selama permintaan sedang dikirim), baik klik pada tombol maupun handler `onSubmit` form HARUS mengabaikan pengiriman (menekan Enter di kolom Email tidak boleh mengirim form).
+  - Hitungan mundur berjalan murni di klien sebagai bantuan tampilan dan muncul untuk semua email, bukan hanya yang terdaftar; server tetap menegakkan batas jeda 60 detik per akun secara independen (U12).
+  - Hitungan mundur tidak diumumkan tiap detik ke pembaca layar (teks tombol tidak diberi `aria-live`; pembaca layar hanya menerima satu pengumuman saat keadaan sukses dimulai lewat kotak pesan sukses `role="status"`).
+  - Persistensi hitungan mundur saat muat ulang halaman: saat permintaan sukses (untuk semua email, terdaftar atau tidak), simpan `{email, waktuBerakhir}` di `sessionStorage`. Saat halaman dibuka atau dimuat ulang dan `waktuBerakhir` belum lewat, pulihkan keadaan sukses: kolom Email terisi `email` tersebut, kotak pesan sukses tampil, dan hitungan mundur lanjut dari sisa detik (sisa detik dibatasi pada rentang `0..60`). Bila `waktuBerakhir` sudah lewat (atau data tidak valid), hapus data dari `sessionStorage` dan tampilkan keadaan awal. Seluruh akses `sessionStorage` (baca, tulis, hapus) dibungkus `try/catch` dan boleh gagal tanpa merusak halaman.
+  - Mengubah isi kolom Email langsung menghapus data tersimpan di `sessionStorage`, menghentikan hitungan mundur, menyembunyikan pesan sukses, dan mengaktifkan tombol kembali ke "Kirim Tautan".
+- Gagal mengirim karena galat server atau koneksi terputus: tampilkan "Gagal mengirim tautan, silakan coba lagi." (kotak galat di atas form, `role="alert"`), tanpa memulai hitungan mundur dan tanpa menyimpan ke `sessionStorage`. Pesan lama dibersihkan saat submit berikutnya, dan galat serta sukses tidak pernah tampil bersamaan.
+- Status keadaan halaman:
+  - **Awal:** kolom Email kosong (placeholder "nama@email.com") dan dapat diedit, tidak ada banner pesan, tombol "Kirim Tautan" aktif.
+  - **Sukses dengan hitungan:** kotak pesan sukses "Jika email terdaftar, tautan atur ulang password telah dikirim ke {email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit." tampil di atas form (satu pengumuman saat mulai), kolom Email tetap terisi dan bisa diedit, tombol `aria-disabled="true"` dengan label "Kirim ulang dalam N detik" (`N` = 60..1, klik tombol dan submit form/Enter diabaikan), dan `{email, waktuBerakhir}` tersimpan di `sessionStorage` (dipulihkan dengan sisa detik dibatasi `0..60` bila halaman dimuat ulang sebelum waktu berakhir).
+  - **Hitungan habis:** saat waktu berakhir tercapai (`N` mencapai 0), data di `sessionStorage` dihapus, tombol kembali aktif dengan label "Kirim Tautan" (`aria-disabled` dilepas), sedangkan pesan sukses dan isi kolom Email tetap tampil sampai pengguna mengirim ulang atau mengubah email.
+  - **Email diubah:** saat pengguna mengubah isi kolom Email (baik saat hitungan mundur masih berjalan maupun setelah hitungan habis), data di `sessionStorage` dihapus, hitungan mundur dihentikan, pesan sukses disembunyikan, dan tombol langsung aktif dengan label "Kirim Tautan".
+  - **Gagal:** saat pengiriman gagal (jaringan/galat server), tampil kotak galat "Gagal mengirim tautan, silakan coba lagi." (`role="alert"`) di atas form (atau galat format di bawah kolom Email bila gagal validasi), tidak ada hitungan mundur, dan tombol aktif dengan label "Kirim Tautan".
 
 ### 10. Atur Ulang Password (`/atur-ulang-password?token=...`, publik)
 
-Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas. Rute ini TIDAK dibungkus `RouteTamu` supaya tautan dari email tetap bekerja di browser yang masih memiliki sesi login.
+Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password" (TANPA label kecil di atas judul), dan deskripsi tepat di bawah judul (`text-sm leading-5 text-teks-redup`): "Buat password baru untuk akunmu. Minimal 8 karakter." Tanpa bilah atas, dan tanpa tautan "Kembali ke beranda" maupun "Kembali ke Masuk". Rute ini TIDAK dibungkus `RouteTamu` supaya tautan dari email tetap bekerja di browser yang masih memiliki sesi login.
 - Token dibaca sekali dari query `?token=...` ke state saat inisialisasi (aman terhadap `StrictMode`) lalu langsung dihapus dari URL lewat `navigate(pathname, { replace: true })` sehingga bilah alamat menjadi `/atur-ulang-password` saja; `<meta name="referrer" content="no-referrer">` dipasang di `index.html`, dan token tidak pernah ditulis ke log, `console`, atau storage. Konsekuensi yang diterima: memuat ulang halaman membuat tautan tampil tidak berlaku.
-- Kolom Password baru dan Konfirmasi password, tombol "Simpan Password" (indikator putar, `aria-disabled` selama mengirim).
+- Kolom (`KolomPassword`, lihat Komponen bersama):
+  - Password baru: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Password baru". Tidak ada petunjuk terpisah di bawah kolom karena aturan minimal 8 karakter sudah tertulis pada deskripsi di bawah judul.
+  - Konfirmasi password: ikon kiri `lock` (`size-4`, `aria-hidden="true"`), tombol tampilkan/sembunyikan di kanan, placeholder "Ulangi password baru". Tidak ada petunjuk di bawah kolom.
+  - Placeholder memakai `placeholder:text-teks-redup` (kontras >= 4,5 : 1) dan tidak menggantikan label.
+- Tombol "Simpan Password" (indikator putar, `aria-disabled` selama mengirim).
 - Galat kolom tampil tepat di bawah kolomnya (`role="alert"`): password baru kosong → "Password wajib diisi."; password baru kurang dari 8 byte atau lebih dari 72 byte UTF-8 → "Password minimal 8 karakter" atau "Password maksimal 72 karakter"; konfirmasi kosong → "Konfirmasi password wajib diisi."; konfirmasi tidak sama dengan password baru (hanya diperiksa bila password baru sudah diisi) → "Konfirmasi password tidak sama.". Semua pemeriksaan kolom berjalan sekaligus saat submit; fokus pindah ke kolom bermasalah pertama (Password baru lalu Konfirmasi password), dan mengetik di kolom password baru membersihkan galat kedua kolom sementara mengetik di konfirmasi membersihkan galat konfirmasi. Galat panjang password dari server (`PASSWORD_TERLALU_PENDEK`/`PASSWORD_TERLALU_PANJANG`) juga tampil di bawah kolom password baru. Banner di atas form hanya untuk galat umum, misalnya "Gagal mengubah password, silakan coba lagi."
 - Tanpa token di URL (atau token kosong), atau bila token kedaluwarsa, sudah dipakai, atau tidak sah (`TOKEN_RESET_TIDAK_VALID`): halaman menampilkan kotak galat "Tautan tidak berlaku atau sudah kedaluwarsa." dan tautan "Lupa Password" untuk meminta tautan baru (ke `/lupa-password`), tanpa form.
 - Sukses (`204`): jika browser masih memiliki sesi login (`status === "terautentikasi"`), panggil `keluar()` terlebih dahulu (dibungkus `try/catch` yang mengabaikan kegagalan agar tidak menghalangi navigasi), lalu arahkan ke `/masuk` dengan pesan "Password berhasil diubah, silakan masuk."
@@ -474,7 +504,7 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas
 
 1. Tombol "Upgrade ke Pro" dan pesan "batch tidak terbatas" memakai Bahasa Indonesia (SPEC sudah disesuaikan).
 2. Akun Pro yang masih berlaku boleh membeli paket lagi. Masa berlaku baru dihitung dari masa berlaku saat ini (SPEC F-LANGGANAN). Tombol berlabel "Perpanjang Pro" untuk akun itu (label usulan).
-3. Kolom kosong atau tidak valid di Daftar, Masuk, dan Atur Ulang Password menampilkan pesan spesifik tepat di bawah kolomnya masing-masing (lewat komponen `KolomIsian`/`KolomPassword`), bukan lagi pesan generik "Data yang dikirim tidak valid." di atas form (keputusan lama pada poin ini, diganti 23 November 2026). Banner di atas form hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom, contohnya `LOGIN_GAGAL` yang sengaja ambigu agar tidak membocorkan apakah email atau password yang salah, atau galat umum saat mengubah password.
+3. Kolom kosong atau tidak valid di Daftar, Masuk, Lupa Password, dan Atur Ulang Password menampilkan pesan spesifik tepat di bawah kolomnya masing-masing (lewat komponen `KolomIsian`/`KolomPassword`), bukan lagi pesan generik "Data yang dikirim tidak valid." di atas form (keputusan lama pada poin ini, diganti 23 November 2026). Banner di atas form hanya dipakai untuk galat yang tidak bisa diatribusikan ke satu kolom, contohnya `LOGIN_GAGAL` yang sengaja ambigu agar tidak membocorkan apakah email atau password yang salah, atau galat umum saat mengirim tautan / mengubah password.
 4. Teks yang bertanda "(usulan)" dan label kecil di luar daftar pesan SPEC disetujui untuk sementara. Perancang TIDAK BOLEH menambah teks baru di luar itu; perubahan teks lewat pemilik proyek.
 5. Akun nonaktif yang mencoba masuk (SPEC U6) memakai pesan generik "Email atau password salah".
 6. Halaman Batch tetap halaman tersendiri di `/batch/:id_batch`, bukan item navbar. Navbar Pengajar tetap memakai menu "Beranda" (menyala saat di Halaman Batch) dan "Langganan"; Halaman Batch dibuka dari daftar batch di Beranda.
@@ -490,5 +520,10 @@ Kartu di tengah dengan `logo.png`, judul "Atur Ulang Password", tanpa bilah atas
 12. Tabel Free dan Pro di Pemasaran tetap tabel di semua lebar tanpa gulir horizontal (pengecualian dari aturan tabel menjadi kartu di bawah 1024 px).
 13. Garis hijau pendek di atas judul hanya dipakai di Pemasaran. Halaman aplikasi (termasuk Dashboard Pantauan) tidak memakainya.
 14. Teks OCR di Dashboard Hasil Koreksi: tautan "Tampilkan lengkap" berganti menjadi "Tampilkan ringkas" setelah teks dibuka (pilihan pemilik proyek, 1 November 2026)
-15. Halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) tidak memakai bilah atas; hanya kartu di tengah layar dengan logo, seperti referensi situs lain (pilihan pemilik proyek, 2 November 2026). Mockup Masuk dan Daftar yang masih menampilkan bilah atas varian Publik diabaikan; varian Publik hanya dipakai di Pemasaran.
-16. Bilah atas Pemasaran menempel di atas dan memuat tiga tautan jangkar yang menggulir ke seksi "Cara kerja", "Fitur utama", dan "Free dan Pro", mengikuti situs referensi (pilihan pemilik proyek, 2 November 2026). Label memakai judul seksi yang sudah ada; mockup Pemasaran belum menampilkannya, jadi UI.md yang diikuti..
+15. Halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password):
+    - Tidak memakai bilah atas dan tidak memakai label kecil di atas judul; hanya kartu di tengah layar dengan `logo.png`, judul, dan deskripsi singkat satu kalimat tepat di bawah judul (`text-sm leading-5 text-teks-redup`), seperti referensi situs lain (pilihan pemilik proyek, 2 dan 25 November 2026). Mockup Masuk dan Daftar yang masih menampilkan bilah atas varian Publik diabaikan; varian Publik hanya dipakai di Pemasaran.
+    - Deskripsi di bawah judul: Masuk "Masuk untuk membuat batch koreksi dan melihat hasilnya."; Daftar "Buat akun Pengajar untuk mulai mengoreksi jawaban esai."; Lupa Password "Masukkan email akunmu. Jika terdaftar, kami kirim tautan untuk mengatur ulang password."; Atur Ulang Password "Buat password baru untuk akunmu. Minimal 8 karakter."
+    - Semua kolom memakai `KolomIsian`/`KolomPassword` dengan ikon dekoratif di kiri dalam kolom (`user` untuk Nama, `mail` untuk Email, `lock` untuk Password; `size-4`, `aria-hidden="true"`; tombol mata pada password tetap di kanan) dan placeholder dengan kontras minimal 4,5 : 1 (`placeholder:text-teks-redup`, tidak menggantikan label): Nama "Nama lengkap", Email "nama@email.com", Password Masuk "Masukkan password", Password Daftar "Buat password" (petunjuk "Minimal 8 karakter." di bawah kolom tetap ada), Password baru "Password baru", Konfirmasi password "Ulangi password baru" (Atur Ulang Password tanpa petunjuk terpisah di bawah kolom).
+    - Navigasi di bawah kartu: Masuk dan Daftar memiliki tautan "Kembali ke beranda" (ikon `arrow-left`, ke `/`); Lupa Password cukup tetap "Kembali ke Masuk" (ikon `arrow-left`, ke `/masuk`); Atur Ulang Password tanpa tautan kembali.
+    - Lupa Password setelah sukses menampilkan pesan "Jika email terdaftar, tautan atur ulang password telah dikirim ke {email}. Periksa kotak masuk dan folder spam. Tautan berlaku 30 menit." (sama untuk semua email, U12) dengan hitungan mundur klien 60 detik pada tombol ("Kirim ulang dalam N detik", `aria-disabled="true"`, klik tombol dan submit form/Enter diabaikan, bertahan saat muat ulang lewat `sessionStorage` dengan batas `0..60` detik dan `try/catch`, tanpa pengumuman tiap detik ke pembaca layar), sementara kolom Email tetap terisi dan bila diubah langsung menghentikan hitungan mundur, menghapus data `sessionStorage`, menyembunyikan pesan sukses, serta mengaktifkan kembali tombol "Kirim Tautan".
+16. Bilah atas Pemasaran menempel di atas dan memuat tiga tautan jangkar yang menggulir ke seksi "Cara kerja", "Fitur utama", dan "Free dan Pro", mengikuti situs referensi (pilihan pemilik proyek, 2 November 2026). Label memakai judul seksi yang sudah ada; mockup Pemasaran belum menampilkannya, jadi UI.md yang diikuti.
