@@ -196,6 +196,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Kolom Email | `mail` | `size-4` | Ikon kiri di dalam `KolomIsian` Email (Masuk, Daftar, Lupa Password) |
 | Kolom Password | `lock` | `size-4` | Ikon kiri di dalam `KolomPassword` (Masuk, Daftar, Atur Ulang Password) |
 | Halaman tidak ditemukan / keadaan kosong | `search-x` | `size-6` | Halaman 404 (`size-6` adalah ukuran baru untuk ilustrasi keadaan kosong pada halaman 404) |
+| Hubungi Admin via WhatsApp | `message-circle` | `size-4` | Tombol "Hubungi Admin via WhatsApp" di halaman Langganan |
 
 ### Catatan
 
