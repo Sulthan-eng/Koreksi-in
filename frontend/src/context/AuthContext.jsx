@@ -29,6 +29,7 @@ function normalisasiMasaBerlakuPro(nilai, statusLangganan) {
 export function AuthProvider({ children }) {
   const [status, setStatus] = useState("memuat");
   const [nama, setNama] = useState(null);
+  const [email, setEmail] = useState(null);
   const [statusLangganan, setStatusLangganan] = useState(null);
   const [masaBerlakuPro, setMasaBerlakuPro] = useState(null);
   const [peran, setPeran] = useState("pengajar");
@@ -41,6 +42,7 @@ export function AuthProvider({ children }) {
       setKeluarSengaja(false);
       setPesanSesi(pesanUntukKode("SESI_BERAKHIR"));
       setNama(null);
+      setEmail(null);
       setStatusLangganan(null);
       setMasaBerlakuPro(null);
       setPeran("pengajar");
@@ -62,6 +64,7 @@ export function AuthProvider({ children }) {
         const hasil = await auth.saya();
         const langganan = normalisasiStatusLangganan(hasil.status_langganan);
         setNama(hasil.nama);
+        setEmail(hasil.email);
         setStatusLangganan(langganan);
         setMasaBerlakuPro(
           normalisasiMasaBerlakuPro(hasil.masa_berlaku_pro, langganan),
@@ -79,10 +82,12 @@ export function AuthProvider({ children }) {
     statusLanggananPengguna,
     peranPengguna,
     masaBerlakuProPengguna = null,
+    emailPengguna = null,
   ) {
     const langganan = normalisasiStatusLangganan(statusLanggananPengguna);
     setKeluarSengaja(false);
     setNama(namaPengguna);
+    setEmail(emailPengguna);
     setStatusLangganan(langganan);
     setMasaBerlakuPro(
       normalisasiMasaBerlakuPro(masaBerlakuProPengguna, langganan),
@@ -98,6 +103,9 @@ export function AuthProvider({ children }) {
         const langganan = normalisasiStatusLangganan(hasil.status_langganan);
         if (hasil.nama) {
           setNama(hasil.nama);
+        }
+        if (hasil.email) {
+          setEmail(hasil.email);
         }
         if (langganan !== null || !pertahankanSaatGagal) {
           setStatusLangganan(langganan);
@@ -124,6 +132,7 @@ export function AuthProvider({ children }) {
     } finally {
       setKeluarSengaja(true);
       setNama(null);
+      setEmail(null);
       setStatusLangganan(null);
       setMasaBerlakuPro(null);
       setPeran("pengajar");
@@ -136,6 +145,7 @@ export function AuthProvider({ children }) {
       value={{
         status,
         nama,
+        email,
         statusLangganan,
         masaBerlakuPro,
         peran,
