@@ -54,7 +54,11 @@ function dapatkanDaftarMenu(varian, pathname) {
   return [];
 }
 
-function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
+function BilahAtas({
+  varian = "pengajar",
+  seksiAktif = null,
+  onPilihSeksi = null,
+}) {
   const { nama, statusLangganan, keluar } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -92,6 +96,7 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
     const elemen = document.getElementById(idSeksi);
     if (!elemen) return;
     peristiwa.preventDefault();
+    onPilihSeksi?.(idSeksi);
     const gerakKurang = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
