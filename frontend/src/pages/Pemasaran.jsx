@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   ArrowDown,
@@ -51,6 +51,19 @@ const KELAS_KARTU_FITUR =
 function Pemasaran() {
   const [seksiAktif, setSeksiAktif] = useState(null);
   const { hash } = useLocation();
+  const sedangGulirKeSeksiRef = useRef(false);
+  const timerGulirRef = useRef(null);
+
+  function pilihSeksi(idSeksi) {
+    setSeksiAktif(idSeksi);
+    sedangGulirKeSeksiRef.current = true;
+    if (timerGulirRef.current) {
+      window.clearTimeout(timerGulirRef.current);
+    }
+    timerGulirRef.current = window.setTimeout(() => {
+      sedangGulirKeSeksiRef.current = false;
+    }, 700);
+  }
 
   useEffect(() => {
     const sedangBerpotongan = new Set();
@@ -64,16 +77,12 @@ function Pemasaran() {
           }
         });
 
-        const masuk = entri.find((item) => item.isIntersecting);
-        if (masuk) {
-          setSeksiAktif(masuk.target.id);
-        } else if (sedangBerpotongan.size === 0) {
-          setSeksiAktif(null);
-        } else {
-          setSeksiAktif([...sedangBerpotongan].at(-1));
-        }
+        if (sedangGulirKeSeksiRef.current) return;
+
+        const aktif = ID_SEKSI.find((id) => sedangBerpotongan.has(id)) ?? null;
+        setSeksiAktif(aktif);
       },
-      { rootMargin: "-40% 0px -55% 0px" },
+      { rootMargin: "-10% 0px -70% 0px" },
     );
 
     ID_SEKSI.forEach((id) => {
@@ -81,7 +90,12 @@ function Pemasaran() {
       if (elemen) pengamat.observe(elemen);
     });
 
-    return () => pengamat.disconnect();
+    return () => {
+      pengamat.disconnect();
+      if (timerGulirRef.current) {
+        window.clearTimeout(timerGulirRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -100,7 +114,11 @@ function Pemasaran() {
 
   return (
     <div className="min-h-screen bg-latar text-teks">
-      <BilahAtas varian="publik" seksiAktif={seksiAktif} />
+      <BilahAtas
+        varian="publik"
+        seksiAktif={seksiAktif}
+        onPilihSeksi={pilihSeksi}
+      />
 
       <main>
         <section className="bg-latar">
@@ -130,7 +148,7 @@ function Pemasaran() {
 
             <div
               aria-hidden="true"
-              className="flex w-full min-w-0 flex-col items-center gap-3"
+              className="mx-auto flex w-full max-w-md min-w-0 flex-col items-center gap-3 lg:max-w-none"
             >
               <div className="w-full rounded-xl border border-garis bg-permukaan p-4 shadow-sm">
                 <p className="text-sm font-semibold leading-5 text-teks-redup">
@@ -148,7 +166,7 @@ function Pemasaran() {
                 </p>
                 <svg
                   viewBox="0 0 320 165"
-                  className="block h-auto w-full"
+                  className="mx-auto block h-auto w-full max-w-sm"
                   fill="none"
                   strokeLinecap="round"
                   aria-hidden="true"
@@ -163,24 +181,24 @@ function Pemasaran() {
                     <line x1="16" x2="304" y1="120" y2="120" />
                     <line x1="16" x2="304" y1="150" y2="150" />
                     <line
-                      x1="44"
-                      x2="44"
+                      x1="36"
+                      x2="36"
                       y1="0"
                       y2="165"
                       className="text-merek-hijau"
                     />
                   </g>
-                  <g className="text-teks" fill="currentColor" fontSize="12">
-                    <text x="52" y="54">
+                  <g className="text-teks" fill="currentColor" fontSize="11.5">
+                    <text x="44" y="54">
                       Andi Pratama
                     </text>
-                    <text x="52" y="84">
+                    <text x="44" y="84">
                       Fotosintesis adalah proses tumbuhan
                     </text>
-                    <text x="52" y="114">
+                    <text x="44" y="114">
                       membuat makanan dengan bantuan cahaya.
                     </text>
-                    <text x="52" y="144">
+                    <text x="44" y="144">
                       Hasilnya glukosa dan oksigen.
                     </text>
                   </g>
