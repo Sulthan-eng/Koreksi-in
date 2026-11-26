@@ -30,7 +30,9 @@ function KartuAngka({
           </span>
         )}
       </div>
-      <p className={`text-3xl font-bold leading-9 ${kelasNilai}`.trim()}>
+      <p
+        className={`mt-auto text-3xl font-bold leading-9 ${kelasNilai}`.trim()}
+      >
         {nilai}
       </p>
     </div>

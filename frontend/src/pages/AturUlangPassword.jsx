@@ -141,7 +141,7 @@ function AturUlangPassword() {
             </h1>
             {!tokenTidakSah && (
               <p className="text-center text-sm leading-5 text-teks-redup">
-                Buat password baru untuk akunmu. Minimal 8 karakter.
+                Buat password baru untuk akun Anda. Minimal 8 karakter.
               </p>
             )}
           </div>
