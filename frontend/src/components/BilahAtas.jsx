@@ -182,6 +182,17 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
   return (
     <>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-garis bg-permukaan px-4 py-3 text-teks">
+        <button
+          ref={tombolBukaRef}
+          type="button"
+          aria-label="Buka menu"
+          aria-expanded={laciTerbuka}
+          onClick={bukaLaci}
+          className="inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks lg:hidden"
+        >
+          <Menu aria-hidden="true" className="size-5" />
+        </button>
+
         <img src="/logo-ikon.png" alt="" className="h-10 w-auto" />
         <span className="text-lg font-bold">Koreksi-in</span>
 
@@ -217,17 +228,6 @@ function BilahAtas({ varian = "pengajar", seksiAktif = null }) {
             Keluar
           </button>
         </div>
-
-        <button
-          ref={tombolBukaRef}
-          type="button"
-          aria-label="Buka menu"
-          aria-expanded={laciTerbuka}
-          onClick={bukaLaci}
-          className="ml-auto inline-flex size-11 items-center justify-center rounded-lg border border-garis bg-permukaan text-teks lg:hidden"
-        >
-          <Menu aria-hidden="true" className="size-5" />
-        </button>
       </header>
 
       <dialog
