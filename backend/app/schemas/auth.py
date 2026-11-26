@@ -57,6 +57,7 @@ class TokenResponse(BaseModel):
 
 class SayaResponse(BaseModel):
     nama: str
+    email: str
     status_langganan: StatusLangganan
     masa_berlaku_pro: datetime | None = None
     peran: Peran

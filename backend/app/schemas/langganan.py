@@ -17,6 +17,7 @@ class BuatTransaksiResponse(BaseModel):
 
 class TransaksiResponse(BaseModel):
     id_transaksi: uuid.UUID
+    id_order: str
     paket: PaketLangganan
     nominal: int
     status: StatusTransaksi

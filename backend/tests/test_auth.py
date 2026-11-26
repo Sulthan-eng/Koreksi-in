@@ -351,6 +351,7 @@ async def test_saya_dengan_token_valid(client: AsyncClient) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "nama": "Budi Santoso",
+        "email": "budi@contoh.com",
         "status_langganan": "free",
         "masa_berlaku_pro": None,
         "peran": "pengajar",
@@ -374,6 +375,7 @@ async def test_saya_mengembalikan_status_langganan_pro(
     assert response.status_code == 200
     body = response.json()
     assert body["nama"] == "Budi Santoso"
+    assert body["email"] == "budi@contoh.com"
     assert body["status_langganan"] == "pro"
     assert body["peran"] == "pengajar"
     assert datetime.fromisoformat(body["masa_berlaku_pro"]) == batas_pro
@@ -431,6 +433,7 @@ async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
     assert response.status_code == 200
     assert response.json() == {
         "nama": "Budi Santoso",
+        "email": "budi@contoh.com",
         "status_langganan": "free",
         "masa_berlaku_pro": None,
         "peran": "pengajar",
