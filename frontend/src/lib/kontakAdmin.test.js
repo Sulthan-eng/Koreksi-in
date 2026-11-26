@@ -18,9 +18,13 @@ describe("buatPesanKendalaPembayaran", () => {
         id_order: "KRS-abc123",
       },
     });
+    const baris = pesan.split("\n");
 
-    assert.equal(
-      pesan,
+    // Format jam dari Intl id-ID (kata "pukul", pemisah jam) bisa berbeda
+    // antar versi ICU/Node, jadi baris ini dicek dengan pola toleran,
+    // sedangkan baris lain tetap dibandingkan persis termasuk urutannya.
+    assert.deepEqual(
+      [baris[0], baris[1], baris[2], baris[3], baris[4], baris[5], baris[7]],
       [
         "Halo Admin Koreksi-in, saya mengalami kendala pembayaran.",
         "Nama: Budi Santoso",
@@ -28,9 +32,13 @@ describe("buatPesanKendalaPembayaran", () => {
         "Paket: 1 bulan (30 hari), Rp 30.000",
         "Nominal: Rp 30.000",
         "Status: Menunggu",
-        "Waktu transaksi: 27 November 2026 pukul 12.30 WIB",
         "Order ID: KRS-abc123",
-      ].join("\n"),
+      ],
+    );
+    assert.equal(baris.length, 8);
+    assert.match(
+      baris[6],
+      /^Waktu transaksi: 27 November 2026 (pukul )?12[.:]30 WIB$/,
     );
   });
 
