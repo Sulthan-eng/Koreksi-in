@@ -20,7 +20,7 @@ const CONTOH_HASIL_KOREKSI = [
   },
   {
     nama: "Citra Dewi",
-    skor: 48,
+    skor: 32,
     kategori: "Kurang Mirip",
     kelasKategori: "bg-kurang-mirip-latar text-kurang-mirip",
   },

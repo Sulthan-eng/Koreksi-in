@@ -153,7 +153,7 @@ function LupaPassword() {
               Lupa Password
             </h1>
             <p className="text-center text-sm leading-5 text-teks-redup">
-              Masukkan email akunmu. Jika terdaftar, kami kirim tautan untuk
+              Masukkan email akun Anda. Jika terdaftar, kami kirim tautan untuk
               mengatur ulang password.
             </p>
           </div>

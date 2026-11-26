@@ -20,6 +20,7 @@ import HalamanBatch from "./pages/HalamanBatch.jsx";
 import Langganan from "./pages/Langganan.jsx";
 import DashboardPantauan from "./pages/DashboardPantauan.jsx";
 import AkunPengajar from "./pages/AkunPengajar.jsx";
+import HalamanTidakDitemukan from "./pages/HalamanTidakDitemukan.jsx";
 
 function RouteTamu({ children }) {
   const { status, peran } = useAuth();
@@ -91,6 +92,7 @@ const rute = createRoutesFromElements(
       <Route path="/admin" element={<DashboardPantauan />} />
       <Route path="/admin/akun-pengajar" element={<AkunPengajar />} />
     </Route>
+    <Route path="*" element={<HalamanTidakDitemukan />} />
   </Route>,
 );
 
