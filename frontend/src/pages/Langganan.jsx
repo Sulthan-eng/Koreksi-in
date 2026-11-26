@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CircleAlert, Crown, UserCheck } from "lucide-react";
+import {
+  Check,
+  CircleAlert,
+  Crown,
+  MessageCircle,
+  UserCheck,
+} from "lucide-react";
 import * as langgananApi from "../api/langganan.js";
 import { PESAN_KODE, pesanBerlakuHingga } from "../api/pesan.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apakahGalatJaringan, formatTanggalWib } from "../lib/akunPengajar.js";
+import {
+  buatPesanKendalaPembayaran,
+  buatTautanWhatsAppAdmin,
+} from "../lib/kontakAdmin.js";
 import {
   DAFTAR_MANFAAT_PRO,
   DAFTAR_PAKET_PRO,
@@ -18,8 +28,11 @@ import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
 import Spinner from "../components/Spinner.jsx";
 
+const NOMOR_WA_ADMIN = import.meta.env.VITE_NOMOR_WA_ADMIN;
+
 function Langganan() {
-  const { statusLangganan, masaBerlakuPro, muatUlangProfil } = useAuth();
+  const { nama, email, statusLangganan, masaBerlakuPro, muatUlangProfil } =
+    useAuth();
   const [sedangMuatProfilAwal, setSedangMuatProfilAwal] = useState(true);
   const [paketTerpilih, setPaketTerpilih] = useState(DAFTAR_PAKET_PRO[0].kode);
   const [ringkasanTerbuka, setRingkasanTerbuka] = useState(false);
@@ -217,10 +230,24 @@ function Langganan() {
       ? formatTanggalWib(masaBerlakuPro)
       : "";
 
+  const tautanWhatsAppAdmin = buatTautanWhatsAppAdmin({
+    nomor: NOMOR_WA_ADMIN,
+    pesan: buatPesanKendalaPembayaran({
+      nama,
+      email,
+      transaksi: transaksiTerakhir,
+    }),
+  });
+
   return (
     <div className="min-h-screen bg-latar text-teks">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6">
-        <h1 className="text-2xl font-bold leading-8">Langganan</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold leading-8">Langganan</h1>
+          <p className="text-sm leading-5 text-teks-redup">
+            Kelola paket Pro dan pantau status pembayaran.
+          </p>
+        </div>
 
         <section className="flex flex-col gap-4 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
           {sedangMuatProfilAwal && !statusLangganan ? (
@@ -410,6 +437,19 @@ function Langganan() {
                 <div className="flex flex-col gap-3 border-t border-garis pt-4 lg:flex-row lg:items-center lg:justify-between">
                   <p className="text-sm leading-5 text-teks-redup">
                     {PESAN_KODE.PEMBAYARAN_BELUM_TERKONFIRMASI}
+                    {tautanWhatsAppAdmin && (
+                      <>
+                        {" "}
+                        <a
+                          href={tautanWhatsAppAdmin}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-biru-utama underline"
+                        >
+                          Hubungi Admin
+                        </a>
+                      </>
+                    )}
                   </p>
                   <div>
                     <button
@@ -424,6 +464,40 @@ function Langganan() {
                   </div>
                 </div>
               )}
+
+            {(transaksiTerakhir.status === "gagal" ||
+              transaksiTerakhir.status === "kedaluwarsa") &&
+              tautanWhatsAppAdmin && (
+                <p className="border-t border-garis pt-4 text-sm leading-5 text-teks-redup">
+                  Pembayaran belum berhasil. Jika saldo Anda sudah terpotong,{" "}
+                  <a
+                    href={tautanWhatsAppAdmin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-biru-utama underline"
+                  >
+                    hubungi Admin
+                  </a>
+                  .
+                </p>
+              )}
+          </section>
+        )}
+
+        {tautanWhatsAppAdmin && (
+          <section className="flex flex-col gap-3 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Ada kendala pembayaran?</h2>
+            <div>
+              <a
+                href={tautanWhatsAppAdmin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-5 font-semibold text-teks focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+              >
+                <MessageCircle className="size-4" aria-hidden="true" />
+                Hubungi Admin via WhatsApp
+              </a>
+            </div>
           </section>
         )}
       </main>

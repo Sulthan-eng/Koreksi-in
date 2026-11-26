@@ -78,6 +78,7 @@ function Masuk() {
         hasil.status_langganan,
         hasil.peran,
         hasil.masa_berlaku_pro,
+        hasil.email,
       );
       navigate(berandaUntukPeran(hasil.peran), { replace: true });
     } catch (error) {

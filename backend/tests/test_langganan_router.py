@@ -193,5 +193,6 @@ async def test_daftar_transaksi_hanya_milik_sendiri(
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 1
+    assert body[0]["id_order"] == "KRS-milik-1"
     assert body[0]["paket"] == "pro_1_bulan"
     assert body[0]["nominal"] == 30000

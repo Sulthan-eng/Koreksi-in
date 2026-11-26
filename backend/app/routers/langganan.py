@@ -29,6 +29,7 @@ async def daftar_transaksi(
     return [
         TransaksiResponse(
             id_transaksi=item.id_transaksi,
+            id_order=item.id_order,
             paket=item.paket,
             nominal=item.nominal,
             status=item.status,

@@ -97,6 +97,7 @@ async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
     efektif = jenis_akun_efektif(pengguna)
     return SayaResponse(
         nama=pengguna.nama,
+        email=pengguna.email,
         status_langganan=efektif,
         masa_berlaku_pro=pengguna.masa_berlaku_pro if efektif == StatusLangganan.PRO else None,
         peran=pengguna.peran,
