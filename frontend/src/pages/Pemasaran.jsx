@@ -67,6 +67,24 @@ function Pemasaran() {
 
   useEffect(() => {
     const sedangBerpotongan = new Set();
+
+    function perbaruiSeksiAktif() {
+      if (sedangGulirKeSeksiRef.current) return;
+
+      const sampaiDasar =
+        window.scrollY > 0 &&
+        window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 2;
+      if (sampaiDasar) {
+        setSeksiAktif(ID_SEKSI.at(-1));
+        return;
+      }
+
+      const aktif =
+        ID_SEKSI.findLast((id) => sedangBerpotongan.has(id)) ?? null;
+      setSeksiAktif(aktif);
+    }
+
     const pengamat = new IntersectionObserver(
       (entri) => {
         entri.forEach((item) => {
@@ -77,10 +95,7 @@ function Pemasaran() {
           }
         });
 
-        if (sedangGulirKeSeksiRef.current) return;
-
-        const aktif = ID_SEKSI.find((id) => sedangBerpotongan.has(id)) ?? null;
-        setSeksiAktif(aktif);
+        perbaruiSeksiAktif();
       },
       { rootMargin: "-10% 0px -70% 0px" },
     );
@@ -90,8 +105,11 @@ function Pemasaran() {
       if (elemen) pengamat.observe(elemen);
     });
 
+    window.addEventListener("scroll", perbaruiSeksiAktif, { passive: true });
+
     return () => {
       pengamat.disconnect();
+      window.removeEventListener("scroll", perbaruiSeksiAktif);
       if (timerGulirRef.current) {
         window.clearTimeout(timerGulirRef.current);
       }
