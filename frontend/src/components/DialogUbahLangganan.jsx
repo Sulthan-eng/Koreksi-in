@@ -82,7 +82,9 @@ function DialogUbahLangganan({ akun, onBatal, onSimpan }) {
           <h2 id={idJudul} className="text-lg font-semibold">
             Ubah Langganan
           </h2>
-          <p className="text-sm leading-5 text-teks-redup">{akun.nama}</p>
+          <p className="wrap-anywhere text-sm leading-5 text-teks-redup">
+            {akun.nama}
+          </p>
         </div>
 
         <fieldset className="flex flex-col gap-2" disabled={sedangSimpan}>

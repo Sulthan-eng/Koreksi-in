@@ -10,10 +10,10 @@ const KELAS_ITEM_MENU =
   "inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-teks no-underline aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama";
 
 const KELAS_TAUTAN_PROFIL =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg px-1.5 font-semibold text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama lg:px-3";
+  "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 font-semibold text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama lg:px-3";
 
 const KELAS_TAUTAN_PROFIL_LACI =
-  "flex min-h-11 items-center gap-3 rounded-lg px-2 text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama";
+  "flex min-h-11 min-w-0 items-center gap-3 rounded-lg px-2 text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama";
 
 const KELAS_TAUTAN_JANGKAR =
   "inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-teks no-underline hover:bg-biru-muda hover:text-biru-utama focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=true]:bg-biru-muda aria-[current=true]:text-biru-utama";
@@ -240,7 +240,9 @@ function BilahAtas({
               >
                 {inisialDariNama(nama)}
               </span>
-              <span className="hidden lg:inline">{nama}</span>
+              <span className="hidden max-w-40 truncate align-middle lg:inline-block">
+                {nama}
+              </span>
             </Link>
           )}
           <button
@@ -315,7 +317,9 @@ function BilahAtas({
                 >
                   {inisialDariNama(nama)}
                 </span>
-                <span className="font-semibold">{nama}</span>
+                <span className="min-w-0 wrap-anywhere font-semibold">
+                  {nama}
+                </span>
                 {statusLangganan && (
                   <span className="ml-auto flex items-center">
                     <Lencana varian={statusLangganan} />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronRight,
@@ -56,6 +56,8 @@ function Profil() {
   const [galatNama, setGalatNama] = useState(null);
   const [kesalahanUmumNama, setKesalahanUmumNama] = useState(null);
   const [sedangSimpanNama, setSedangSimpanNama] = useState(false);
+  const pensilRef = useRef(null);
+  const sudahPernahDibukaRef = useRef(false);
 
   const [passwordLama, setPasswordLama] = useState("");
   const [passwordBaru, setPasswordBaru] = useState("");
@@ -91,6 +93,18 @@ function Profil() {
   function tutupUbahNama() {
     setUbahNamaTerbuka(false);
   }
+
+  useEffect(() => {
+    if (!sudahPernahDibukaRef.current) {
+      sudahPernahDibukaRef.current = true;
+      return;
+    }
+    if (ubahNamaTerbuka) {
+      document.getElementById("nama-baru")?.focus();
+    } else {
+      pensilRef.current?.focus();
+    }
+  }, [ubahNamaTerbuka]);
 
   async function tanganiSubmitNama(peristiwa) {
     peristiwa.preventDefault();
@@ -221,11 +235,13 @@ function Profil() {
           >
             {inisialDariNama(nama)}
           </span>
-          <div className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
               Profil
             </p>
-            <h1 className="text-2xl font-bold leading-8">{nama}</h1>
+            <h1 className="wrap-anywhere text-2xl font-bold leading-8">
+              {nama}
+            </h1>
           </div>
         </div>
 
@@ -247,23 +263,76 @@ function Profil() {
             <section className="flex flex-col gap-5 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Informasi akun</h2>
               <dl className="grid gap-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-1">
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
-                      Nama
-                    </dt>
-                    <dd className="text-base leading-6">{nama}</dd>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={ubahNamaTerbuka ? tutupUbahNama : bukaUbahNama}
-                    aria-expanded={ubahNamaTerbuka}
-                    aria-label="Ubah nama"
-                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-garis bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+                {ubahNamaTerbuka ? (
+                  <form
+                    noValidate
+                    onSubmit={tanganiSubmitNama}
+                    className="flex flex-col gap-3"
                   >
-                    <Pencil className="size-4" aria-hidden="true" />
-                  </button>
-                </div>
+                    {kesalahanUmumNama && (
+                      <PesanForm
+                        varian="galat"
+                        pesan={kesalahanUmumNama}
+                        id="pesan-ubah-nama"
+                        kotak
+                      />
+                    )}
+                    <KolomIsian
+                      id="nama-baru"
+                      label="Nama"
+                      type="text"
+                      autoComplete="name"
+                      Ikon={User}
+                      value={namaInput}
+                      onChange={(peristiwa) => {
+                        setNamaInput(peristiwa.target.value);
+                        setGalatNama(null);
+                      }}
+                      galat={galatNama}
+                      ariaDescribedby={
+                        kesalahanUmumNama ? "pesan-ubah-nama" : undefined
+                      }
+                    />
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="submit"
+                        disabled={sedangSimpanNama}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-5 font-semibold text-permukaan disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+                      >
+                        {sedangSimpanNama && <Spinner ukuran="size-4" />}
+                        Simpan
+                      </button>
+                      <button
+                        type="button"
+                        disabled={sedangSimpanNama}
+                        onClick={tutupUbahNama}
+                        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-garis bg-permukaan px-5 font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+                      >
+                        Batal
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <dt className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
+                        Nama
+                      </dt>
+                      <dd className="wrap-anywhere text-base leading-6">
+                        {nama}
+                      </dd>
+                    </div>
+                    <button
+                      ref={pensilRef}
+                      type="button"
+                      onClick={bukaUbahNama}
+                      aria-label="Ubah nama"
+                      className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-garis bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex flex-col gap-1">
                   <dt className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
                     Email
@@ -318,60 +387,6 @@ function Profil() {
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Link>
             </section>
-
-            {ubahNamaTerbuka && (
-              <section className="flex flex-col gap-5 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
-                <h2 className="text-lg font-semibold">Ubah nama</h2>
-                {kesalahanUmumNama && (
-                  <PesanForm
-                    varian="galat"
-                    pesan={kesalahanUmumNama}
-                    id="pesan-ubah-nama"
-                    kotak
-                  />
-                )}
-                <form
-                  noValidate
-                  onSubmit={tanganiSubmitNama}
-                  className="flex flex-col gap-4"
-                >
-                  <KolomIsian
-                    id="nama-baru"
-                    label="Nama"
-                    type="text"
-                    autoComplete="name"
-                    Ikon={User}
-                    value={namaInput}
-                    onChange={(peristiwa) => {
-                      setNamaInput(peristiwa.target.value);
-                      setGalatNama(null);
-                    }}
-                    galat={galatNama}
-                    ariaDescribedby={
-                      kesalahanUmumNama ? "pesan-ubah-nama" : undefined
-                    }
-                  />
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="submit"
-                      disabled={sedangSimpanNama}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-biru-utama bg-biru-utama px-5 font-semibold text-permukaan disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
-                    >
-                      {sedangSimpanNama && <Spinner ukuran="size-4" />}
-                      Simpan
-                    </button>
-                    <button
-                      type="button"
-                      disabled={sedangSimpanNama}
-                      onClick={tutupUbahNama}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg border border-garis bg-permukaan px-5 font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
-                    >
-                      Batal
-                    </button>
-                  </div>
-                </form>
-              </section>
-            )}
 
             <section className="flex flex-col gap-5 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Ganti kata sandi</h2>
