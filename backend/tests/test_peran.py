@@ -52,6 +52,7 @@ RUTE_PENGAJAR = {
     ("GET", "/api/ringkasan"),
     ("POST", "/api/langganan/transaksi"),
     ("GET", "/api/langganan/transaksi"),
+    ("GET", "/api/langganan/invoice/{id_order}"),
 }
 
 # Rute khusus Admin (Pengajar ditolak 403)
@@ -189,6 +190,7 @@ async def test_rute_pengajar_menolak_admin(
         path.replace("{id_batch}", str(uuid.uuid4()))
         .replace("{id_file}", str(uuid.uuid4()))
         .replace("{id_koreksi}", str(uuid.uuid4()))
+        .replace("{id_order}", "KRS-dummy")
     )
 
     # Panggil endpoint sebagai Admin

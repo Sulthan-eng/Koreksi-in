@@ -24,6 +24,7 @@ def _notifikasi(
     gross_amount: str = "30000.00",
     status_code: str = "200",
     fraud_status: str | None = "accept",
+    payment_type: str | None = None,
 ) -> dict:
     payload = {
         "order_id": order_id,
@@ -34,6 +35,8 @@ def _notifikasi(
     }
     if fraud_status is not None:
         payload["fraud_status"] = fraud_status
+    if payment_type is not None:
+        payload["payment_type"] = payment_type
     return payload
 
 
@@ -429,6 +432,122 @@ async def test_gagal_lalu_gross_amount_tidak_cocok_tetap_gagal(
     await db_session.refresh(pengguna)
     assert transaksi.status == StatusTransaksi.GAGAL
     assert pengguna.status_langganan == StatusLangganan.FREE
+
+
+async def test_settlement_menyimpan_metode_pembayaran(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    _, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="metode@contoh.id", order_id=order_id
+    )
+
+    response = await client.post(
+        _URL, json=_notifikasi(order_id, "settlement", payment_type="bank_transfer")
+    )
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    assert transaksi.metode_pembayaran == "Transfer Bank"
+
+
+async def test_settlement_menjadwalkan_email_berhasil_sekali_walau_notifikasi_duplikat(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    from app.services import email as email_service
+
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, _ = await _buat_pengguna_dan_transaksi(
+        db_session, email="email-berhasil@contoh.id", order_id=order_id
+    )
+    notifikasi = _notifikasi(order_id, "settlement")
+
+    pertama = await client.post(_URL, json=notifikasi)
+    kedua = await client.post(_URL, json=notifikasi)
+
+    assert pertama.status_code == 200
+    assert kedua.status_code == 200
+    assert len(_background_tasks_tidak_dijalankan) == 1
+    fn, args, _kwargs = _background_tasks_tidak_dijalankan[0]
+    assert fn is email_service.kirim_email_pembayaran_berhasil
+    assert args[0] == pengguna.email
+    assert args[2] == order_id
+
+
+async def test_expire_menjadwalkan_email_kedaluwarsa(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    from app.services import email as email_service
+
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, _ = await _buat_pengguna_dan_transaksi(
+        db_session, email="email-expired@contoh.id", order_id=order_id
+    )
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "expire", fraud_status=None))
+
+    assert response.status_code == 200
+    assert len(_background_tasks_tidak_dijalankan) == 1
+    fn, args, _kwargs = _background_tasks_tidak_dijalankan[0]
+    assert fn is email_service.kirim_email_pembayaran_kedaluwarsa
+    assert args[0] == pengguna.email
+
+
+async def test_mapping_pending_tidak_menjadwalkan_email(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    await _buat_pengguna_dan_transaksi(
+        db_session, email="email-pending@contoh.id", order_id=order_id
+    )
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "pending", fraud_status=None))
+
+    assert response.status_code == 200
+    assert _background_tasks_tidak_dijalankan == []
+
+
+async def test_smtp_gagal_tidak_mengganggu_webhook(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    """BackgroundTasks hanya berjalan SETELAH response webhook terkirim, jadi status
+    transaksi dan status code 200 tidak mungkin terpengaruh kegagalan SMTP yang terjadi
+    di task itu. Yang perlu dibuktikan di sini: (1) response 200 dan status transaksi
+    Berhasil sudah final sebelum task dijadwalkan, dan (2) task yang dijadwalkan itu
+    sendiri menelan kegagalan SMTP tanpa melempar (perilaku kirim_email_* yang sudah
+    ada, lihat test_email.py)."""
+    from app.services import email as email_service
+
+    def _kirim_smtp_gagal(pesan):
+        raise OSError("gagal konek smtp")
+
+    monkeypatch.setattr(email_service, "_kirim_smtp", _kirim_smtp_gagal)
+    monkeypatch.setattr(settings, "SMTP_USER", "pengirim@contoh.com")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "rahasia-app-password")
+
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    _, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="email-smtp-gagal@contoh.id", order_id=order_id
+    )
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "settlement"))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    assert transaksi.status == StatusTransaksi.BERHASIL
+
+    assert len(_background_tasks_tidak_dijalankan) == 1
+    fn, args, kwargs = _background_tasks_tidak_dijalankan[0]
+    await fn(*args, **kwargs)
 
 
 async def test_gagal_lalu_signature_palsu_401_tanpa_perubahan(

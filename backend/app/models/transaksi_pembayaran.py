@@ -30,3 +30,4 @@ class TransaksiPembayaran(Base):
     dibuat_pada: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    metode_pembayaran: Mapped[str | None] = mapped_column(String(50), nullable=True)
