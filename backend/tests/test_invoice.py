@@ -1,0 +1,145 @@
+from datetime import UTC, datetime
+
+from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import hash_password
+from app.models.enums import PaketLangganan, Peran, StatusTransaksi
+from app.models.pengguna import Pengguna
+from app.models.transaksi_pembayaran import TransaksiPembayaran
+from app.services import transaksi as transaksi_service
+
+
+async def _buat_pengguna(
+    db_session: AsyncSession,
+    *,
+    nama: str,
+    email: str,
+    password: str = "rahasia123",
+    peran: Peran = Peran.PENGAJAR,
+) -> Pengguna:
+    pengguna = Pengguna(
+        nama=nama, email=email, password_hash=await hash_password(password), peran=peran
+    )
+    db_session.add(pengguna)
+    await db_session.commit()
+    await db_session.refresh(pengguna)
+    return pengguna
+
+
+async def _masuk(client: AsyncClient, email: str, password: str = "rahasia123") -> str:
+    response = await client.post("/api/auth/masuk", json={"email": email, "password": password})
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+async def _token_pengajar(
+    client: AsyncClient, db_session: AsyncSession, email: str = "pengajar@contoh.id"
+) -> dict[str, str]:
+    await _buat_pengguna(db_session, nama="Pengajar Test", email=email)
+    token = await _masuk(client, email)
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _buat_transaksi(
+    db_session: AsyncSession,
+    pengguna: Pengguna,
+    *,
+    id_order: str,
+    status: StatusTransaksi = StatusTransaksi.BERHASIL,
+    paket: PaketLangganan = PaketLangganan.PRO_1_BULAN,
+    nominal: int = 30000,
+    metode_pembayaran: str | None = "Transfer Bank",
+) -> TransaksiPembayaran:
+    transaksi = TransaksiPembayaran(
+        id_pengguna=pengguna.id_pengguna,
+        id_order=id_order,
+        paket=paket,
+        nominal=nominal,
+        status=status,
+        diperbarui_pada=datetime.now(UTC),
+        metode_pembayaran=metode_pembayaran,
+    )
+    db_session.add(transaksi)
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+    return transaksi
+
+
+def test_petakan_metode_dikenal() -> None:
+    assert transaksi_service._petakan_metode("bank_transfer") == "Transfer Bank"
+    assert transaksi_service._petakan_metode("credit_card") == "Kartu Kredit/Debit"
+    assert transaksi_service._petakan_metode("qris") == "QRIS"
+
+
+def test_petakan_metode_tidak_dikenal_disimpan_mentah() -> None:
+    assert transaksi_service._petakan_metode("metode_baru_dari_midtrans") == (
+        "metode_baru_dari_midtrans"
+    )
+
+
+def test_petakan_metode_kosong_atau_bukan_string() -> None:
+    assert transaksi_service._petakan_metode(None) is None
+    assert transaksi_service._petakan_metode("") is None
+    assert transaksi_service._petakan_metode(123) is None
+
+
+async def test_invoice_milik_sendiri_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
+    headers = await _token_pengajar(client, db_session, email="pemilik@contoh.id")
+    pemilik = await _ambil_pengguna(db_session, "pemilik@contoh.id")
+    await _buat_transaksi(db_session, pemilik, id_order="KRS-milik-1")
+
+    response = await client.get("/api/langganan/invoice/KRS-milik-1", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["nomor_invoice"] == "KRS-milik-1"
+    assert body["nama_pengajar"] == "Pengajar Test"
+    assert body["email_pengajar"] == "pemilik@contoh.id"
+    assert body["metode_pembayaran"] == "Transfer Bank"
+    assert body["paket"] == "Langganan Pro 1 Bulan"
+    assert body["nominal"] == 30000
+
+
+async def test_invoice_milik_pengajar_lain_404(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    headers = await _token_pengajar(client, db_session, email="peminta@contoh.id")
+    lain = await _buat_pengguna(db_session, nama="Lain", email="lain@contoh.id")
+    await _buat_transaksi(db_session, lain, id_order="KRS-milik-lain")
+
+    response = await client.get("/api/langganan/invoice/KRS-milik-lain", headers=headers)
+
+    assert response.status_code == 404
+    assert response.json()["kode"] == "INVOICE_TIDAK_DITEMUKAN"
+
+
+async def test_invoice_belum_lunas_404(client: AsyncClient, db_session: AsyncSession) -> None:
+    headers = await _token_pengajar(client, db_session, email="menunggu@contoh.id")
+    pengguna = await _ambil_pengguna(db_session, "menunggu@contoh.id")
+    await _buat_transaksi(
+        db_session,
+        pengguna,
+        id_order="KRS-menunggu-1",
+        status=StatusTransaksi.MENUNGGU,
+        metode_pembayaran=None,
+    )
+
+    response = await client.get("/api/langganan/invoice/KRS-menunggu-1", headers=headers)
+
+    assert response.status_code == 404
+    assert response.json()["kode"] == "INVOICE_TIDAK_DITEMUKAN"
+
+
+async def test_invoice_tidak_ada_404(client: AsyncClient, db_session: AsyncSession) -> None:
+    headers = await _token_pengajar(client, db_session, email="kosong@contoh.id")
+
+    response = await client.get("/api/langganan/invoice/KRS-tidak-ada", headers=headers)
+
+    assert response.status_code == 404
+    assert response.json()["kode"] == "INVOICE_TIDAK_DITEMUKAN"
+
+
+async def _ambil_pengguna(db_session: AsyncSession, email: str) -> Pengguna:
+    return await db_session.scalar(select(Pengguna).where(Pengguna.email == email))

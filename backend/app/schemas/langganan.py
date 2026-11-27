@@ -23,3 +23,13 @@ class TransaksiResponse(BaseModel):
     status: StatusTransaksi
     dibuat_pada: datetime
     diperbarui_pada: datetime
+
+
+class InvoiceResponse(BaseModel):
+    nomor_invoice: str
+    tanggal_dibayar: datetime
+    nama_pengajar: str
+    email_pengajar: str
+    metode_pembayaran: str | None
+    paket: str
+    nominal: int
