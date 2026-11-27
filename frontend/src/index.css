@@ -22,3 +22,18 @@
   --color-kurang-mirip: #991b1b;
   --color-kurang-mirip-latar: #fee2e2;
 }
+
+@layer utilities {
+  /* Tumbuh mengikuti panjang teks (hasil OCR bisa panjang), dengan batas
+     minimum (kira-kira 6 baris, supaya tidak menciut jadi satu baris saat
+     kosong atau berisi teks pendek) dan batas maksimum agar tidak
+     memanjang tanpa henti. Browser yang belum mendukung field-sizing
+     tetap berperilaku seperti textarea biasa (tinggi statis dari atribut
+     rows), bukan rusak. */
+  .textarea-kunci-jawaban {
+    field-sizing: content;
+    min-height: 9rem;
+    max-height: 24rem;
+    overflow-y: auto;
+  }
+}

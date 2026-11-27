@@ -12,6 +12,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useAksiBatch } from "../hooks/useAksiBatch.js";
 import { NAMA_FILE_EKSPOR_DEFAULT, pesanGalatEkspor } from "../lib/ekspor.js";
 import { catatHasilPolling } from "../lib/pollingStatus.js";
+import { rapikanTeksOcr } from "../lib/teksOcr.js";
 import DialogKonfirmasi from "../components/DialogKonfirmasi.jsx";
 import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
@@ -252,7 +253,7 @@ function HalamanBatch() {
       const formData = new FormData();
       formData.append("file", file);
       const hasil = await batchApi.ocrKunci(id, formData);
-      setKunciJawaban(hasil.teks);
+      setKunciJawaban(rapikanTeksOcr(hasil.teks));
       refKunciTextarea.current?.focus();
     } catch (error) {
       setKesalahanSoal(error.pesan);
@@ -561,7 +562,7 @@ function HalamanBatch() {
                       <textarea
                         id="kunci_jawaban"
                         ref={refKunciTextarea}
-                        rows={4}
+                        rows={6}
                         value={kunciJawaban}
                         readOnly={sedangOcr}
                         onChange={(peristiwa) =>
@@ -571,7 +572,7 @@ function HalamanBatch() {
                         aria-describedby={
                           kesalahanSoal ? "galat-kunci" : undefined
                         }
-                        className="w-full rounded-lg border border-garis bg-permukaan p-3 text-teks aria-invalid:border-kurang-mirip"
+                        className="w-full rounded-lg border border-garis bg-permukaan p-3 text-teks aria-invalid:border-kurang-mirip textarea-kunci-jawaban"
                       />
                     </label>
                     {kesalahanSoal && (

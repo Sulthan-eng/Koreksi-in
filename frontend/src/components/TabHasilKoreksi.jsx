@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BadgeCheck, Pencil } from "lucide-react";
 import * as batchApi from "../api/batch.js";
 import { PESAN_KODE } from "../api/pesan.js";
+import { rapikanTeksOcr, teksUntukDisimpan } from "../lib/teksOcr.js";
 import KeadaanData from "./KeadaanData.jsx";
 import Lencana from "./Lencana.jsx";
 import PesanForm from "./PesanForm.jsx";
@@ -101,7 +102,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
   function mulaiEdit(item) {
     setIdKoreksiDiedit(item.id_koreksi);
     setModeEdit("teks");
-    setTeksDraft(item.teks_ocr);
+    setTeksDraft(rapikanTeksOcr(item.teks_ocr));
     setKesalahanEdit(null);
   }
 
@@ -142,7 +143,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
     setKesalahanEdit(null);
     try {
       const hasilBaru = await batchApi.ubahTeksOcr(idBatch, item.id_koreksi, {
-        teks_ocr: teksDraft,
+        teks_ocr: teksUntukDisimpan(teksDraft, item.teks_ocr),
       });
       setDaftarHasil((sebelumnya) =>
         sebelumnya.map((baris) =>
@@ -409,7 +410,7 @@ function TabHasilKoreksi({ idBatch, daftarSoal, bacaSaja }) {
                           </div>
                         </form>
                       ) : (
-                        <TeksOcr teks={item.teks_ocr} />
+                        <TeksOcr teks={rapikanTeksOcr(item.teks_ocr)} />
                       )}
                     </td>
                     <td
