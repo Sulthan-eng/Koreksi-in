@@ -16,7 +16,7 @@ Koreksi-in membantu Pengajar (guru atau dosen) mengoreksi jawaban esai atau jawa
 
 Status per November 2026:
 
-- Seluruh fitur Pengajar (FR1–FR23, FR28, FR29, FR31–FR33) serta fitur Admin (FR24–FR27) sudah Selesai dan berjalan di produksi. Rincian status tiap fitur ada di bagian 3; pekerjaan berikutnya dikerjakan satu per satu atas permintaan pemilik proyek.
+- Seluruh fitur Pengajar (FR1–FR23, FR28, FR29, FR31–FR33) serta fitur Admin (FR24–FR27) sudah Selesai di implementasi. Rincian status tiap fitur ada di bagian 3; pekerjaan berikutnya dikerjakan satu per satu atas permintaan pemilik proyek.
 
 ## 2. Glosarium dan istilah UI
 
