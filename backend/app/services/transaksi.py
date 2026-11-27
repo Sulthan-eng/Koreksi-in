@@ -93,7 +93,7 @@ async def daftar_transaksi(db: AsyncSession, pengguna: Pengguna) -> list[Transak
 
 
 def _petakan_status(transaction_status: str, fraud_status: str | None) -> StatusTransaksi | None:
-    """None berarti tidak ada transisi (tetap menunggu / no-op). Lihat SPEC
+    """None berarti tidak ada transisi (status tetap, no-op). Lihat SPEC
     bagian 9 (F-LANGGANAN) untuk pemetaan lengkap."""
     if transaction_status in ("capture", "settlement"):
         if fraud_status == "challenge":
@@ -140,7 +140,7 @@ async def proses_notifikasi(db: AsyncSession, payload: object) -> None:
     if transaksi is None:
         raise TRANSAKSI_TIDAK_DITEMUKAN
 
-    if transaksi.status != StatusTransaksi.MENUNGGU:
+    if transaksi.status in (StatusTransaksi.BERHASIL, StatusTransaksi.KEDALUWARSA):
         return
 
     nominal_payload = _parse_gross_amount(gross_amount)
@@ -152,6 +152,11 @@ async def proses_notifikasi(db: AsyncSession, payload: object) -> None:
         payload.get("transaction_status", ""), payload.get("fraud_status")
     )
     if status_baru is None:
+        return
+
+    if transaksi.status == StatusTransaksi.GAGAL and status_baru != StatusTransaksi.BERHASIL:
+        # Transaksi gagal hanya bisa pulih lewat notifikasi sukses: kartu
+        # pertama ditolak, pembayar mencoba kartu lain di order yang sama.
         return
 
     sekarang = datetime.now(UTC)
