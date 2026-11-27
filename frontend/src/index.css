@@ -22,3 +22,15 @@
   --color-kurang-mirip: #991b1b;
   --color-kurang-mirip-latar: #fee2e2;
 }
+
+@layer utilities {
+  /* Tumbuh mengikuti panjang teks (hasil OCR bisa panjang), dengan batas
+     maksimum agar tidak memanjang tanpa henti. Browser yang belum
+     mendukung field-sizing tetap berperilaku seperti textarea biasa
+     (tinggi statis dari atribut rows), bukan rusak. */
+  .textarea-kunci-jawaban {
+    field-sizing: content;
+    max-height: 24rem;
+    overflow-y: auto;
+  }
+}
