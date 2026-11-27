@@ -7,10 +7,14 @@ import {
   MAKS_PERCOBAAN_POLLING_TRANSAKSI,
   ambilTransaksiTerakhir,
   dapatkanPaketPro,
+  formatMetodePembayaran,
   formatRingkasanPaket,
   formatRingkasanTransaksi,
+  formatTanggalJamWib,
+  formatTanggalSingkatWib,
   labelTombolLangganan,
   langkahPollingTransaksi,
+  namaPaketTransaksi,
   pecahPesanPenolakanLangganan,
 } from "./langganan.js";
 
@@ -260,5 +264,49 @@ describe("pecahPesanPenolakanLangganan", () => {
       pecahPesanPenolakanLangganan("GAGAL_EKSPOR", PESAN_KODE.GAGAL_EKSPOR),
       null,
     );
+  });
+});
+
+describe("fungsi murni riwayat transaksi dan invoice", () => {
+  it("memetakan kode paket ke nama paket tampilan riwayat transaksi", () => {
+    assert.equal(namaPaketTransaksi("pro_1_bulan"), "Langganan Pro 1 Bulan");
+    assert.equal(namaPaketTransaksi("pro_3_bulan"), "Langganan Pro 3 Bulan");
+    assert.equal(namaPaketTransaksi("tidak_dikenal"), "Langganan Pro 1 Bulan");
+  });
+
+  it("memformat tanggal singkat WIB untuk riwayat transaksi", () => {
+    assert.equal(
+      formatTanggalSingkatWib("2026-11-27T03:46:00Z"),
+      "27 Nov 2026",
+    );
+    // 17.00 UTC = 00.00 WIB hari berikutnya
+    assert.equal(
+      formatTanggalSingkatWib("2026-11-26T17:00:00Z"),
+      "27 Nov 2026",
+    );
+    assert.equal(formatTanggalSingkatWib(null), "");
+    assert.equal(formatTanggalSingkatWib("bukan-tanggal"), "");
+  });
+
+  it("memformat tanggal dan jam WIB untuk halaman invoice", () => {
+    assert.equal(
+      formatTanggalJamWib("2026-11-27T03:46:00Z"),
+      "27 November 2026, 10.46 WIB",
+    );
+    assert.equal(
+      formatTanggalJamWib("2026-11-26T17:05:00Z"),
+      "27 November 2026, 00.05 WIB",
+    );
+    assert.equal(formatTanggalJamWib(""), "");
+    assert.equal(formatTanggalJamWib("bukan-tanggal"), "");
+  });
+
+  it("memformat metode pembayaran dengan tanda strip bila kosong", () => {
+    assert.equal(formatMetodePembayaran("Transfer Bank"), "Transfer Bank");
+    assert.equal(formatMetodePembayaran("QRIS"), "QRIS");
+    assert.equal(formatMetodePembayaran(null), "-");
+    assert.equal(formatMetodePembayaran(undefined), "-");
+    assert.equal(formatMetodePembayaran(""), "-");
+    assert.equal(formatMetodePembayaran("   "), "-");
   });
 });
