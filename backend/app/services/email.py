@@ -11,6 +11,7 @@ import asyncio
 import logging
 import smtplib
 import ssl
+from datetime import datetime
 from email.message import EmailMessage
 
 from app.core.config import settings
@@ -74,7 +75,12 @@ async def _kirim_dan_catat_gagal(pesan: EmailMessage, label_log: str) -> None:
 
 
 async def kirim_email_pembayaran_berhasil(
-    email_tujuan: str, nama: str, nomor_invoice: str, nama_paket: str, nominal: int
+    email_tujuan: str,
+    nama: str,
+    nomor_invoice: str,
+    nama_paket: str,
+    nominal: int,
+    dibayar_pada: datetime,
 ) -> None:
     """Dipanggil lewat BackgroundTasks setelah status transaksi Berhasil
     di-commit (FR30). Kegagalan hanya dicatat log, tidak dilempar."""
@@ -82,13 +88,16 @@ async def kirim_email_pembayaran_berhasil(
         logger.error("kirim_email_pembayaran_berhasil_gagal alasan=kredensial_smtp_kosong")
         return
 
-    tautan_invoice = f"{settings.FRONTEND_URL.rstrip('/')}/invoice/{nomor_invoice}"
+    url_dasar = settings.FRONTEND_URL.rstrip("/")
+    tautan_invoice = f"{url_dasar}/invoice/{nomor_invoice}"
     isi = email_templates.email_pembayaran_berhasil(
         nama=nama,
         nomor_invoice=nomor_invoice,
         nama_paket=nama_paket,
         nominal=nominal,
+        dibayar_pada=dibayar_pada,
         tautan_invoice=tautan_invoice,
+        frontend_url=url_dasar,
     )
     pesan = _buat_pesan_html(email_tujuan, isi)
     await _kirim_dan_catat_gagal(pesan, "kirim_email_pembayaran_berhasil_gagal")
@@ -103,13 +112,15 @@ async def kirim_email_pembayaran_kedaluwarsa(
         logger.error("kirim_email_pembayaran_kedaluwarsa_gagal alasan=kredensial_smtp_kosong")
         return
 
-    tautan_langganan = f"{settings.FRONTEND_URL.rstrip('/')}/langganan"
+    url_dasar = settings.FRONTEND_URL.rstrip("/")
+    tautan_langganan = f"{url_dasar}/langganan"
     isi = email_templates.email_pembayaran_kedaluwarsa(
         nama=nama,
         nomor_invoice=nomor_invoice,
         nama_paket=nama_paket,
         nominal=nominal,
         tautan_langganan=tautan_langganan,
+        frontend_url=url_dasar,
     )
     pesan = _buat_pesan_html(email_tujuan, isi)
     await _kirim_dan_catat_gagal(pesan, "kirim_email_pembayaran_kedaluwarsa_gagal")

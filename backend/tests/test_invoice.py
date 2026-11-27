@@ -86,15 +86,84 @@ def test_petakan_metode_kosong_atau_bukan_string() -> None:
     assert transaksi_service._petakan_metode(123) is None
 
 
+def test_format_tanggal_wib_selisih_tetap_utc_plus_7() -> None:
+    waktu_utc = datetime(2026, 11, 27, 3, 46, tzinfo=UTC)
+    assert email_templates.format_tanggal_wib(waktu_utc) == "27 November 2026, 10.46 WIB"
+
+    # Lewat 17.00 UTC berpindah hari di WIB (00.00 WIB hari berikutnya)
+    batas_hari = datetime(2026, 11, 26, 17, 0, tzinfo=UTC)
+    assert email_templates.format_tanggal_wib(batas_hari) == "27 November 2026, 00.00 WIB"
+
+    # Datetime naive diperlakukan sebagai UTC
+    waktu_naive = datetime(2026, 1, 5, 2, 5)
+    assert email_templates.format_tanggal_wib(waktu_naive) == "5 Januari 2026, 09.05 WIB"
+
+
+def test_email_pembayaran_berhasil_memuat_tanggal_dan_logo_tanpa_aktif_sampai() -> None:
+    dibayar = datetime(2026, 11, 27, 3, 46, tzinfo=UTC)
+    isi = email_templates.email_pembayaran_berhasil(
+        nama="Sari",
+        nomor_invoice="KRS-7F3A9C21",
+        nama_paket="Langganan Pro 1 Bulan",
+        nominal=30000,
+        dibayar_pada=dibayar,
+        tautan_invoice="https://koreksi-in.sulthanfarizan.my.id/invoice/KRS-7F3A9C21",
+        frontend_url="https://koreksi-in.sulthanfarizan.my.id/",
+    )
+
+    assert isi.subjek == "Pembayaran Koreksi-in berhasil"
+    for bagian in (isi.html, isi.teks):
+        assert "KRS-7F3A9C21" in bagian
+        assert "Langganan Pro 1 Bulan" in bagian
+        assert "Rp 30.000" in bagian
+        assert "Dibayar pada" in bagian
+        assert "27 November 2026, 10.46 WIB" in bagian
+        assert "https://koreksi-in.sulthanfarizan.my.id/invoice/KRS-7F3A9C21" in bagian
+        assert "Aktif sampai" not in bagian
+        assert "Batas pembayaran" not in bagian
+        assert "HANYA UNTUK MOCKUP" not in bagian
+
+    assert 'src="https://koreksi-in.sulthanfarizan.my.id/logo-ikon.png"' in isi.html
+    assert 'alt="Logo Koreksi-in"' in isi.html
+
+
+def test_email_pembayaran_kedaluwarsa_memuat_no_pesanan_tanpa_batas_pembayaran() -> None:
+    isi = email_templates.email_pembayaran_kedaluwarsa(
+        nama="Sari",
+        nomor_invoice="KRS-7F3A9C21",
+        nama_paket="Langganan Pro 1 Bulan",
+        nominal=30000,
+        tautan_langganan="https://koreksi-in.sulthanfarizan.my.id/langganan",
+        frontend_url="https://koreksi-in.sulthanfarizan.my.id",
+    )
+
+    assert isi.subjek == "Pembayaran Koreksi-in kedaluwarsa"
+    for bagian in (isi.html, isi.teks):
+        assert "No. pesanan" in bagian
+        assert "KRS-7F3A9C21" in bagian
+        assert "Langganan Pro 1 Bulan" in bagian
+        assert "Rp 30.000" in bagian
+        assert "https://koreksi-in.sulthanfarizan.my.id/langganan" in bagian
+        assert "Batas pembayaran" not in bagian
+        assert "Aktif sampai" not in bagian
+        assert "HANYA UNTUK MOCKUP" not in bagian
+
+    assert 'src="https://koreksi-in.sulthanfarizan.my.id/logo-ikon.png"' in isi.html
+    assert 'alt="Logo Koreksi-in"' in isi.html
+
+
 def test_email_templates_escape_nama_pada_html() -> None:
     nama_mentah = "Budi & Siti <script>alert(1)</script>"
+    dibayar = datetime(2026, 11, 27, 3, 46, tzinfo=UTC)
 
     berhasil = email_templates.email_pembayaran_berhasil(
         nama=nama_mentah,
         nomor_invoice="KRS-123",
         nama_paket="Langganan Pro 1 Bulan",
         nominal=30000,
+        dibayar_pada=dibayar,
         tautan_invoice="http://localhost:5173/invoice/KRS-123",
+        frontend_url="http://localhost:5173",
     )
     kedaluwarsa = email_templates.email_pembayaran_kedaluwarsa(
         nama=nama_mentah,
@@ -102,6 +171,7 @@ def test_email_templates_escape_nama_pada_html() -> None:
         nama_paket="Langganan Pro 1 Bulan",
         nominal=30000,
         tautan_langganan="http://localhost:5173/langganan",
+        frontend_url="http://localhost:5173",
     )
 
     for isi in (berhasil, kedaluwarsa):

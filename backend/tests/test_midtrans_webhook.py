@@ -474,6 +474,7 @@ async def test_settlement_menjadwalkan_email_berhasil_sekali_walau_notifikasi_du
     assert fn is email_service.kirim_email_pembayaran_berhasil
     assert args[0] == pengguna.email
     assert args[2] == order_id
+    assert isinstance(args[5], datetime)
 
 
 async def test_expire_menjadwalkan_email_kedaluwarsa(
