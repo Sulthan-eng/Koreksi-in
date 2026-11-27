@@ -268,3 +268,187 @@ async def test_mapping_capture_challenge_tetap_menunggu(
     await db_session.refresh(pengguna)
     assert transaksi.status == StatusTransaksi.MENUNGGU
     assert pengguna.status_langganan == StatusLangganan.FREE
+
+
+async def test_gagal_lalu_settlement_jadi_berhasil_dan_pro_aktif(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="gagal-lalu-sukses@contoh.id", order_id=order_id
+    )
+    transaksi.status = StatusTransaksi.GAGAL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "settlement"))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.BERHASIL
+    assert pengguna.status_langganan == StatusLangganan.PRO
+    assert pengguna.masa_berlaku_pro is not None
+
+
+async def test_gagal_lalu_settlement_pada_akun_pro_memperpanjang_dari_masa_berlaku_lama(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    masa_berlaku_lama = datetime.now(UTC) + timedelta(days=10)
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session,
+        email="gagal-lalu-perpanjang@contoh.id",
+        order_id=order_id,
+        paket=PaketLangganan.PRO_3_BULAN,
+        nominal=80000,
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=masa_berlaku_lama,
+    )
+    transaksi.status = StatusTransaksi.GAGAL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(
+        _URL, json=_notifikasi(order_id, "settlement", gross_amount="80000.00")
+    )
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.BERHASIL
+    assert pengguna.masa_berlaku_pro == masa_berlaku_lama + timedelta(days=90)
+
+
+async def test_berhasil_lalu_settlement_duplikat_tidak_memperpanjang(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    masa_berlaku_awal = datetime.now(UTC) + timedelta(days=30)
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session,
+        email="berhasil-duplikat@contoh.id",
+        order_id=order_id,
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=masa_berlaku_awal,
+    )
+    transaksi.status = StatusTransaksi.BERHASIL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "settlement"))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.BERHASIL
+    assert pengguna.masa_berlaku_pro == masa_berlaku_awal
+
+
+async def test_berhasil_lalu_deny_terlambat_tetap_berhasil(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    masa_berlaku = datetime.now(UTC) + timedelta(days=30)
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session,
+        email="berhasil-deny-terlambat@contoh.id",
+        order_id=order_id,
+        status_langganan=StatusLangganan.PRO,
+        masa_berlaku_pro=masa_berlaku,
+    )
+    transaksi.status = StatusTransaksi.BERHASIL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "deny", fraud_status=None))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.BERHASIL
+    assert pengguna.status_langganan == StatusLangganan.PRO
+    assert pengguna.masa_berlaku_pro == masa_berlaku
+
+
+async def test_kedaluwarsa_lalu_settlement_tetap_kedaluwarsa(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="kedaluwarsa-lalu-sukses@contoh.id", order_id=order_id
+    )
+    transaksi.status = StatusTransaksi.KEDALUWARSA
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "settlement"))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.KEDALUWARSA
+    assert pengguna.status_langganan == StatusLangganan.FREE
+
+
+async def test_gagal_lalu_deny_lagi_tetap_gagal(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    _, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="gagal-lalu-deny@contoh.id", order_id=order_id
+    )
+    transaksi.status = StatusTransaksi.GAGAL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(_URL, json=_notifikasi(order_id, "deny", fraud_status=None))
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    assert transaksi.status == StatusTransaksi.GAGAL
+
+
+async def test_gagal_lalu_gross_amount_tidak_cocok_tetap_gagal(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="gagal-nominal-salah@contoh.id", order_id=order_id, nominal=30000
+    )
+    transaksi.status = StatusTransaksi.GAGAL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+
+    response = await client.post(
+        _URL, json=_notifikasi(order_id, "settlement", gross_amount="999999.00")
+    )
+
+    assert response.status_code == 200
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.GAGAL
+    assert pengguna.status_langganan == StatusLangganan.FREE
+
+
+async def test_gagal_lalu_signature_palsu_401_tanpa_perubahan(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order_id = f"KRS-{uuid.uuid4().hex}"
+    pengguna, transaksi = await _buat_pengguna_dan_transaksi(
+        db_session, email="gagal-signature-palsu@contoh.id", order_id=order_id
+    )
+    transaksi.status = StatusTransaksi.GAGAL
+    await db_session.commit()
+    await db_session.refresh(transaksi)
+    payload = _notifikasi(order_id, "settlement")
+    payload["signature_key"] = "signature-tidak-valid"
+
+    response = await client.post(_URL, json=payload)
+
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SIGNATURE_TIDAK_VALID"
+    await db_session.refresh(transaksi)
+    await db_session.refresh(pengguna)
+    assert transaksi.status == StatusTransaksi.GAGAL
+    assert pengguna.status_langganan == StatusLangganan.FREE
