@@ -165,7 +165,7 @@ Semua ikon `stroke="currentColor"`, `stroke-width` 2, `aria-hidden="true"`. Ukur
 | Tutup menu | `x` | `size-5` | Laci menu (`aria-label` "Tutup menu") |
 | Menu aksi | `ellipsis-vertical` | `size-5` | Titik tiga (`aria-label` berisi nama batch) |
 | Coba Lagi | `rotate-ccw` | `size-4` | File yang Gagal |
-| Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi", "Kembali ke beranda" (Masuk, Daftar), "Kembali ke Masuk" (Lupa Password) |
+| Kembali | `arrow-left` | `size-4` | Tautan "Batch Koreksi", "Kembali ke beranda" (Masuk, Daftar), "Kembali ke Masuk" (Lupa Password), "Kembali ke Beranda" (Profil) |
 | Unggah | `upload` | `size-4` | "Upload Jawaban Peserta Didik" |
 | Tambah | `plus` | `size-4` | "Tambah Soal", "Tambah File" |
 | Ekspor | `download` | `size-4` | "Ekspor Rekap Nilai" |
@@ -227,6 +227,7 @@ Daftar halaman target sistem penuh, sumber kebutuhan di `docs/SPEC.md` bagian 9.
 | 9 | Lupa Password | `/lupa-password` | Publik | FR1 | Form email, tombol "Kirim Tautan" (hitung mundur 60 detik "Kirim ulang dalam N detik"), pesan sukses dengan `{email}` dan masa berlaku 30 menit | Selesai | Ada |
 | 10 | Atur Ulang Password | `/atur-ulang-password` | Publik (lewat tautan email) | FR1 | Form password baru dan konfirmasi, tombol "Simpan Password", pesan token tidak berlaku | Selesai | Ada |
 | 11 | Halaman 404 | `/*` (catch-all, semua rute tak dikenali) | Publik (semua peran; tombol kembali menyesuaikan) | – | Judul "Halaman tidak ditemukan", satu kalimat penjelas, ikon Lucide `search-x`, tombol kembali menurut peran | Rancangan | Ada |
+| 12 | Profil | `/profil` | Pengajar | FR31 sampai FR33, UC-20 sampai UC-22 | Kartu Informasi akun (baris Nama berganti di tempat menjadi form saat ikon pensil diklik, email hanya baca, tanggal bergabung), kartu Paket (label Free/Pro, tautan ke Langganan), kartu Ganti kata sandi | Selesai | Ada |
 
 Halaman 9 dan 10 mengikuti SPEC F-RESET. Halaman Masuk mendapat tautan "Lupa password?". Setelah Keluar, pengguna dialihkan ke Halaman Pemasaran (SPEC bagian 6).
 
@@ -241,7 +242,7 @@ Komponen yang dipakai lebih dari satu halaman. Satu definisi per komponen di `fr
 
 | Komponen | Dipakai di | Aturan |
 |---|---|---|
-| Bilah atas | Semua halaman, kecuali halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) yang tampil tanpa bilah atas | Tiga varian. Publik: logo, "Masuk", "Daftar" (di Pemasaran ditambah tiga tautan jangkar, lihat rancangan Pemasaran). Pengajar: logo, menu "Beranda" dan "Langganan", label FREE atau PRO, nama, "Keluar". Menu yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar" (tanpa nama pengguna). Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) tombol menu (`aria-label` "Buka menu") ditempatkan di paling kiri sebelum logo dan nama "Koreksi-in", lalu menu berpindah ke laci dari kiri yang dibuka tombol tersebut (tombol tutup "Tutup menu"), berisi item menu, label FREE atau PRO, nama, dan "Keluar" |
+| Bilah atas | Semua halaman, kecuali halaman kartu publik (Masuk, Daftar, Lupa Password, Atur Ulang Password) yang tampil tanpa bilah atas | Tiga varian. Publik: logo, "Masuk", "Daftar" (di Pemasaran ditambah tiga tautan jangkar, lihat rancangan Pemasaran). Pengajar: logo, menu "Beranda" dan "Langganan", label FREE atau PRO, lingkaran inisial (dua huruf jika nama dua kata atau lebih, satu huruf jika satu kata) bersama nama sebagai TAUTAN LANGSUNG ke `/profil` (bukan menu/dropdown; nama di bilah desktop dipotong `truncate` lebar maksimum `max-w-40` agar tidak mendorong tombol Keluar), "Keluar". Menu dan tautan Profil yang sedang dibuka bertanda `aria-current="page"`; "Beranda" tetap menyala di Halaman Batch. Admin: logo, menu "Dashboard Pantauan" dan "Akun Pengajar", "Keluar" (tanpa nama pengguna maupun tautan Profil, karena `/profil` khusus Pengajar). Mulai 1024 px menu tampil sebagai bilah horizontal. Di bawah 1024 px (tablet dan ponsel) tombol menu (`aria-label` "Buka menu") ditempatkan di paling kiri sebelum logo dan nama "Koreksi-in"; lingkaran inisial (tautan ke Profil) tetap tampil di bilah meski teks nama disembunyikan, lalu menu berpindah ke laci dari kiri yang dibuka tombol tersebut (tombol tutup "Tutup menu"), berisi item menu, baris tautan Profil (lingkaran inisial, nama lengkap, label FREE atau PRO), dan "Keluar" |
 | Lencana | Status pemrosesan, kategori, FREE atau PRO, status aktif akun | Selalu berisi teks, memakai token di bagian Pemakaian |
 | Dialog konfirmasi | Hapus batch, selesaikan batch, nonaktifkan atau aktifkan akun, ganti kunci jawaban, batalkan pilihan file, tinggalkan halaman unggah | Judul singkat ("Hapus Batch", "Selesaikan Batch", "Nonaktifkan Akun", "Aktifkan Akun", "Ganti Kunci Jawaban", "Batalkan Pilihan File", "Tinggalkan Halaman"), satu kalimat persis dari SPEC, dua tombol. Hapus, selesaikan, nonaktifkan, dan aktifkan: "Ya" dan "Batal". Batalkan pilihan file ("Semua file terpilih dan nama peserta didik yang sudah diisi akan dibuang. Lanjutkan?"): "Kembali" dan "Ya". Tinggalkan halaman: "Tetap di Halaman" dan "Tinggalkan". Tombol utama memakai `bg-biru-utama`; aksi merusak tidak memakai warna merah polos tanpa teks |
 | Kartu angka | Ringkasan Pengajar, Dashboard Pantauan | Angka besar dan label teks (komponen `KartuAngka`). Nilai 0 tetap tampil. Angka di kartu selalu rata bawah (`mt-auto`) agar kartu tetap sejajar walau labelnya satu atau dua baris di lebar ponsel. |
@@ -525,6 +526,21 @@ Blok dari atas ke bawah:
 **Bilah atas: TIDAK tampil.** Halaman ini mandiri tanpa bilah atas, sebagaimana halaman publik kartu. Rute catch-all tidak mengikat peran tertentu karena tombol kembali sudah mengarahkan pengguna sesuai peran.
 
 Keadaan: statis, tidak ada pemuatan data/polling.
+
+### 12. Profil (`/profil`, Pengajar)
+
+Dibuka dengan mengklik lingkaran inisial atau nama di bilah atas (tautan langsung, bukan menu). Konten lebar `max-w-3xl`.
+
+Blok dari atas ke bawah:
+1. **Tautan kembali.** "Kembali ke Beranda" (ikon `arrow-left`, `size-4`, `aria-hidden="true"`, ke `/`), gaya sama seperti tautan "Batch Koreksi" di Halaman Batch, tampil di semua lebar layar, di atas judul.
+2. **Judul.** Lingkaran inisial besar (`size-16`), eyebrow "Profil", dan nama Pengajar sebagai judul (`h1`).
+3. **Kartu "Informasi akun".** Baris Nama, baris Email (hanya baca, keterangan "Email tidak dapat diubah."), baris "Bergabung sejak" (`dibuat_pada`, format tanggal `Asia/Jakarta`). Baris Nama punya DUA tampilan yang bertukar DI TEMPAT (bukan kartu terpisah): tampilan teks (nama + tombol ikon pensil `aria-label` "Ubah nama") dan tampilan form (label Nama, satu kolom isian terisi nama saat ini, tombol "Simpan" dan "Batal"). Ikon pensil diklik → baris berganti ke form, fokus pindah ke kolom isian. "Batal" atau sukses simpan → baris kembali ke tampilan teks, fokus kembali ke ikon pensil. Validasi sama seperti registrasi (tidak kosong setelah trim, maksimal 100 karakter), galat tampil di bawah kolom isian yang sama. Sukses: nama di baris ini, di judul halaman (blok 2), dan di bilah atas berubah tanpa muat ulang halaman. Gagal memuat profil: "Gagal memuat profil, coba muat ulang halaman".
+4. **Kartu "Paket".** Lencana FREE atau PRO sama seperti Langganan, teks "Akun Anda memakai paket Free." atau "Berlaku hingga {tanggal}", tautan "Lihat riwayat pembayaran" ke `/langganan` (riwayat pembayaran itu sendiri TIDAK diduplikasi di halaman ini).
+5. **Kartu "Ganti kata sandi".** Kartu tersendiri, TIDAK terpengaruh oleh blok 3. Tiga kolom password (Kata sandi saat ini, Kata sandi baru, Ulangi kata sandi baru), tombol "Simpan". Galat per kolom: kata sandi saat ini salah atau kosong → kolom 1; kata sandi baru kosong/di luar 8–72 byte/sama dengan yang lama → kolom 2; konfirmasi tidak sama → kolom 3. Galat yang tidak terikat satu kolom (terlalu banyak percobaan gagal, sesi berakhir) → banner di atas form. Sukses: ketiga kolom dikosongkan dan pesan "Kata sandi berhasil diubah. Perangkat lain akan keluar otomatis." tampil (usulan, boleh disesuaikan pemilik proyek karena SPEC F-PROFIL belum menuliskan salinan pasti untuk pesan sukses ini).
+
+Tanpa kartu pemakaian, hapus akun, atau ubah email (lihat SPEC F-PROFIL). Nama Pengguna (maksimal 100 karakter, bisa tanpa spasi) memakai `wrap-anywhere` di setiap tempat ditampilkan (judul halaman ini, baris Nama, bilah atas, sapaan Beranda, tabel Akun Pengajar Admin) agar tidak memecah tata letak; bilah atas desktop memotong (`truncate`, lebar maksimum `max-w-40`) alih-alih melebar, supaya tombol Keluar di sebelahnya tidak terdorong.
+
+Keadaan: memuat (indikator saat membuka halaman), gagal (pesan di atas, kartu tidak dirender), siap (tiga kartu seperti di atas; baris Nama di kartu 2 punya dua tampilan yang bertukar di tempat, lihat blok 2).
 
 ### Keputusan pemilik proyek
 

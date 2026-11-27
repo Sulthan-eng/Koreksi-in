@@ -2,11 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { inisialDariNama } from "../lib/inisial.js";
 import Lencana from "./Lencana.jsx";
 import Spinner from "./Spinner.jsx";
 
 const KELAS_ITEM_MENU =
   "inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-teks no-underline aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama";
+
+const KELAS_TAUTAN_PROFIL =
+  "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1.5 font-semibold text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama lg:px-3";
+
+const KELAS_TAUTAN_PROFIL_LACI =
+  "flex min-h-11 min-w-0 items-center gap-3 rounded-lg px-2 text-teks no-underline hover:bg-latar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=page]:bg-biru-muda aria-[current=page]:text-biru-utama";
 
 const KELAS_TAUTAN_JANGKAR =
   "inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-teks no-underline hover:bg-biru-muda hover:text-biru-utama focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama aria-[current=true]:bg-biru-muda aria-[current=true]:text-biru-utama";
@@ -214,16 +221,35 @@ function BilahAtas({
           ))}
         </nav>
 
-        <div className="ml-auto hidden items-center gap-3 lg:flex">
+        <div className="ml-auto flex items-center gap-3">
           {varian === "pengajar" && statusLangganan && (
-            <Lencana varian={statusLangganan} />
+            <span className="hidden lg:inline-flex">
+              <Lencana varian={statusLangganan} />
+            </span>
           )}
-          {varian !== "admin" && nama && <span>{nama}</span>}
+          {varian === "pengajar" && nama && (
+            <Link
+              to="/profil"
+              aria-current={pathname === "/profil" ? "page" : undefined}
+              aria-label={`Profil ${nama}`}
+              className={KELAS_TAUTAN_PROFIL}
+            >
+              <span
+                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-biru-utama text-sm font-bold text-permukaan"
+                aria-hidden="true"
+              >
+                {inisialDariNama(nama)}
+              </span>
+              <span className="hidden max-w-40 truncate align-middle lg:inline-block">
+                {nama}
+              </span>
+            </Link>
+          )}
           <button
             type="button"
             onClick={tanganiKeluar}
             disabled={sedangKeluar}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks disabled:opacity-50"
+            className="hidden min-h-11 items-center justify-center gap-2 rounded-lg border border-garis bg-permukaan px-4 font-semibold text-teks disabled:opacity-50 lg:inline-flex"
           >
             {sedangKeluar ? (
               <Spinner ukuran="size-4" />
@@ -277,14 +303,29 @@ function BilahAtas({
           </nav>
 
           <div className="mt-auto flex flex-col gap-3 border-t border-garis pt-4">
-            {((varian === "pengajar" && statusLangganan) ||
-              (varian !== "admin" && nama)) && (
-              <div className="flex items-center gap-2">
-                {varian === "pengajar" && statusLangganan && (
-                  <Lencana varian={statusLangganan} />
+            {varian === "pengajar" && nama && (
+              <Link
+                to="/profil"
+                aria-current={pathname === "/profil" ? "page" : undefined}
+                aria-label={`Profil ${nama}`}
+                onClick={tutupLaci}
+                className={KELAS_TAUTAN_PROFIL_LACI}
+              >
+                <span
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-biru-utama text-sm font-bold text-permukaan"
+                  aria-hidden="true"
+                >
+                  {inisialDariNama(nama)}
+                </span>
+                <span className="min-w-0 wrap-anywhere font-semibold">
+                  {nama}
+                </span>
+                {statusLangganan && (
+                  <span className="ml-auto flex items-center">
+                    <Lencana varian={statusLangganan} />
+                  </span>
                 )}
-                {varian !== "admin" && nama && <span>{nama}</span>}
-              </div>
+              </Link>
             )}
             <button
               type="button"

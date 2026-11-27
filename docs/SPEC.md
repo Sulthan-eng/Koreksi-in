@@ -16,7 +16,7 @@ Koreksi-in membantu Pengajar (guru atau dosen) mengoreksi jawaban esai atau jawa
 
 Status per November 2026:
 
-- Seluruh fitur Pengajar (FR1–FR23, FR28, FR29) serta fitur Admin (FR24–FR27) sudah Selesai dan berjalan di produksi. Rincian status tiap fitur ada di bagian 3; pekerjaan berikutnya dikerjakan satu per satu atas permintaan pemilik proyek.
+- Seluruh fitur Pengajar (FR1–FR23, FR28, FR29, FR31–FR33) serta fitur Admin (FR24–FR27) sudah Selesai di implementasi. Rincian status tiap fitur ada di bagian 3; pekerjaan berikutnya dikerjakan satu per satu atas permintaan pemilik proyek.
 
 ## 2. Glosarium dan istilah UI
 
@@ -42,7 +42,7 @@ Istilah UI wajib Bahasa Indonesia. Nama di kode mengikuti ERD (Indonesia), lihat
 | Dashboard Pantauan | halaman Admin | Halaman utama Admin |
 | Halaman Pemasaran | halaman publik | Halaman pertama bagi pengunjung yang belum login |
 
-## 3. Cakupan fitur (29 FR)
+## 3. Cakupan fitur (32 FR)
 
 Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada selisih yang harus diperbaiki, lihat catatan), **Belum dikerjakan**.
 
@@ -77,6 +77,9 @@ Status: **Selesai** (sudah di kode dan lolos uji), **Perbaikan** (sudah ada, ada
 | FR27 | Admin: Dashboard Pantauan | UC-18 | Selesai |
 | FR28 | Halaman Pemasaran | - | Selesai |
 | FR29 | Pengajar: hubungi Admin terkait kendala pembayaran | UC-19 | Selesai |
+| FR31 | Pengajar: lihat halaman Profil (akun, paket, ganti kata sandi) | UC-20 | Selesai |
+| FR32 | Pengajar: ubah nama di halaman Profil | UC-21 | Selesai |
+| FR33 | Pengajar: ganti kata sandi di halaman Profil | UC-22 | Selesai |
 
 Konsekuensi status saat ini:
 
@@ -85,6 +88,7 @@ Konsekuensi status saat ini:
 - Kolom `Batch.status` sudah ada; nilai `aktif` dan `selesai` sudah dipakai (FR23 Selesai).
 - Kolom `Hasil_Koreksi.skor_revisi` dan `skor_hitung_ulang` kini terpakai lewat FR15 dan FR16: `skor_revisi` diisi Pengajar lewat aksi "Ubah Nilai Akhir" (FR16), `skor_hitung_ulang` ditandai saat hitung ulang skor via judge gagal (FR15).
 - Halaman daftar batch di Beranda sudah ada, karena Pengajar perlu membuka batch miliknya.
+- FR31 sampai FR33 (F-PROFIL): backend, tes, kolom lockout, dan halaman `/profil` di frontend sudah selesai ujung ke ujung (lihat bagian 9 F-PROFIL dan bagian 5).
 
 ## 4. Aturan produk
 
@@ -132,7 +136,7 @@ Semua kolom waktu di bagian ini (termasuk `Transaksi_Pembayaran`) adalah TIMESTA
 
 | Tabel | Kolom |
 |---|---|
-| `Pengguna` | `id_pengguna`, `nama` VARCHAR(100) NOT NULL, `email` VARCHAR(255) UNIQUE NOT NULL (disimpan lowercase), `password_hash` VARCHAR(255) NOT NULL (bcrypt), `status_langganan` ENUM('free','pro') NOT NULL DEFAULT 'free', `masa_berlaku_pro` TIMESTAMP NULL, `dibuat_pada` TIMESTAMP NOT NULL DEFAULT now(), `reset_token_hash` VARCHAR(64) NULL UNIQUE (hash SHA-256 token reset password; NULL berarti tidak ada permintaan reset yang berlaku), `reset_dibuat_pada` TIMESTAMP NULL (waktu token reset dibuat), `peran` ENUM('pengajar','admin') NOT NULL DEFAULT 'pengajar' (registrasi selalu mengisi 'pengajar'; Admin hanya dibuat developer), `dinonaktifkan_pada` TIMESTAMP NULL (NULL berarti akun aktif) |
+| `Pengguna` | `id_pengguna`, `nama` VARCHAR(100) NOT NULL, `email` VARCHAR(255) UNIQUE NOT NULL (disimpan lowercase), `password_hash` VARCHAR(255) NOT NULL (bcrypt), `status_langganan` ENUM('free','pro') NOT NULL DEFAULT 'free', `masa_berlaku_pro` TIMESTAMP NULL, `dibuat_pada` TIMESTAMP NOT NULL DEFAULT now(), `reset_token_hash` VARCHAR(64) NULL UNIQUE (hash SHA-256 token reset password; NULL berarti tidak ada permintaan reset yang berlaku), `reset_dibuat_pada` TIMESTAMP NULL (waktu token reset dibuat), `peran` ENUM('pengajar','admin') NOT NULL DEFAULT 'pengajar' (registrasi selalu mengisi 'pengajar'; Admin hanya dibuat developer), `dinonaktifkan_pada` TIMESTAMP NULL (NULL berarti akun aktif), `percobaan_password_gagal` INT NOT NULL DEFAULT 0 (hitungan percobaan salah berurutan di F-PROFIL ganti kata sandi, bagian 9), `percobaan_terkunci_sampai` TIMESTAMP NULL (NULL berarti tidak terkunci) |
 | `Sesi` | `id_sesi`, `id_pengguna` FK NOT NULL ON DELETE CASCADE, `refresh_token_hash` VARCHAR(64) UNIQUE NOT NULL (SHA-256), `dibuat_pada` NOT NULL DEFAULT now(), `terakhir_dipakai_pada` NOT NULL (diisi service), `kedaluwarsa_pada` NOT NULL (diisi service), `dicabut_pada` NULL. Satu baris per login, sehingga satu akun boleh punya beberapa sesi aktif (multi-perangkat) |
 | `Batch` | `id_batch`, `id_pengguna` FK NOT NULL ON DELETE CASCADE, `nama_batch` VARCHAR(100) NOT NULL, `status` ENUM('aktif','selesai') NOT NULL DEFAULT 'aktif', `dibuat_pada` NOT NULL DEFAULT now() |
 | `Soal` | `id_soal`, `id_batch` FK NOT NULL ON DELETE CASCADE, `no_soal` INT NOT NULL, `kunci_jawaban` TEXT NOT NULL. UNIQUE (`id_batch`, `no_soal`). Tanpa teks soal, tanpa vektor |
@@ -148,12 +152,13 @@ Aturan data:
 - `jumlah_retry` menghitung Coba Lagi manual (F-RETRY, FR11). Retry otomatis tidak dihitung.
 - Penghapusan Batch (FR22) menghapus berkas fisik (lewat lapisan penyimpanan, bagian 11) oleh backend dan baris turunan lewat cascade.
 - Konsistensi hasil (NFR14): jika teks jawaban dan kunci tidak berubah, hasil yang sudah tersimpan dipakai ulang dan Gemini tidak dipanggil lagi. Pembandingnya adalah `teks_ocr` yang tersimpan dengan teks baru; tidak ada kolom hash.
+- `percobaan_password_gagal` dan `percobaan_terkunci_sampai` (F-PROFIL, bagian 9): setelah 5 kali salah berurutan pada ganti kata sandi, `percobaan_terkunci_sampai` diisi sekarang + 15 menit dan permintaan baru ditolak `GANTI_PASSWORD_TERKUNCI` (429) tanpa memeriksa password selama kunci masih berlaku. Direset ke 0/NULL saat verifikasi kata sandi lama berhasil, saat kunci sudah kedaluwarsa, dan saat reset password lewat email (F-RESET) berhasil.
 
 ## 6. Autentikasi, sesi, dan peran
 
 Aturan ini sudah ditetapkan. Implementasi manual.
 
-- Endpoint (prefix `/api/auth`): `POST /daftar` (201, `{nama, email, password}` → `{id_pengguna, nama, email}`); `POST /masuk` (200, `{email, password}` → `{access_token}` + cookie `refresh_token`); `POST /refresh` (200, baca cookie `refresh_token` → `{access_token}` + cookie `refresh_token` diperbarui); `POST /keluar` (204, baca cookie `refresh_token` → tanpa isi, cookie dihapus); `GET /saya` (200, header `Authorization: Bearer <access_token>` → `{nama, status_langganan, masa_berlaku_pro, peran}`); `POST /lupa-password` (200, `{email}` → `{pesan}`, lihat F-RESET); `POST /atur-ulang-password` (204, `{token, password_baru}` → tanpa isi, lihat F-RESET).
+- Endpoint (prefix `/api/auth`): `POST /daftar` (201, `{nama, email, password}` → `{id_pengguna, nama, email}`); `POST /masuk` (200, `{email, password}` → `{access_token}` + cookie `refresh_token`); `POST /refresh` (200, baca cookie `refresh_token` → `{access_token}` + cookie `refresh_token` diperbarui); `POST /keluar` (204, baca cookie `refresh_token` → tanpa isi, cookie dihapus); `GET /saya` (200, header `Authorization: Bearer <access_token>` → `{nama, email, status_langganan, masa_berlaku_pro, peran, dibuat_pada}`); `POST /lupa-password` (200, `{email}` → `{pesan}`, lihat F-RESET); `POST /atur-ulang-password` (204, `{token, password_baru}` → tanpa isi, lihat F-RESET); `PATCH /profil` (200, login Pengajar, `{nama}` → `SayaResponse` terbaru, lihat F-PROFIL); `POST /ganti-password` (204, login Pengajar, `{password_lama, password_baru, konfirmasi_password_baru}` → tanpa isi, lihat F-PROFIL).
 - Registrasi: `nama`, `email`, `password`. Email di-trim dan di-lowercase, lalu HARUS berformat email yang valid; format tidak valid ditolak dengan `VALIDASI_GAGAL` (422). Password minimal 8 karakter dan maksimal 72 byte, disimpan sebagai hash bcrypt. Email yang sudah terdaftar ditolak dengan pesan "Email sudah terdaftar". Setelah sukses, arahkan ke halaman masuk dengan pesan "Akun berhasil dibuat, silakan masuk". Registrasi tidak membuat sesi. Registrasi selalu membuat peran Pengajar.
 - Login: `email` dan `password`. Jika gagal, pesan generik "Email atau password salah" (tanpa membedakan email atau password; diputuskan tetap generik pada 31 Okt 2026 agar daftar email terdaftar tidak mudah ditebak). Jika sukses, buat satu baris `Sesi` dan kirim access token. Admin dan Pengajar memakai endpoint login yang sama.
 - Access token: JWT (HS256, rahasia `SECRET_KEY` dari environment), berlaku 15 menit, berisi `id_pengguna`, `id_sesi`, `exp`. Frontend menyimpannya di memori saja (bukan localStorage).
@@ -326,6 +331,20 @@ FR29/UC-19 (hubungi Admin terkait kendala pembayaran): `GET /api/langganan/trans
 - Batas ini khusus permintaan tautan reset (jeda 60 detik per akun). Rate limit login tetap tidak diterapkan (bagian 6).
 - Konkurensi: permintaan tautan mengunci baris `Pengguna` (`SELECT ... FOR UPDATE`, pola FR18) sebelum menulis token baru; atur ulang password mencari baris lewat hash token lalu menguncinya juga, sehingga dari dua permintaan paralel dengan token yang sama, tepat satu yang berhasil.
 
+**F-PROFIL (FR31, FR32, FR33, UC-20, UC-21, UC-22, backend dan frontend lolos ujung ke ujung di localhost).** Halaman `/profil`, khusus Pengajar (Admin tidak dapat membukanya). Endpoint (prefix `/api/auth`, login Pengajar via `pengajar_saat_ini`): `GET /saya` (sudah ada, bagian 6, kini menyertakan `dibuat_pada`), `PATCH /profil` (`{nama}` → `SayaResponse`), `POST /ganti-password` (`{password_lama, password_baru, konfirmasi_password_baru}` → 204). Tautan ke Profil di bilah atas Pengajar adalah lingkaran inisial dan nama sebagai TAUTAN LANGSUNG ke `/profil` (bukan menu/dropdown); lingkaran inisial dibangun oleh fungsi bersama `inisialDariNama` (`frontend/src/lib/inisial.js`), dipakai juga di judul halaman Profil.
+
+UC-20 (lihat halaman Profil): Pengajar membuka Profil dengan mengklik lingkaran inisial atau nama di bilah atas, yang merupakan tautan langsung ke `/profil` (bukan menu). Halaman menampilkan informasi akun (nama, email hanya baca, tanggal bergabung dari `dibuat_pada`), paket (label Free/Pro dari `status_langganan` efektif, "Aktif sampai {tanggal}" untuk Pro, tautan ke `/langganan`; riwayat pembayaran tetap di halaman Langganan, tidak diduplikasi di sini), dan form ganti kata sandi. Tanpa kartu pemakaian, hapus akun, atau ubah email. Alternatif: gagal memuat profil — "Gagal memuat profil, coba muat ulang halaman".
+
+UC-21 (ubah nama): baris Nama di kartu "Informasi akun" berganti di tempat menjadi form saat ikon pensil diklik (bukan kartu terpisah): label Nama, satu kolom isian terisi nama saat ini, tombol Simpan dan Batal; Batal atau sukses mengembalikan baris itu ke tampilan teks dan ikon pensil. Fokus pindah ke kolom isian saat form dibuka, dan kembali ke ikon pensil saat ditutup (Batal maupun sukses). Validasi sama persis dengan registrasi (`UbahProfilRequest.nama`, aturan sama seperti `DaftarRequest.nama`, bagian 6): tidak kosong setelah trim, maksimal 100 karakter; galat tampil di bawah kolom isian yang sama. Sukses: `PATCH /api/auth/profil` menyimpan dan mengembalikan `SayaResponse` terbaru; nama di bilah atas dan judul halaman Profil berubah tanpa muat ulang halaman. Alternatif: nama kosong atau melebihi batas — `VALIDASI_GAGAL` (422), sama seperti registrasi. Form ganti kata sandi (UC-22) tetap kartu tersendiri, tidak terpengaruh perubahan ini.
+
+UC-22 (ganti kata sandi): form terpisah (kata sandi saat ini, kata sandi baru, ulangi kata sandi baru), tombol simpan sendiri. `konfirmasi_password_baru` harus sama dengan `password_baru` (divalidasi di schema, `VALIDASI_GAGAL` bila tidak cocok, backend tidak menerima pasangan yang tidak sama — beda dari F-RESET yang konfirmasinya hanya diperiksa di frontend). Kata sandi saat ini diverifikasi di backend dalam permintaan yang sama (tanpa endpoint cek terpisah, field tidak digembok menunggu verifikasi). Kata sandi baru memakai aturan sama seperti registrasi dan reset (minimal 8 karakter, maksimal 72 byte) dan TIDAK BOLEH sama dengan kata sandi lama. Sukses: kata sandi diganti, SEMUA sesi akun ini KECUALI sesi yang sedang dipakai untuk permintaan itu dicabut (beda dari F-RESET yang mencabut semua sesi termasuk sesi sendiri). Alternatif:
+- Kata sandi saat ini salah: `PASSWORD_LAMA_SALAH` (400) "Kata sandi saat ini tidak sesuai." — pesan umum, tanpa petunjuk lain, dan menambah hitungan percobaan gagal.
+- Kata sandi baru di luar 8–72 byte: `PASSWORD_TERLALU_PENDEK`/`PASSWORD_TERLALU_PANJANG` (400), sama seperti registrasi.
+- Kata sandi baru sama dengan kata sandi lama: `PASSWORD_BARU_SAMA` (400) "Password baru tidak boleh sama dengan password saat ini."
+- 5 kali salah berurutan: `GANTI_PASSWORD_TERKUNCI` (429) "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.", berlaku 15 menit sejak percobaan ke-5, direset begitu kata sandi lama benar, kunci kedaluwarsa, atau reset password lewat email (F-RESET) berhasil (lihat bagian 5, aturan data `Pengguna`).
+- Akun nonaktif atau sesi tidak valid/kedaluwarsa: `SESI_BERAKHIR` (401), ditegakkan `pengajar_saat_ini` sebelum mencapai logic ganti kata sandi, sama seperti seluruh endpoint terproteksi (bagian 6).
+- Dua permintaan ganti kata sandi bersamaan pada akun yang sama: baris `Pengguna` dikunci `SELECT ... FOR UPDATE` dan dibaca ulang sebelum diproses (pola sama seperti F-RESET), sehingga permintaan kedua tidak memakai hitungan percobaan yang sudah basi dari sebelum permintaan pertama commit.
+
 ## 10. Pesan error
 
 Backend mengembalikan kode error yang stabil; frontend memetakan kode ke teks Indonesia. Teks tidak boleh membocorkan detail teknis, jejak stack, atau isi rahasia. Pesan yang sudah ditulis di bagian 4, 6, 8, dan 9 dipakai persis. Tambahan: sesi habis, "Sesi berakhir, silakan masuk kembali."
@@ -349,6 +368,16 @@ Kode error reset password (bagian 9, F-RESET):
 | `TOKEN_RESET_TIDAK_VALID` | 400 | "Tautan tidak berlaku atau sudah kedaluwarsa." |
 
 `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, dan `VALIDASI_GAGAL` (bagian 6) dipakai ulang untuk F-RESET.
+
+Kode error ubah profil dan ganti kata sandi (bagian 9, F-PROFIL):
+
+| Kode | Status | Pesan |
+|---|---|---|
+| `PASSWORD_LAMA_SALAH` | 400 | "Kata sandi saat ini tidak sesuai." |
+| `PASSWORD_BARU_SAMA` | 400 | "Password baru tidak boleh sama dengan password saat ini." |
+| `GANTI_PASSWORD_TERKUNCI` | 429 | "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi." |
+
+`PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `VALIDASI_GAGAL`, `AKSES_DITOLAK`, dan `SESI_BERAKHIR` (bagian 6) dipakai ulang untuk F-PROFIL.
 
 Kode error batch dan soal (bagian 4, 9):
 
@@ -615,3 +644,4 @@ Item di sini TIDAK BOLEH diimplementasikan berdasarkan asumsi. Angkat saat Plan 
 | 2026-11-26 | Perbarui seksi hero dan tombol ajakan di `frontend/src/pages/Pemasaran.jsx` (judul utama baru, satu tombol "Coba Koreksi Gratis" ke `/masuk` di hero dan ke `/daftar` di penutup, serta ilustrasi alur tiga kartu dengan `Lencana` bersama) dan sinkronkan `docs/UI.md` bagian 1. |
 | 2026-11-27 | Tambah FR29/UC-19 (F-LANGGANAN, hubungi Admin terkait kendala pembayaran): `TransaksiResponse` menyertakan `id_order`, `SayaResponse` menyertakan `email` (field tambahan saja, tanpa migrasi — kedua kolom sudah ada); tes `backend/tests/test_auth.py` dan `test_langganan_router.py` diperbarui. Frontend: `AuthContext.jsx` menyimpan `email` dari `/api/auth/saya`; halaman Langganan menampilkan deskripsi "Kelola paket Pro dan pantau status pembayaran." (kini final, bukan usulan) dan kartu "Ada kendala pembayaran?" dengan tombol "Hubungi Admin via WhatsApp" (disembunyikan bila `VITE_NOMOR_WA_ADMIN` kosong), beserta petunjuk kontekstual "hubungi Admin" di seksi "Status transaksi terakhir" untuk status Gagal/Kedaluwarsa dan Menunggu setelah polling berhenti. Pesan WhatsApp dan pembuatan tautan `wa.me` (pembersihan nomor dari spasi/`+`/strip) dibangun oleh fungsi murni baru `frontend/src/lib/kontakAdmin.js` dengan tes `node --test`. `VITE_NOMOR_WA_ADMIN` ditambah di `frontend/.env.example`. Sinkronkan `docs/UI.md` (inventaris halaman Langganan, blok "Status transaksi terakhir", blok "Kartu kendala pembayaran"). |
 | 2026-11-27 | Fix webhook Midtrans (F-LANGGANAN): transaksi `gagal` kini bisa pulih menjadi `berhasil` lewat notifikasi sukses berikutnya pada `order_id` yang sama (Snap mengizinkan pembayar mencoba kartu lain setelah kartu pertama ditolak), ditemukan dari kasus nyata di Sandbox; `berhasil` dan `kedaluwarsa` tetap status akhir. |
+| 2026-11-27 | PR A — FR31/FR32/FR33 (halaman Profil Pengajar, UC-20 sampai UC-22, backend dan frontend dalam satu PR): migrasi Alembic `b4c6d8e0f1a3` menambah `Pengguna.percobaan_password_gagal` dan `percobaan_terkunci_sampai` (bagian 5); `GET /api/auth/saya` (`SayaResponse`) kini menyertakan `dibuat_pada`; endpoint baru `PATCH /api/auth/profil` (`UbahProfilRequest{nama}`, validasi sama seperti registrasi) dan `POST /api/auth/ganti-password` (`GantiPasswordRequest{password_lama, password_baru, konfirmasi_password_baru}`, keduanya `backend/app/routers/auth.py`, login Pengajar via `pengajar_saat_ini`); fungsi baru `services/auth.py::ubah_nama` dan `ganti_password` (verifikasi kata sandi lama lewat `verify_password`, baris `Pengguna` dikunci `SELECT ... FOR UPDATE` dengan `execution_options(populate_existing=True)` agar baris yang sudah ada di identity map sesi ikut disegarkan, bukan sekadar menyegel lock tanpa membaca ulang atributnya, dan dibaca ulang untuk mencegah race dua permintaan bersamaan, lockout 5 kali salah berurutan selama 15 menit lewat dua kolom baru, direset saat berhasil/kedaluwarsa/reset password email, mencabut semua sesi KECUALI sesi yang sedang dipakai lewat `id_sesi` yang kini disimpan `pengguna_saat_ini` ke `request.state`); 3 kode error baru di bagian 10 (`PASSWORD_LAMA_SALAH`, `PASSWORD_BARU_SAMA`, `GANTI_PASSWORD_TERKUNCI`). Tes baru di `test_auth.py` (ubah nama, kata sandi lama salah, kata sandi baru sama dengan lama, lockout dan kedaluwarsanya, deteksi hitungan basi lewat sesi lain sebelum `SELECT ... FOR UPDATE`, sesi lain tercabut tapi sesi sendiri tetap hidup, reset password email mengosongkan hitungan gagal, akun nonaktif/sesi tidak valid ditolak) dan dua rute baru didaftarkan `RUTE_PENGAJAR` di `test_peran.py` (Admin ditolak via test parametrized yang sudah ada). Frontend: halaman baru `frontend/src/pages/Profil.jsx` (empat kartu: Informasi akun, Paket, Ubah nama kondisional, Ganti kata sandi), rute `/profil` di `App.jsx` dalam blok `TataLetakTerproteksi peran="pengajar"` yang sudah ada; `BilahAtas.jsx` diperluas dengan lingkaran inisial yang jadi tautan langsung ke `/profil` (bukan menu/dropdown, tetap tampil di ponsel meski teks nama disembunyikan di header, tampil penuh di laci); fungsi bersama baru `frontend/src/lib/inisial.js::inisialDariNama` (satu huruf untuk nama satu kata, huruf pertama kata pertama dan terakhir untuk dua kata atau lebih); `AuthContext.jsx` menambah state `dibuatPada`; `api/auth.js` menambah `ubahProfil`/`gantiPassword`; `api/pesan.js` menambah 4 kode (`GAGAL_MUAT_PROFIL`, `PASSWORD_LAMA_SALAH`, `PASSWORD_BARU_SAMA`, `GANTI_PASSWORD_TERKUNCI`) dan pesan sukses ganti kata sandi (usulan); `lib/galatAuth.js` menambah `galatUbahProfilDariKode`/`galatGantiPasswordDariKode` dengan tes. UC-20 diperbaiki: akses Profil adalah tautan langsung lewat lingkaran inisial/nama, bukan "menu kecil" seperti tertulis sebelumnya. `docs/UI.md` disinkronkan (baris "Bilah atas", baris inventaris ke-12, dan subbagian Rancangan halaman ke-12). Status FR31–FR33 di bagian 3 menjadi Selesai. |

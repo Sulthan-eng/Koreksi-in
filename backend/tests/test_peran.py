@@ -32,6 +32,8 @@ RUTE_BERSAMA = {
 
 # Rute khusus Pengajar (Admin ditolak 403)
 RUTE_PENGAJAR = {
+    ("PATCH", "/api/auth/profil"),
+    ("POST", "/api/auth/ganti-password"),
     ("GET", "/api/batch"),
     ("POST", "/api/batch"),
     ("GET", "/api/batch/{id_batch}"),

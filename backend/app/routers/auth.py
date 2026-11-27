@@ -4,7 +4,7 @@ from starlette.requests import Request
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import pengguna_saat_ini
+from app.core.dependencies import pengajar_saat_ini, pengguna_saat_ini
 from app.core.errors import SESI_BERAKHIR
 from app.core.security import REFRESH_TOKEN_EXPIRE_DAYS
 from app.models.enums import StatusLangganan
@@ -13,11 +13,13 @@ from app.schemas.auth import (
     AturUlangPasswordRequest,
     DaftarRequest,
     DaftarResponse,
+    GantiPasswordRequest,
     LupaPasswordRequest,
     LupaPasswordResponse,
     MasukRequest,
     SayaResponse,
     TokenResponse,
+    UbahProfilRequest,
 )
 from app.services import auth as auth_service
 from app.services import email as email_service
@@ -101,6 +103,37 @@ async def saya(pengguna: Pengguna = Depends(pengguna_saat_ini)) -> SayaResponse:
         status_langganan=efektif,
         masa_berlaku_pro=pengguna.masa_berlaku_pro if efektif == StatusLangganan.PRO else None,
         peran=pengguna.peran,
+        dibuat_pada=pengguna.dibuat_pada,
+    )
+
+
+@router.patch("/profil", response_model=SayaResponse)
+async def ubah_profil(
+    body: UbahProfilRequest,
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> SayaResponse:
+    pengguna = await auth_service.ubah_nama(db, pengguna, body.nama)
+    efektif = jenis_akun_efektif(pengguna)
+    return SayaResponse(
+        nama=pengguna.nama,
+        email=pengguna.email,
+        status_langganan=efektif,
+        masa_berlaku_pro=pengguna.masa_berlaku_pro if efektif == StatusLangganan.PRO else None,
+        peran=pengguna.peran,
+        dibuat_pada=pengguna.dibuat_pada,
+    )
+
+
+@router.post("/ganti-password", status_code=204)
+async def ganti_password(
+    body: GantiPasswordRequest,
+    request: Request,
+    pengguna: Pengguna = Depends(pengajar_saat_ini),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await auth_service.ganti_password(
+        db, pengguna, request.state.id_sesi, body.password_lama, body.password_baru
     )
 
 
