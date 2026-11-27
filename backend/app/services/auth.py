@@ -43,7 +43,7 @@ PASSWORD_BARU_SAMA = AppError(
 )
 GANTI_PASSWORD_TERKUNCI = AppError(
     kode="GANTI_PASSWORD_TERKUNCI",
-    pesan="Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi.",
+    pesan="Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.",
     status_code=429,
 )
 
@@ -217,7 +217,14 @@ async def ganti_password(
     bersamaan tidak memakai counter yang sudah basi (lihat rencana PR).
     Setelah sukses, semua sesi akun ini KECUALI id_sesi_saat_ini dicabut."""
     pengguna_terkini = await db.scalar(
-        select(Pengguna).where(Pengguna.id_pengguna == pengguna.id_pengguna).with_for_update()
+        select(Pengguna)
+        .where(Pengguna.id_pengguna == pengguna.id_pengguna)
+        .with_for_update()
+        # pengguna sudah ada di identity map sesi ini (dimuat pengguna_saat_ini
+        # sebelum endpoint dipanggil); tanpa populate_existing, SQLAlchemy
+        # mengembalikan objek Python yang sama tanpa menimpa atributnya dari baris
+        # yang baru dikunci, sehingga "baca ulang" di bawah lock jadi tidak berarti.
+        .execution_options(populate_existing=True)
     )
     if pengguna_terkini is None or pengguna_terkini.dinonaktifkan_pada is not None:
         await db.rollback()

@@ -341,7 +341,7 @@ UC-22 (ganti kata sandi): form terpisah (kata sandi saat ini, kata sandi baru, u
 - Kata sandi saat ini salah: `PASSWORD_LAMA_SALAH` (400) "Kata sandi saat ini tidak sesuai." — pesan umum, tanpa petunjuk lain, dan menambah hitungan percobaan gagal.
 - Kata sandi baru di luar 8–72 byte: `PASSWORD_TERLALU_PENDEK`/`PASSWORD_TERLALU_PANJANG` (400), sama seperti registrasi.
 - Kata sandi baru sama dengan kata sandi lama: `PASSWORD_BARU_SAMA` (400) "Password baru tidak boleh sama dengan password saat ini."
-- 5 kali salah berurutan: `GANTI_PASSWORD_TERKUNCI` (429) "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi.", berlaku 15 menit sejak percobaan ke-5, direset begitu kata sandi lama benar, kunci kedaluwarsa, atau reset password lewat email (F-RESET) berhasil (lihat bagian 5, aturan data `Pengguna`).
+- 5 kali salah berurutan: `GANTI_PASSWORD_TERKUNCI` (429) "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.", berlaku 15 menit sejak percobaan ke-5, direset begitu kata sandi lama benar, kunci kedaluwarsa, atau reset password lewat email (F-RESET) berhasil (lihat bagian 5, aturan data `Pengguna`).
 - Akun nonaktif atau sesi tidak valid/kedaluwarsa: `SESI_BERAKHIR` (401), ditegakkan `pengajar_saat_ini` sebelum mencapai logic ganti kata sandi, sama seperti seluruh endpoint terproteksi (bagian 6).
 - Dua permintaan ganti kata sandi bersamaan pada akun yang sama: baris `Pengguna` dikunci `SELECT ... FOR UPDATE` dan dibaca ulang sebelum diproses (pola sama seperti F-RESET), sehingga permintaan kedua tidak memakai hitungan percobaan yang sudah basi dari sebelum permintaan pertama commit.
 
@@ -375,7 +375,7 @@ Kode error ubah profil dan ganti kata sandi (bagian 9, F-PROFIL):
 |---|---|---|
 | `PASSWORD_LAMA_SALAH` | 400 | "Kata sandi saat ini tidak sesuai." |
 | `PASSWORD_BARU_SAMA` | 400 | "Password baru tidak boleh sama dengan password saat ini." |
-| `GANTI_PASSWORD_TERKUNCI` | 429 | "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi." |
+| `GANTI_PASSWORD_TERKUNCI` | 429 | "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi." |
 
 `PASSWORD_TERLALU_PENDEK`, `PASSWORD_TERLALU_PANJANG`, `VALIDASI_GAGAL`, `AKSES_DITOLAK`, dan `SESI_BERAKHIR` (bagian 6) dipakai ulang untuk F-PROFIL.
 

@@ -955,6 +955,50 @@ async def test_ganti_password_lama_salah_ditolak(
     assert pengguna.percobaan_password_gagal == 1
 
 
+async def test_ganti_password_select_for_update_menyegarkan_objek_basi(
+    client: AsyncClient, db_session: AsyncSession, _engine: AsyncEngine
+) -> None:
+    """Memanggil service langsung (bukan lewat client/HTTP) karena identity map
+    SQLAlchemy memakai weak reference: lewat dua request HTTP terpisah, objek
+    Pengguna yang dimuat pengguna_saat_ini di request pertama bisa langsung
+    di-garbage-collect begitu response request itu selesai, membuat request
+    kedua memuat ulang dari nol secara kebetulan dan menyembunyikan bug ini.
+    Yang sebenarnya ingin diuji adalah SATU request: pengguna_saat_ini memuat
+    Pengguna tanpa lock di awal dan memegang referensinya (parameter `pengguna`)
+    sepanjang request, lalu ganti_password melakukan SELECT...FOR UPDATE pada
+    SESI yang sama. Di sini kita pegang referensi `pengguna` (meniru parameter
+    itu) sebelum sesi LAIN mengubah baris yang sama di database, lalu panggil
+    ganti_password dengan `pengguna` yang basi itu. Tanpa
+    execution_options(populate_existing=True), SELECT...FOR UPDATE akan
+    mengembalikan objek basi (percobaan_password_gagal lama) dari identity map
+    alih-alih baris yang baru dikunci, sehingga percobaan salah ini seharusnya
+    langsung mengunci (4 + 1 = 5) tetapi malah dihitung dari 0 dan tidak
+    terkunci."""
+    await _daftar_dan_masuk(client)
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    assert pengguna.percobaan_password_gagal == 0
+    sesi = await db_session.scalar(select(Sesi))
+
+    sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
+    async with sessionmaker() as sesi_lain:
+        pengguna_sesi_lain = await sesi_lain.scalar(
+            select(Pengguna).where(Pengguna.email == "budi@contoh.com")
+        )
+        pengguna_sesi_lain.percobaan_password_gagal = 4
+        await sesi_lain.commit()
+
+    with pytest.raises(AppError) as exc_info:
+        await auth_service.ganti_password(
+            db_session, pengguna, sesi.id_sesi, "salah-sekali", "baru12345"
+        )
+    assert exc_info.value.kode == "PASSWORD_LAMA_SALAH"
+
+    async with sessionmaker() as sesi_cek:
+        akhir = await sesi_cek.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+        assert akhir.percobaan_password_gagal == 5
+        assert akhir.percobaan_terkunci_sampai is not None
+
+
 async def test_ganti_password_baru_sama_dengan_lama_ditolak(client: AsyncClient) -> None:
     hasil_masuk = await _daftar_dan_masuk(client)
     headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
@@ -1015,7 +1059,7 @@ async def test_ganti_password_5x_salah_mengunci_akun(
     assert terkunci.status_code == 429
     assert terkunci.json() == {
         "kode": "GANTI_PASSWORD_TERKUNCI",
-        "pesan": "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi.",
+        "pesan": "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.",
     }
     pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
     assert pengguna.password_hash is not None
