@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
@@ -32,18 +33,37 @@ TOKEN_RESET_TIDAK_VALID = AppError(
     pesan="Tautan tidak berlaku atau sudah kedaluwarsa.",
     status_code=400,
 )
+PASSWORD_LAMA_SALAH = AppError(
+    kode="PASSWORD_LAMA_SALAH", pesan="Kata sandi saat ini tidak sesuai.", status_code=400
+)
+PASSWORD_BARU_SAMA = AppError(
+    kode="PASSWORD_BARU_SAMA",
+    pesan="Password baru tidak boleh sama dengan password saat ini.",
+    status_code=400,
+)
+GANTI_PASSWORD_TERKUNCI = AppError(
+    kode="GANTI_PASSWORD_TERKUNCI",
+    pesan="Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi.",
+    status_code=429,
+)
 
 _JEDA_RESET_DETIK = 60
 _KEDALUWARSA_RESET_MENIT = 30
+_MAKS_PERCOBAAN_PASSWORD = 5
+_DURASI_KUNCI_MENIT = 15
 
 
-async def daftar(db: AsyncSession, nama: str, email: str, password: str) -> Pengguna:
-    email = email.strip().lower()
+def _validasi_panjang_password(password: str) -> None:
     panjang_password = len(password.encode("utf-8"))
     if panjang_password < 8:
         raise PASSWORD_TERLALU_PENDEK
     if panjang_password > 72:
         raise PASSWORD_TERLALU_PANJANG
+
+
+async def daftar(db: AsyncSession, nama: str, email: str, password: str) -> Pengguna:
+    email = email.strip().lower()
+    _validasi_panjang_password(password)
 
     existing = await db.scalar(select(Pengguna).where(Pengguna.email == email))
     if existing is not None:
@@ -147,11 +167,7 @@ async def atur_ulang_password(db: AsyncSession, token: str, password_baru: str) 
     (bukan compare manual) dan dikunci via SELECT...FOR UPDATE, lalu expiry
     dicek, password diganti, kedua kolom reset dikosongkan, dan SEMUA sesi
     akun itu dicabut -- satu transaksi."""
-    panjang_password = len(password_baru.encode("utf-8"))
-    if panjang_password < 8:
-        raise PASSWORD_TERLALU_PENDEK
-    if panjang_password > 72:
-        raise PASSWORD_TERLALU_PANJANG
+    _validasi_panjang_password(password_baru)
 
     token_hash = hash_refresh_token(token)
     pengguna = await db.scalar(
@@ -170,10 +186,82 @@ async def atur_ulang_password(db: AsyncSession, token: str, password_baru: str) 
     pengguna.password_hash = await hash_password(password_baru)
     pengguna.reset_token_hash = None
     pengguna.reset_dibuat_pada = None
+    # Pemilik akun baru saja membuktikan kontrol atas email; jangan mewarisi
+    # lockout dari percobaan ganti-password sebelumnya.
+    pengguna.percobaan_password_gagal = 0
+    pengguna.percobaan_terkunci_sampai = None
 
     await db.execute(
         update(Sesi)
         .where(Sesi.id_pengguna == pengguna.id_pengguna, Sesi.dicabut_pada.is_(None))
+        .values(dicabut_pada=sekarang)
+    )
+    await db.commit()
+
+
+async def ubah_nama(db: AsyncSession, pengguna: Pengguna, nama: str) -> Pengguna:
+    pengguna.nama = nama
+    await db.commit()
+    return pengguna
+
+
+async def ganti_password(
+    db: AsyncSession,
+    pengguna: Pengguna,
+    id_sesi_saat_ini: uuid.UUID,
+    password_lama: str,
+    password_baru: str,
+) -> None:
+    """Mengunci baris Pengguna (FOR UPDATE) dan membaca ulang nilai sebelum
+    memeriksa lockout/password, supaya dua permintaan ganti-password yang
+    bersamaan tidak memakai counter yang sudah basi (lihat rencana PR).
+    Setelah sukses, semua sesi akun ini KECUALI id_sesi_saat_ini dicabut."""
+    pengguna_terkini = await db.scalar(
+        select(Pengguna).where(Pengguna.id_pengguna == pengguna.id_pengguna).with_for_update()
+    )
+    if pengguna_terkini is None or pengguna_terkini.dinonaktifkan_pada is not None:
+        await db.rollback()
+        raise SESI_BERAKHIR
+
+    sekarang = datetime.now(UTC)
+    if (
+        pengguna_terkini.percobaan_terkunci_sampai is not None
+        and pengguna_terkini.percobaan_terkunci_sampai > sekarang
+    ):
+        await db.rollback()
+        raise GANTI_PASSWORD_TERKUNCI
+    if (
+        pengguna_terkini.percobaan_terkunci_sampai is not None
+        and pengguna_terkini.percobaan_terkunci_sampai <= sekarang
+    ):
+        pengguna_terkini.percobaan_password_gagal = 0
+        pengguna_terkini.percobaan_terkunci_sampai = None
+
+    if not await verify_password(password_lama, pengguna_terkini.password_hash):
+        pengguna_terkini.percobaan_password_gagal += 1
+        if pengguna_terkini.percobaan_password_gagal >= _MAKS_PERCOBAAN_PASSWORD:
+            pengguna_terkini.percobaan_terkunci_sampai = sekarang + timedelta(
+                minutes=_DURASI_KUNCI_MENIT
+            )
+        await db.commit()
+        raise PASSWORD_LAMA_SALAH
+
+    pengguna_terkini.percobaan_password_gagal = 0
+    pengguna_terkini.percobaan_terkunci_sampai = None
+
+    _validasi_panjang_password(password_baru)
+    if await verify_password(password_baru, pengguna_terkini.password_hash):
+        raise PASSWORD_BARU_SAMA
+
+    pengguna_terkini.password_hash = await hash_password(password_baru)
+
+    await db.execute(
+        update(Sesi)
+        .where(
+            Sesi.id_pengguna == pengguna_terkini.id_pengguna,
+            Sesi.dicabut_pada.is_(None),
+            Sesi.id_sesi != id_sesi_saat_ini,
+        )
         .values(dicabut_pada=sekarang)
     )
     await db.commit()

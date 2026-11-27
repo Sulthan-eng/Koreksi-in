@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import DateTime, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -36,5 +36,11 @@ class Pengguna(Base):
         server_default=Peran.PENGAJAR.value,
     )
     dinonaktifkan_pada: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    percobaan_password_gagal: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
+    percobaan_terkunci_sampai: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

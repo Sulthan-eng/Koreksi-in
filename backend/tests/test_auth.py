@@ -349,7 +349,10 @@ async def test_saya_dengan_token_valid(client: AsyncClient) -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    assert body["dibuat_pada"] is not None
+    del body["dibuat_pada"]
+    assert body == {
         "nama": "Budi Santoso",
         "email": "budi@contoh.com",
         "status_langganan": "free",
@@ -431,7 +434,10 @@ async def test_saya_pro_dengan_masa_berlaku_lewat_mengembalikan_free(
     )
 
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    assert body["dibuat_pada"] is not None
+    del body["dibuat_pada"]
+    assert body == {
         "nama": "Budi Santoso",
         "email": "budi@contoh.com",
         "status_langganan": "free",
@@ -851,3 +857,290 @@ async def test_atur_ulang_password_akun_nonaktif_ditolak(
     }
     await db_session.refresh(pengguna)
     assert pengguna.password_hash == hash_lama
+
+
+async def test_ubah_profil_nama_valid(client: AsyncClient, db_session: AsyncSession) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.patch("/api/auth/profil", json={"nama": "Budi Baru"}, headers=headers)
+
+    assert response.status_code == 200
+    assert response.json()["nama"] == "Budi Baru"
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    assert pengguna.nama == "Budi Baru"
+
+
+async def test_ubah_profil_nama_kosong_ditolak(client: AsyncClient) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.patch("/api/auth/profil", json={"nama": "   "}, headers=headers)
+
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
+
+
+async def test_ubah_profil_nama_melebihi_batas_ditolak(client: AsyncClient) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.patch("/api/auth/profil", json={"nama": "a" * 101}, headers=headers)
+
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
+
+
+_GANTI_PASSWORD_BENAR = {
+    "password_lama": "rahasia123",
+    "password_baru": "baru12345",
+    "konfirmasi_password_baru": "baru12345",
+}
+
+
+async def test_ganti_password_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers
+    )
+
+    assert response.status_code == 204
+    login_lama = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+    assert login_lama.status_code == 401
+    login_baru = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "baru12345"}
+    )
+    assert login_baru.status_code == 200
+
+
+async def test_ganti_password_konfirmasi_tidak_cocok_ditolak(client: AsyncClient) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.post(
+        "/api/auth/ganti-password",
+        json={**_GANTI_PASSWORD_BENAR, "konfirmasi_password_baru": "beda123456"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["kode"] == "VALIDASI_GAGAL"
+
+
+async def test_ganti_password_lama_salah_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    hash_lama = pengguna.password_hash
+
+    response = await client.post(
+        "/api/auth/ganti-password",
+        json={**_GANTI_PASSWORD_BENAR, "password_lama": "salah-sekali"},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "PASSWORD_LAMA_SALAH",
+        "pesan": "Kata sandi saat ini tidak sesuai.",
+    }
+    await db_session.refresh(pengguna)
+    assert pengguna.password_hash == hash_lama
+    assert pengguna.percobaan_password_gagal == 1
+
+
+async def test_ganti_password_baru_sama_dengan_lama_ditolak(client: AsyncClient) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.post(
+        "/api/auth/ganti-password",
+        json={
+            "password_lama": "rahasia123",
+            "password_baru": "rahasia123",
+            "konfirmasi_password_baru": "rahasia123",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "kode": "PASSWORD_BARU_SAMA",
+        "pesan": "Password baru tidak boleh sama dengan password saat ini.",
+    }
+
+
+async def test_ganti_password_baru_terlalu_pendek_ditolak(client: AsyncClient) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    response = await client.post(
+        "/api/auth/ganti-password",
+        json={
+            "password_lama": "rahasia123",
+            "password_baru": "pendek1",
+            "konfirmasi_password_baru": "pendek1",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert response.json()["kode"] == "PASSWORD_TERLALU_PENDEK"
+
+
+async def test_ganti_password_5x_salah_mengunci_akun(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    for _ in range(5):
+        gagal = await client.post(
+            "/api/auth/ganti-password",
+            json={**_GANTI_PASSWORD_BENAR, "password_lama": "salah-sekali"},
+            headers=headers,
+        )
+        assert gagal.status_code == 400
+
+    terkunci = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers
+    )
+
+    assert terkunci.status_code == 429
+    assert terkunci.json() == {
+        "kode": "GANTI_PASSWORD_TERKUNCI",
+        "pesan": "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi.",
+    }
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    assert pengguna.password_hash is not None
+
+
+async def test_ganti_password_kunci_kedaluwarsa_mengizinkan_percobaan_baru(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    for _ in range(5):
+        await client.post(
+            "/api/auth/ganti-password",
+            json={**_GANTI_PASSWORD_BENAR, "password_lama": "salah-sekali"},
+            headers=headers,
+        )
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    assert pengguna.percobaan_terkunci_sampai is not None
+    pengguna.percobaan_terkunci_sampai = datetime.now(UTC) - timedelta(seconds=1)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers
+    )
+
+    assert response.status_code == 204
+    login_baru = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "baru12345"}
+    )
+    assert login_baru.status_code == 200
+
+
+async def test_ganti_password_mencabut_sesi_lain_tapi_tidak_sesi_sendiri(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk_1 = await _daftar_dan_masuk(client)
+    headers_1 = {"Authorization": f"Bearer {hasil_masuk_1['access_token']}"}
+
+    login_2 = await client.post(
+        "/api/auth/masuk", json={"email": "budi@contoh.com", "password": "rahasia123"}
+    )
+    headers_2 = {"Authorization": f"Bearer {login_2.json()['access_token']}"}
+
+    response = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers_1
+    )
+    assert response.status_code == 204
+
+    # Sesi yang dipakai request ganti-password itu sendiri tetap hidup.
+    masih_hidup = await client.get("/api/auth/saya", headers=headers_1)
+    assert masih_hidup.status_code == 200
+
+    # Sesi lain (login kedua) tercabut.
+    sesi_lain_tercabut = await client.get("/api/auth/saya", headers=headers_2)
+    assert sesi_lain_tercabut.status_code == 401
+    assert sesi_lain_tercabut.json()["kode"] == "SESI_BERAKHIR"
+
+    sesi_list = (await db_session.scalars(select(Sesi))).all()
+    assert len(sesi_list) == 2
+    tercabut = [s for s in sesi_list if s.dicabut_pada is not None]
+    hidup = [s for s in sesi_list if s.dicabut_pada is None]
+    assert len(tercabut) == 1
+    assert len(hidup) == 1
+
+
+async def test_ganti_password_reset_lewat_email_mengosongkan_percobaan_gagal(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    _background_tasks_tidak_dijalankan: list[tuple],
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+
+    gagal = await client.post(
+        "/api/auth/ganti-password",
+        json={**_GANTI_PASSWORD_BENAR, "password_lama": "salah-sekali"},
+        headers=headers,
+    )
+    assert gagal.status_code == 400
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    assert pengguna.percobaan_password_gagal == 1
+
+    await client.post("/api/auth/lupa-password", json={"email": "budi@contoh.com"})
+    _, args, _ = _background_tasks_tidak_dijalankan[0]
+    token = args[1]
+    reset = await client.post(
+        "/api/auth/atur-ulang-password", json={"token": token, "password_baru": "baru12345"}
+    )
+    assert reset.status_code == 204
+
+    await db_session.refresh(pengguna)
+    assert pengguna.percobaan_password_gagal == 0
+    assert pengguna.percobaan_terkunci_sampai is None
+
+
+async def test_ganti_password_akun_nonaktif_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    pengguna = await db_session.scalar(select(Pengguna).where(Pengguna.email == "budi@contoh.com"))
+    pengguna.dinonaktifkan_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers
+    )
+
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"
+
+
+async def test_ganti_password_sesi_dicabut_ditolak(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    hasil_masuk = await _daftar_dan_masuk(client)
+    headers = {"Authorization": f"Bearer {hasil_masuk['access_token']}"}
+    sesi = await db_session.scalar(select(Sesi))
+    sesi.dicabut_pada = datetime.now(UTC)
+    await db_session.commit()
+
+    response = await client.post(
+        "/api/auth/ganti-password", json=_GANTI_PASSWORD_BENAR, headers=headers
+    )
+
+    assert response.status_code == 401
+    assert response.json()["kode"] == "SESI_BERAKHIR"

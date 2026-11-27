@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ AKSES_DITOLAK = AppError(
 
 
 async def pengguna_saat_ini(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
 ) -> Pengguna:
@@ -30,6 +31,10 @@ async def pengguna_saat_ini(
     payload = verifikasi_access_token(credentials.credentials)
     id_sesi = uuid.UUID(payload["id_sesi"])
     id_pengguna = uuid.UUID(payload["id_pengguna"])
+    # Disimpan di request.state agar endpoint yang perlu mencabut sesi LAIN
+    # (bukan sesi yang sedang dipakai) bisa membaca id_sesi tanpa mendekode
+    # token sekali lagi, tanpa mengubah signature pengguna_saat_ini.
+    request.state.id_sesi = id_sesi
 
     sesi = await db.scalar(
         select(Sesi).where(
