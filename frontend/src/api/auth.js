@@ -65,3 +65,21 @@ export async function aturUlangPassword({ token, password_baru }) {
     autentikasi: false,
   });
 }
+
+export async function ubahProfil({ nama }) {
+  return permintaan("/api/auth/profil", {
+    method: "PATCH",
+    body: { nama },
+  });
+}
+
+export async function gantiPassword({
+  password_lama,
+  password_baru,
+  konfirmasi_password_baru,
+}) {
+  return permintaan("/api/auth/ganti-password", {
+    method: "POST",
+    body: { password_lama, password_baru, konfirmasi_password_baru },
+  });
+}

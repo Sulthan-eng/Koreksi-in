@@ -18,6 +18,7 @@ import Pemasaran from "./pages/Pemasaran.jsx";
 import Beranda from "./pages/Beranda.jsx";
 import HalamanBatch from "./pages/HalamanBatch.jsx";
 import Langganan from "./pages/Langganan.jsx";
+import Profil from "./pages/Profil.jsx";
 import DashboardPantauan from "./pages/DashboardPantauan.jsx";
 import AkunPengajar from "./pages/AkunPengajar.jsx";
 import HalamanTidakDitemukan from "./pages/HalamanTidakDitemukan.jsx";
@@ -87,6 +88,7 @@ const rute = createRoutesFromElements(
     <Route element={<TataLetakTerproteksi peran="pengajar" />}>
       <Route path="/batch/:id" element={<HalamanBatch />} />
       <Route path="/langganan" element={<Langganan />} />
+      <Route path="/profil" element={<Profil />} />
     </Route>
     <Route element={<TataLetakTerproteksi peran="admin" />}>
       <Route path="/admin" element={<DashboardPantauan />} />

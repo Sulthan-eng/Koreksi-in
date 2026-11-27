@@ -182,6 +182,14 @@ export const PESAN_KODE = {
   AKUN_BERHASIL_DIAKTIFKAN: "Akun berhasil diaktifkan",
   JUDUL_NONAKTIFKAN_AKUN: "Nonaktifkan Akun",
   JUDUL_AKTIFKAN_AKUN: "Aktifkan Akun",
+  GAGAL_MUAT_PROFIL: "Gagal memuat profil, coba muat ulang halaman",
+  PASSWORD_LAMA_SALAH: "Kata sandi saat ini tidak sesuai.",
+  PASSWORD_BARU_SAMA:
+    "Password baru tidak boleh sama dengan password saat ini.",
+  GANTI_PASSWORD_TERKUNCI:
+    "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.",
+  KATA_SANDI_BERHASIL_DIUBAH:
+    "Kata sandi berhasil diubah. Perangkat lain akan keluar otomatis.",
   UMUM: "Terjadi kesalahan, silakan coba lagi.",
 };
 

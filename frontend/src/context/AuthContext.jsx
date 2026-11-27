@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
   const [email, setEmail] = useState(null);
   const [statusLangganan, setStatusLangganan] = useState(null);
   const [masaBerlakuPro, setMasaBerlakuPro] = useState(null);
+  const [dibuatPada, setDibuatPada] = useState(null);
   const [peran, setPeran] = useState("pengajar");
   const [pesanSesi, setPesanSesi] = useState(null);
   const [keluarSengaja, setKeluarSengaja] = useState(false);
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
       setEmail(null);
       setStatusLangganan(null);
       setMasaBerlakuPro(null);
+      setDibuatPada(null);
       setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     });
@@ -69,6 +71,7 @@ export function AuthProvider({ children }) {
         setMasaBerlakuPro(
           normalisasiMasaBerlakuPro(hasil.masa_berlaku_pro, langganan),
         );
+        setDibuatPada(hasil.dibuat_pada ?? null);
         setPeran(normalisasiPeran(hasil.peran));
         setStatus("terautentikasi");
       } catch {
@@ -113,6 +116,9 @@ export function AuthProvider({ children }) {
             normalisasiMasaBerlakuPro(hasil.masa_berlaku_pro, langganan),
           );
         }
+        if (hasil.dibuat_pada) {
+          setDibuatPada(hasil.dibuat_pada);
+        }
         setPeran(normalisasiPeran(hasil.peran));
         return hasil;
       } catch (error) {
@@ -135,6 +141,7 @@ export function AuthProvider({ children }) {
       setEmail(null);
       setStatusLangganan(null);
       setMasaBerlakuPro(null);
+      setDibuatPada(null);
       setPeran("pengajar");
       setStatus("tidak-terautentikasi");
     }
@@ -148,6 +155,7 @@ export function AuthProvider({ children }) {
         email,
         statusLangganan,
         masaBerlakuPro,
+        dibuatPada,
         peran,
         pesanSesi,
         keluarSengaja,

@@ -4,7 +4,9 @@ import {
   fieldPertamaBermasalah,
   galatAturUlangPasswordDariKode,
   galatDaftarDariKode,
+  galatGantiPasswordDariKode,
   galatMasukDariKode,
+  galatUbahProfilDariKode,
 } from "./galatAuth.js";
 
 test("galatDaftarDariKode - EMAIL_SUDAH_TERDAFTAR dipetakan ke kolom email", () => {
@@ -113,6 +115,97 @@ test("galatMasukDariKode - kode lain tidak menandai kredensial", () => {
     {
       kredensialTidakValid: false,
       umum: "Terjadi kesalahan, silakan coba lagi.",
+    },
+  );
+});
+
+test("galatUbahProfilDariKode - NAMA_KOSONG dan NAMA_TERLALU_PANJANG dipetakan ke kolom nama", () => {
+  deepStrictEqual(galatUbahProfilDariKode("NAMA_KOSONG", "Nama wajib diisi."), {
+    nama: "Nama wajib diisi.",
+    umum: null,
+  });
+  deepStrictEqual(
+    galatUbahProfilDariKode(
+      "NAMA_TERLALU_PANJANG",
+      "Nama maksimal 100 karakter.",
+    ),
+    {
+      nama: "Nama maksimal 100 karakter.",
+      umum: null,
+    },
+  );
+});
+
+test("galatUbahProfilDariKode - kode lain jatuh ke galat umum", () => {
+  deepStrictEqual(
+    galatUbahProfilDariKode("VALIDASI_GAGAL", "Data yang dikirim tidak valid."),
+    {
+      nama: null,
+      umum: "Data yang dikirim tidak valid.",
+    },
+  );
+});
+
+test("galatGantiPasswordDariKode - PASSWORD_LAMA_SALAH dipetakan ke kolom kata sandi saat ini", () => {
+  deepStrictEqual(
+    galatGantiPasswordDariKode(
+      "PASSWORD_LAMA_SALAH",
+      "Kata sandi saat ini tidak sesuai.",
+    ),
+    {
+      passwordLama: "Kata sandi saat ini tidak sesuai.",
+      passwordBaru: null,
+      umum: null,
+    },
+  );
+});
+
+test("galatGantiPasswordDariKode - PASSWORD_TERLALU_PENDEK, PASSWORD_TERLALU_PANJANG, dan PASSWORD_BARU_SAMA dipetakan ke kolom kata sandi baru", () => {
+  deepStrictEqual(
+    galatGantiPasswordDariKode(
+      "PASSWORD_TERLALU_PENDEK",
+      "Password minimal 8 karakter",
+    ),
+    {
+      passwordLama: null,
+      passwordBaru: "Password minimal 8 karakter",
+      umum: null,
+    },
+  );
+  deepStrictEqual(
+    galatGantiPasswordDariKode(
+      "PASSWORD_TERLALU_PANJANG",
+      "Password maksimal 72 karakter",
+    ),
+    {
+      passwordLama: null,
+      passwordBaru: "Password maksimal 72 karakter",
+      umum: null,
+    },
+  );
+  deepStrictEqual(
+    galatGantiPasswordDariKode(
+      "PASSWORD_BARU_SAMA",
+      "Password baru tidak boleh sama dengan password saat ini.",
+    ),
+    {
+      passwordLama: null,
+      passwordBaru: "Password baru tidak boleh sama dengan password saat ini.",
+      umum: null,
+    },
+  );
+});
+
+test("galatGantiPasswordDariKode - kode lain (mis. lockout) jatuh ke galat umum", () => {
+  deepStrictEqual(
+    galatGantiPasswordDariKode(
+      "GANTI_PASSWORD_TERKUNCI",
+      "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.",
+    ),
+    {
+      passwordLama: null,
+      passwordBaru: null,
+      umum: "Terlalu banyak percobaan gagal. Coba lagi beberapa menit lagi.",
     },
   );
 });
