@@ -6,6 +6,7 @@ diganti di sini tanpa menyentuh email.py.
 
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass
 
 
@@ -20,10 +21,11 @@ def email_pembayaran_berhasil(
     *, nama: str, nomor_invoice: str, nama_paket: str, nominal: int, tautan_invoice: str
 ) -> IsiEmail:
     rupiah = f"Rp{nominal:,}".replace(",", ".")
+    nama_aman = html.escape(nama)
     return IsiEmail(
         subjek="Pembayaran Koreksi-in berhasil",
         html=f"""
-        <p>Halo {nama},</p>
+        <p>Halo {nama_aman},</p>
         <p>Pembayaran Anda untuk <strong>{nama_paket}</strong> sebesar <strong>{rupiah}</strong>
         telah berhasil. Nomor invoice: <strong>{nomor_invoice}</strong>.</p>
         <p><a href="{tautan_invoice}">Lihat invoice</a></p>
@@ -41,10 +43,11 @@ def email_pembayaran_kedaluwarsa(
     *, nama: str, nomor_invoice: str, nama_paket: str, nominal: int, tautan_langganan: str
 ) -> IsiEmail:
     rupiah = f"Rp{nominal:,}".replace(",", ".")
+    nama_aman = html.escape(nama)
     return IsiEmail(
         subjek="Pembayaran Koreksi-in kedaluwarsa",
         html=f"""
-        <p>Halo {nama},</p>
+        <p>Halo {nama_aman},</p>
         <p>Pembayaran Anda untuk <strong>{nama_paket}</strong> sebesar <strong>{rupiah}</strong>
         (nomor invoice {nomor_invoice}) sudah kedaluwarsa dan tidak diproses.</p>
         <p><a href="{tautan_langganan}">Buka halaman Langganan</a> untuk mencoba lagi.</p>

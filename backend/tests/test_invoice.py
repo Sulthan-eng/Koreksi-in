@@ -8,6 +8,7 @@ from app.core.security import hash_password
 from app.models.enums import PaketLangganan, Peran, StatusTransaksi
 from app.models.pengguna import Pengguna
 from app.models.transaksi_pembayaran import TransaksiPembayaran
+from app.services import email_templates
 from app.services import transaksi as transaksi_service
 
 
@@ -83,6 +84,31 @@ def test_petakan_metode_kosong_atau_bukan_string() -> None:
     assert transaksi_service._petakan_metode(None) is None
     assert transaksi_service._petakan_metode("") is None
     assert transaksi_service._petakan_metode(123) is None
+
+
+def test_email_templates_escape_nama_pada_html() -> None:
+    nama_mentah = "Budi & Siti <script>alert(1)</script>"
+
+    berhasil = email_templates.email_pembayaran_berhasil(
+        nama=nama_mentah,
+        nomor_invoice="KRS-123",
+        nama_paket="Langganan Pro 1 Bulan",
+        nominal=30000,
+        tautan_invoice="http://localhost:5173/invoice/KRS-123",
+    )
+    kedaluwarsa = email_templates.email_pembayaran_kedaluwarsa(
+        nama=nama_mentah,
+        nomor_invoice="KRS-123",
+        nama_paket="Langganan Pro 1 Bulan",
+        nominal=30000,
+        tautan_langganan="http://localhost:5173/langganan",
+    )
+
+    for isi in (berhasil, kedaluwarsa):
+        assert "<script>" not in isi.html
+        assert "Budi & Siti" not in isi.html
+        assert "Budi &amp; Siti &lt;script&gt;alert(1)&lt;/script&gt;" in isi.html
+        assert nama_mentah in isi.teks
 
 
 async def test_invoice_milik_sendiri_sukses(client: AsyncClient, db_session: AsyncSession) -> None:
