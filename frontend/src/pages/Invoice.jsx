@@ -108,7 +108,9 @@ function Invoice() {
                     <dt className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
                       No. invoice
                     </dt>
-                    <dd className="font-semibold">{invoice.nomor_invoice}</dd>
+                    <dd className="wrap-anywhere font-semibold">
+                      {invoice.nomor_invoice}
+                    </dd>
                   </div>
                   <div className="flex flex-col gap-1">
                     <dt className="text-xs font-semibold uppercase tracking-wider text-teks-redup">
