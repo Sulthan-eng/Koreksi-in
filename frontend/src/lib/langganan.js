@@ -6,6 +6,7 @@ export const MAKS_PERCOBAAN_POLLING_TRANSAKSI = 10;
 export const DAFTAR_PAKET_PRO = [
   {
     kode: "pro_1_bulan",
+    namaPaket: "Langganan Pro 1 Bulan",
     labelDurasi: "1 bulan (30 hari)",
     durasiHari: 30,
     nominal: 30000,
@@ -14,6 +15,7 @@ export const DAFTAR_PAKET_PRO = [
   },
   {
     kode: "pro_3_bulan",
+    namaPaket: "Langganan Pro 3 Bulan",
     labelDurasi: "3 bulan (90 hari)",
     durasiHari: 90,
     nominal: 80000,
@@ -21,6 +23,72 @@ export const DAFTAR_PAKET_PRO = [
     ringkasanTeks: "3 bulan (90 hari), Rp 80.000",
   },
 ];
+
+const ZONA_WIB = "Asia/Jakarta";
+
+const NAMA_BULAN_PANJANG = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const NAMA_BULAN_SINGKAT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+function ekstrakBagianWaktuWib(iso) {
+  if (!iso) return null;
+  const tanggal = new Date(iso);
+  if (Number.isNaN(tanggal.getTime())) return null;
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONA_WIB,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const peta = {};
+  for (const bagian of formatter.formatToParts(tanggal)) {
+    if (
+      bagian.type === "year" ||
+      bagian.type === "month" ||
+      bagian.type === "day" ||
+      bagian.type === "hour" ||
+      bagian.type === "minute"
+    ) {
+      peta[bagian.type] = bagian.value;
+    }
+  }
+  return {
+    hari: Number(peta.day),
+    indeksBulan: Number(peta.month) - 1,
+    tahun: peta.year,
+    jam: peta.hour,
+    menit: peta.minute,
+  };
+}
 
 const PETA_PAKET_PRO = new Map(
   DAFTAR_PAKET_PRO.map((item) => [item.kode, item]),
@@ -51,6 +119,28 @@ export function formatRupiah(nominal) {
 
 export function formatRingkasanPaket(kodePaket) {
   return dapatkanPaketPro(kodePaket).ringkasanTeks;
+}
+
+export function namaPaketTransaksi(kodePaket) {
+  return dapatkanPaketPro(kodePaket).namaPaket;
+}
+
+export function formatTanggalSingkatWib(iso) {
+  const bagian = ekstrakBagianWaktuWib(iso);
+  if (!bagian) return "";
+  return `${bagian.hari} ${NAMA_BULAN_SINGKAT[bagian.indeksBulan]} ${bagian.tahun}`;
+}
+
+export function formatTanggalJamWib(iso) {
+  const bagian = ekstrakBagianWaktuWib(iso);
+  if (!bagian) return "";
+  return `${bagian.hari} ${NAMA_BULAN_PANJANG[bagian.indeksBulan]} ${bagian.tahun}, ${bagian.jam}.${bagian.menit} WIB`;
+}
+
+export function formatMetodePembayaran(metode) {
+  if (typeof metode !== "string") return "-";
+  const bersih = metode.trim();
+  return bersih || "-";
 }
 
 export function formatRingkasanTransaksi(transaksi) {

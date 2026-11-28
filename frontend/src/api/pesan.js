@@ -162,6 +162,8 @@ export const PESAN_KODE = {
   AKUN_MEMAKAI_FREE: "Akun Anda memakai paket Free.",
   TRANSAKSI_GAGAL_DIBUAT: "Transaksi gagal dibuat, silakan coba lagi",
   GAGAL_MENCATAT_TRANSAKSI: "Gagal mencatat transaksi, silakan coba lagi",
+  INVOICE_TIDAK_DITEMUKAN: "Invoice tidak ditemukan.",
+  INVOICE_GAGAL_DIMUAT: "Invoice gagal dimuat, silakan coba lagi.",
   PEMBAYARAN_BELUM_TERKONFIRMASI:
     "Pembayaran belum terkonfirmasi. Jika sudah membayar, periksa status beberapa saat lagi.",
   GAGAL_MUAT_RINGKASAN: "Gagal memuat ringkasan, coba muat ulang halaman",

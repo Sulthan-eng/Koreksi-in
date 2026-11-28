@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Check,
+  ChevronRight,
   CircleAlert,
   Crown,
   MessageCircle,
@@ -21,8 +23,11 @@ import {
   ambilTransaksiTerakhir,
   formatRingkasanPaket,
   formatRingkasanTransaksi,
+  formatRupiah,
+  formatTanggalSingkatWib,
   labelTombolLangganan,
   langkahPollingTransaksi,
+  namaPaketTransaksi,
 } from "../lib/langganan.js";
 import KeadaanData from "../components/KeadaanData.jsx";
 import Lencana from "../components/Lencana.jsx";
@@ -481,6 +486,44 @@ function Langganan() {
                   .
                 </p>
               )}
+          </section>
+        )}
+
+        {statusMuatTransaksi === "siap" && daftarTransaksi.length > 0 && (
+          <section className="flex flex-col gap-4 rounded-lg border border-garis bg-permukaan p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Riwayat transaksi</h2>
+            <ul className="flex flex-col">
+              {daftarTransaksi.map((item) => (
+                <li
+                  key={item.id_transaksi}
+                  className="flex flex-col gap-3 border-t border-garis py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm leading-5 text-teks-redup">
+                      {formatTanggalSingkatWib(item.dibuat_pada)}
+                    </p>
+                    <p className="text-base font-semibold leading-6">
+                      {namaPaketTransaksi(item.paket)}
+                    </p>
+                    <p className="text-sm leading-5 text-teks-redup">
+                      {formatRupiah(item.nominal)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                    <Lencana varian={item.status} />
+                    {item.status === "berhasil" && item.id_order && (
+                      <Link
+                        to={`/invoice/${item.id_order}`}
+                        className="inline-flex min-h-11 items-center gap-1 font-semibold text-biru-utama underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-biru-utama"
+                      >
+                        Lihat invoice
+                        <ChevronRight className="size-4" aria-hidden="true" />
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

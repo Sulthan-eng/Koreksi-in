@@ -36,4 +36,13 @@
     max-height: 24rem;
     overflow-y: auto;
   }
+
+  .cetak-warna-persis {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+@page {
+  margin: 0;
 }

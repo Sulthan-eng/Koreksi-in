@@ -53,7 +53,7 @@ function dapatkanDaftarMenu(varian, pathname) {
       {
         label: "Langganan",
         to: "/langganan",
-        aktif: pathname === "/langganan",
+        aktif: pathname === "/langganan" || pathname.startsWith("/invoice/"),
       },
     ];
   }
@@ -193,7 +193,7 @@ function BilahAtas({
 
   return (
     <>
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-garis bg-permukaan px-4 py-3 text-teks">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-garis bg-permukaan px-4 py-3 text-teks print:hidden">
         <button
           ref={tombolBukaRef}
           type="button"
@@ -270,7 +270,7 @@ function BilahAtas({
             tutupLaci();
           }
         }}
-        className="m-0 h-dvh max-h-none w-72 max-w-full border-0 border-r border-garis bg-permukaan p-0 text-teks backdrop:bg-teks/40 lg:hidden"
+        className="m-0 h-dvh max-h-none w-72 max-w-full border-0 border-r border-garis bg-permukaan p-0 text-teks backdrop:bg-teks/40 lg:hidden print:hidden"
       >
         <aside className="flex h-full w-full flex-col gap-4 overflow-y-auto p-4">
           <div className="flex items-center justify-between gap-2">

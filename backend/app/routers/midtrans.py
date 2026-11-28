@@ -30,6 +30,7 @@ async def notifikasi(
             hasil.transaksi.id_order,
             transaksi_service.NAMA_PAKET[hasil.transaksi.paket],
             hasil.transaksi.nominal,
+            hasil.transaksi.diperbarui_pada,
         )
     elif hasil.status_baru == StatusTransaksi.KEDALUWARSA:
         background_tasks.add_task(
